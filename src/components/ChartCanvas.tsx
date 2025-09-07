@@ -36,7 +36,7 @@ export default function ChartCanvas({ data }: { data: PriceSeries }) {
 
   useEffect(() => {
     const s = lineRef.current; if (!s || data.length === 0) return;
-    s.setData(data.map(d => ({ time: Math.floor(d.t / 1000) as any, value: d.p })));
+    s.setData(data.map(d => ({ time: Math.floor(d.t / 1000) as number, value: d.p })));
   }, [data]);
 
   return <div ref={el} className="w-full h-full min-h-[300px]" />;
