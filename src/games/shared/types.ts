@@ -6,7 +6,7 @@ export type Bet = {
   game: 'box-hit' | 'sketch' | 'towers' | 'ahead';
   size: number;             // USDC
   submittedAt: number;      // timestamp
-  meta: Record<string, any>;// game-specific payload
+  meta: Record<string, unknown>;// game-specific payload
 };
 
 export type Tower = {

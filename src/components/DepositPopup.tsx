@@ -160,7 +160,7 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
               <div className="flex items-start gap-2 bg-zinc-800/50 rounded p-3">
                 <ArrowDown size={14} className="text-white mt-0.5 flex-shrink-0" />
                 <span className="text-xs text-white">
-                  This address can only receive SOL on the Solana network. Don't send SOL on any other network or it may be lost.
+                  This address can only receive SOL on the Solana network. Don&apos;t send SOL on any other network or it may be lost.
                 </span>
               </div>
             </div>

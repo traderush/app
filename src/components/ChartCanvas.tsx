@@ -13,8 +13,8 @@ export default function ChartCanvas({ data }: { data: PriceSeries }) {
     let cleanup = () => {};
     (async () => {
       const mod = await import('lightweight-charts');
-      const createChart: any = (mod as any).createChart ?? (mod as any).default?.createChart;
-      const chart: IChartApi = createChart(el.current!, {
+      const createChart = (mod as { createChart?: unknown }).createChart ?? ((mod as { default?: { createChart?: unknown } }).default?.createChart);
+      const chart: IChartApi = (createChart as (container: HTMLElement, options: unknown) => IChartApi)(el.current!, {
         layout: { background: { type: 'Solid', color: 'transparent' }, textColor: '#a1a1aa' },
         grid: { horzLines: { color: 'rgba(255,255,255,.08)' }, vertLines: { color: 'rgba(255,255,255,.04)' } },
         rightPriceScale: { borderVisible: false },
@@ -22,7 +22,7 @@ export default function ChartCanvas({ data }: { data: PriceSeries }) {
         crosshair: { mode: 0 },
       });
       chartRef.current = chart;
-      lineRef.current = chart.addLineSeries({ lineWidth: 2 });
+      lineRef.current = (chart.addSeries as (options: unknown) => ISeriesApi<'Line'>)({ lineWidth: 2 });
 
       const resize = () => chart.applyOptions({
         width: el.current!.clientWidth, height: el.current!.clientHeight,
@@ -36,7 +36,7 @@ export default function ChartCanvas({ data }: { data: PriceSeries }) {
 
   useEffect(() => {
     const s = lineRef.current; if (!s || data.length === 0) return;
-    s.setData(data.map(d => ({ time: Math.floor(d.t / 1000), value: d.p })));
+    s.setData(data.map(d => ({ time: Math.floor(d.t / 1000) as any, value: d.p })));
   }, [data]);
 
   return <div ref={el} className="w-full h-full min-h-[300px]" />;

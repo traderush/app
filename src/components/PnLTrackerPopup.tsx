@@ -6,11 +6,18 @@ import { X, Pencil } from 'lucide-react';
 interface PnLTrackerPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLButtonElement>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
   isCustomizeOpen: boolean;
   onCustomizeOpen: () => void;
   onCustomizeClose: () => void;
-  customization: any;
+  customization: {
+    backgroundImage?: string;
+    backgroundOpacity?: number;
+    backgroundBlur?: number;
+    generalTextColor?: string;
+    balanceTextColor?: string;
+    pnlTextColor?: string;
+  };
 }
 
 const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({

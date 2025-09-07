@@ -29,7 +29,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isPnLCustomizeOpen, setIsPnLCustomizeOpen] = useState(false);
   const [isWatchlistOpen, setIsWatchlistOpen] = useState(false);
   const [isPlayerTrackerOpen, setIsPlayerTrackerOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<{
+    id: string;
+    name: string;
+    address: string;
+    avatar: string;
+    game: string;
+    isOnline: boolean;
+  } | null>(null);
   const [watchedPlayers, setWatchedPlayers] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('watchedPlayers');

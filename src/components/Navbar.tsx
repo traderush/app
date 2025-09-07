@@ -45,13 +45,13 @@ export default function Navbar({ onDepositOpen, onNotificationsOpen, notificatio
       <header className="border-b border-zinc-800/80 bg-[#09090B] backdrop-blur w-full">
         <div className="w-full h-14 px-4 flex items-center gap-4">
           {/* Brand */}
-          <a href="/" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <img 
               src="https://i.ibb.co/DPzsQbm0/a-logo.png" 
               alt="TradeRush Logo" 
               className="h-6 w-auto"
             />
-          </a>
+          </Link>
 
           {/* Scrollable game tabs */}
           <ScrollableGameTabs items={gameTabs} bg="#09090B" />
