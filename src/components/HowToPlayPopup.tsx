@@ -118,6 +118,7 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
               {/* Demo GIF */}
               <div className="w-full max-w-lg mx-auto">
                 <img 
+                  key={currentSlide}
                   src={slides[currentSlide].image}
                   alt={`${slides[currentSlide].title} Demo`}
                   className="w-full rounded-lg border border-zinc-700/50"
