@@ -68,11 +68,11 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
 
   // Mock data for the player
   const mockData = {
-    pnl: '$268K',
+    pnl: '+$268K',
     winrate: '65%',
     wins: 812,
     losses: 1477,
-    realizedPnl: '+$206K',
+    profileCreationDate: 'Jan 15, 2024',
     totalTransactions: 19479,
     buyTransactions: 9585,
     sellTransactions: 9894,
@@ -84,11 +84,11 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
       '<-50%': 19
     },
     recentActivity: [
-      { result: 'Win', gameName: 'RATWIZARD', betAmount: '1.2026', targetPrice: '$159K', age: '20s' },
-      { result: 'Loss', gameName: 'RATWIZARD', betAmount: '0.9584', targetPrice: '$161K', age: '56s' },
-      { result: 'Win', gameName: 'RATWIZARD', betAmount: '2.1045', targetPrice: '$164K', age: '1m' },
-      { result: 'Loss', gameName: 'RATWIZARD', betAmount: '1.5678', targetPrice: '$158K', age: '2m' },
-      { result: 'Win', gameName: 'RATWIZARD', betAmount: '0.7891', targetPrice: '$162K', age: '3m' }
+      { result: 'Win', gameName: 'SOLANA', betAmount: '2.5 SOL', targetPrice: '+15%', age: '20s' },
+      { result: 'Loss', gameName: 'ETHEREUM', betAmount: '1.2 ETH', targetPrice: '-8%', age: '56s' },
+      { result: 'Win', gameName: 'BITCOIN', betAmount: '0.05 BTC', targetPrice: '+22%', age: '1m' },
+      { result: 'Loss', gameName: 'AVAX', betAmount: '15 AVAX', targetPrice: '-12%', age: '2m' },
+      { result: 'Win', gameName: 'MATIC', betAmount: '500 MATIC', targetPrice: '+18%', age: '3m' }
     ]
   };
 
@@ -215,18 +215,22 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
           {/* Main Content */}
           <div className="p-4">
             <div className="grid grid-cols-12 gap-6">
-              {/* Balance Section */}
+              {/* Performance Section */}
               <div className="col-span-3">
-                <h3 className="text-white text-sm font-medium mb-4">Balance</h3>
+                <h3 className="text-white text-sm font-medium mb-4">Performance</h3>
                 <div className="space-y-3">
                   <div>
                     <div className="text-zinc-400 text-xs mb-1">PNL</div>
-                    <div className="text-white text-lg font-medium">{mockData.pnl}</div>
+                    <div className="text-green-400 text-lg font-medium">{mockData.pnl}</div>
                   </div>
                   <div>
                     <div className="text-zinc-400 text-xs mb-1">Winrate</div>
                     <div className="text-white text-sm font-medium">{mockData.winrate}</div>
-                    <div className="text-zinc-500 text-xs">{mockData.wins}W / {mockData.losses}L</div>
+                    <div className="text-xs">
+                      <span className="text-green-400">{mockData.wins}W</span>
+                      <span className="text-zinc-500"> / </span>
+                      <span className="text-red-400">{mockData.losses}L</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -316,13 +320,13 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                 </div>
               </div>
 
-              {/* Performance Section */}
+              {/* History Section */}
               <div className="col-span-3">
-                <h3 className="text-white text-sm font-medium mb-4">Performance</h3>
+                <h3 className="text-white text-sm font-medium mb-4">History</h3>
                 <div className="space-y-3">
                   <div>
-                    <div className="text-zinc-400 text-xs mb-1">Realized PNL</div>
-                    <div className="text-green-400 text-sm font-medium">{mockData.realizedPnl}</div>
+                    <div className="text-zinc-400 text-xs mb-1">Profile Creation Date</div>
+                    <div className="text-white text-sm font-medium">{mockData.profileCreationDate}</div>
                   </div>
                   <div>
                     <div className="text-zinc-400 text-xs mb-1">Total Trades</div>
