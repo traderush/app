@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Menu, Copy, Info, ArrowDown } from 'lucide-react';
+import { X, Menu, Copy, Info, ArrowDown, Check } from 'lucide-react';
 
 interface DepositPopupProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface DepositPopupProps {
 export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Handle escape key
   useEffect(() => {
@@ -51,8 +52,16 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
     };
   }, [isOpen, onClose]);
 
-  const handleCopyAddress = () => {
-    navigator.clipboard.writeText('4KtmTauUtwzTwy2U6v966xMNz961XP9iqk8WfFtpnKBe');
+  const handleCopyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText('4KtmTauUtwzTwy2U6v966xMNz961XP9iqk8WfFtpnKBe');
+      setIsCopied(true);
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
   };
 
   // Handle animation state
@@ -138,10 +147,14 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
                 </div>
                 <button
                   onClick={handleCopyAddress}
-                  className="flex items-center justify-center gap-1 mt-2 text-xs text-zinc-400 hover:text-white transition-colors"
+                  className={`flex items-center justify-center gap-1 mt-2 text-xs transition-colors ${
+                    isCopied 
+                      ? 'text-green-500' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
                 >
-                  <Copy size={12} />
-                  Click to copy
+                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                  {isCopied ? 'Copied!' : 'Click to copy'}
                 </button>
               </div>
               
