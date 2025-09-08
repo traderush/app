@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { X, Play, Target, TrendingUp, Award, BookOpen, Video, Users } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HowToPlayPopupProps {
   isOpen: boolean;
@@ -11,7 +11,31 @@ interface HowToPlayPopupProps {
 export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPlayPopupProps) {
   console.log('HowToPlayPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const popupRef = useRef<HTMLDivElement>(null);
+
+  const slides = [
+    {
+      title: "Getting Started",
+      description: "Learn the basics of trading and how to place your first bet on the platform."
+    },
+    {
+      title: "Advanced Strategies", 
+      description: "Discover advanced trading strategies and risk management techniques."
+    },
+    {
+      title: "Community Features",
+      description: "Connect with other traders, share insights, and track top performers."
+    }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -69,7 +93,7 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
       <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
         <div 
           ref={popupRef}
-          className="w-96 border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
+          className="w-[600px] border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
           style={{ backgroundColor: '#0E0E0E' }}
         >
           {/* Header */}
@@ -83,38 +107,56 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
             </button>
           </div>
 
-          {/* Slider Content */}
+          {/* Content */}
           <div className="p-6">
-            <div className="text-center space-y-4">
-              {/* Title */}
-              <h3 className="text-white text-lg font-medium">Custom Wallet Tracker Notifications</h3>
-              <div className="text-green-500 text-sm">✅ Slider Content Updated!</div>
-              
-              {/* Description */}
-              <p className="text-zinc-400 text-sm">Customize card data items, URL opening option, Toast Duration</p>
-              
-              {/* Demo Video */}
-              <div className="w-full max-w-md mx-auto">
-                <video 
+            <div className="text-center space-y-6">
+              {/* Demo GIF */}
+              <div className="w-full max-w-lg mx-auto">
+                <img 
+                  src="https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
+                  alt="How to Play Demo"
                   className="w-full rounded-lg border border-zinc-700/50"
-                  controls
-                  preload="metadata"
-                >
-                  <source src="https://gmgn.ai/static/opstatic/customwallettrackernotifications.mp4?v=1" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+                />
               </div>
               
-              {/* Pagination Dots */}
-              <div className="flex justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
+              {/* Slide Content */}
+              <div className="space-y-3">
+                <h3 className="text-white font-medium" style={{fontSize: '14px'}}>
+                  {slides[currentSlide].title}
+                </h3>
+                <p className="text-zinc-400" style={{fontSize: '12px'}}>
+                  {slides[currentSlide].description}
+                </p>
+              </div>
+              
+              {/* Navigation */}
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={prevSlide}
+                  className="p-2 rounded-full hover:bg-zinc-800 transition-colors"
+                >
+                  <ChevronLeft size={20} className="text-zinc-400" />
+                </button>
+                
+                {/* Slide Indicators */}
+                <div className="flex gap-2">
+                  {slides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        index === currentSlide ? 'bg-green-500' : 'bg-zinc-600'
+                      }`}
+                    />
+                  ))}
+                </div>
+                
+                <button
+                  onClick={nextSlide}
+                  className="p-2 rounded-full hover:bg-zinc-800 transition-colors"
+                >
+                  <ChevronRight size={20} className="text-zinc-400" />
+                </button>
               </div>
             </div>
           </div>
