@@ -270,7 +270,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Modal */}
           <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
             <div 
-              className="w-96 border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
+              className="w-80 border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
               style={{ backgroundColor: '#0E0E0E' }}
             >
               {/* Header */}
@@ -288,9 +288,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
 
               {/* Content */}
-              <div className="p-4 space-y-4">
+              <div className="p-3 space-y-3">
                 {/* Background Image */}
-                <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
+                <div className="p-2">
                   <div className="flex items-center gap-3">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Image URL</span>
                   </div>
@@ -304,7 +304,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Background Opacity */}
-                <div className="p-3">
+                <div className="p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Opacity</span>
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundOpacity}%</span>
@@ -320,7 +320,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Background Blur */}
-                <div className="p-3">
+                <div className="p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Blur</span>
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundBlur}px</span>
@@ -336,13 +336,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Text Colors */}
-                <div className="p-3">
+                <div className="p-2">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Text Colors</span>
                   </div>
                   
                   {/* General Text Color */}
-                  <div className="flex items-center justify-between p-2">
+                  <div className="flex items-center justify-between p-1">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Main</span>
                     <input
                       type="color"
@@ -353,7 +353,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
 
                   {/* Balance Text Color */}
-                  <div className="flex items-center justify-between p-2">
+                  <div className="flex items-center justify-between p-1">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Loss</span>
                     <input
                       type="color"
@@ -364,7 +364,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
 
                   {/* PnL Text Color */}
-                  <div className="flex items-center justify-between p-2">
+                  <div className="flex items-center justify-between p-1">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Profit</span>
                     <input
                       type="color"
@@ -376,7 +376,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Footer with Apply and Reset Buttons */}
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center justify-between pt-1">
                   <button
                     onClick={() => {
                       setPnLCustomization({
