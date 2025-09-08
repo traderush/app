@@ -30,7 +30,7 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
     {
       title: "Community Features",
       description: "Connect with other traders, share insights, and track top performers.",
-      image: "https://i.ibb.co/ynd8cQB2/customtipstoastposition-ezgif-com-optimize-1.gif"
+      image: "https://i.ibb.co/v4YX0JJ7/newchartindicators-ezgif-com-optimize.gif"
     }
   ];
 
