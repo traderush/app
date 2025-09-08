@@ -15,7 +15,7 @@ import WatchlistPopup from './WatchlistPopup';
 import PlayerTrackerPopup from './PlayerTrackerPopup';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SignatureColorProvider } from '@/contexts/SignatureColorContext';
-import { Slider } from '@/components/ui/slider';
+import CustomSlider from '@/components/CustomSlider';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -311,13 +311,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundOpacity}%</span>
                   </div>
                   <div className="mt-2">
-                    <Slider
+                    <CustomSlider
                       min={0}
                       max={100}
                       step={1}
-                      value={[pnLCustomization.backgroundOpacity]}
-                      onValueChange={(values) => setPnLCustomization(prev => ({ ...prev, backgroundOpacity: values[0] }))}
+                      value={pnLCustomization.backgroundOpacity}
+                      onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundOpacity: value }))}
                       className="w-full"
+                      signatureColor="#FA5616"
                     />
                   </div>
                 </div>
@@ -329,13 +330,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundBlur}px</span>
                   </div>
                   <div className="mt-2">
-                    <Slider
+                    <CustomSlider
                       min={0}
                       max={8}
                       step={1}
-                      value={[pnLCustomization.backgroundBlur]}
-                      onValueChange={(values) => setPnLCustomization(prev => ({ ...prev, backgroundBlur: values[0] }))}
+                      value={pnLCustomization.backgroundBlur}
+                      onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundBlur: value }))}
                       className="w-full"
+                      signatureColor="#FA5616"
                     />
                   </div>
                 </div>
