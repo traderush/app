@@ -77,7 +77,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
       <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
         <div 
           ref={popupRef}
-          className="w-[800px] border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
+          className="w-auto border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
           style={{ backgroundColor: '#0E0E0E' }}
         >
           {/* Header */}
@@ -92,8 +92,8 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
           </div>
 
           {/* Rewards Content */}
-          <div className="p-6">
-            <div className="text-center space-y-6">
+          <div className="p-4">
+            <div className="flex items-center gap-6">
               {/* Text Content */}
               <div className="space-y-2">
                 <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
@@ -105,7 +105,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               </div>
 
               {/* Chart */}
-              <div className="w-full max-w-md mx-auto">
+              <div className="w-80">
                 <div className="relative h-64 w-full">
                   {/* Chart Area */}
                   <svg className="w-full h-full" viewBox="0 0 300 200">
