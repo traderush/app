@@ -11,7 +11,15 @@ interface RewardsPopupProps {
 export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPopupProps) {
   console.log('RewardsPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState(2); // Default to middle point
   const popupRef = useRef<HTMLDivElement>(null);
+
+  const rewardPoints = [
+    { volume: "50k", reward: "$100", x: 20, y: 100 },
+    { volume: "250k", reward: "$500", x: 50, y: 80 },
+    { volume: "500k", reward: "$1000", x: 80, y: 60 },
+    { volume: "1000k", reward: "$2000", x: 110, y: 40 }
+  ];
 
   useEffect(() => {
     if (isOpen) {
@@ -74,7 +82,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
         >
           {/* Header */}
           <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
-            <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Referral Program</h2>
+            <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Rewards</h2>
             <button
               onClick={onClose}
               className="grid place-items-center w-8 h-8 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors"
@@ -83,24 +91,24 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
             </button>
           </div>
 
-          {/* Referral Program Content */}
-          <div className="p-6">
-            <div className="flex items-center justify-between h-64">
+          {/* Rewards Content */}
+          <div className="p-4">
+            <div className="flex items-center justify-between h-80">
               {/* Left Side - Text Content */}
-              <div className="flex flex-col justify-center space-y-2 w-1/2 pr-4">
+              <div className="flex flex-col justify-center space-y-2 w-1/2 pr-6">
                 <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
                 <p className="text-white text-sm">Commissions Get up to</p>
                 <div className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-                  $2000
+                  {rewardPoints[selectedPoint].reward}
                 </div>
                 <p className="text-white text-sm">Commission</p>
               </div>
 
               {/* Right Side - Chart */}
-              <div className="w-1/2 pl-4">
-                <div className="relative h-48 w-full">
+              <div className="w-1/2 pl-6">
+                <div className="relative h-72 w-full">
                   {/* Chart Area */}
-                  <svg className="w-full h-full" viewBox="0 0 200 120">
+                  <svg className="w-full h-full" viewBox="0 0 200 140">
                     {/* Area fill under the line */}
                     <defs>
                       <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -111,36 +119,86 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     
                     {/* Area fill */}
                     <path
-                      d="M 20 100 Q 50 80 80 60 Q 110 40 140 30 Q 170 20 180 15"
+                      d="M 20 120 Q 50 100 80 80 Q 110 60 140 40"
                       fill="url(#areaGradient)"
                     />
                     
                     {/* Line */}
                     <path
-                      d="M 20 100 Q 50 80 80 60 Q 110 40 140 30 Q 170 20 180 15"
+                      d="M 20 120 Q 50 100 80 80 Q 110 60 140 40"
                       fill="none"
                       stroke="#10B981"
                       strokeWidth="2"
                     />
                     
-                    {/* Data points */}
-                    <circle cx="20" cy="100" r="2" fill="white"/>
-                    <circle cx="50" cy="80" r="2" fill="white"/>
-                    <circle cx="80" cy="60" r="2" fill="white"/>
-                    <circle cx="110" cy="40" r="2" fill="white"/>
-                    <circle cx="140" cy="30" r="2" fill="white"/>
+                    {/* Clickable Data points */}
+                    {rewardPoints.map((point, index) => (
+                      <g key={index}>
+                        <circle 
+                          cx={point.x} 
+                          cy={point.y} 
+                          r="4" 
+                          fill={selectedPoint === index ? "#10B981" : "white"}
+                          stroke={selectedPoint === index ? "#10B981" : "#10B981"}
+                          strokeWidth="2"
+                          className="cursor-pointer hover:r-5 transition-all"
+                          onClick={() => setSelectedPoint(index)}
+                        />
+                        
+                        {/* Volume labels */}
+                        <text 
+                          x={point.x} 
+                          y="135" 
+                          fontSize="8" 
+                          fill="#9CA3AF" 
+                          textAnchor="middle"
+                        >
+                          Vol.{point.volume}
+                        </text>
+                      </g>
+                    ))}
                     
-                    {/* Volume labels */}
-                    <text x="50" y="115" fontSize="8" fill="#9CA3AF" textAnchor="middle">Vol.50k</text>
-                    <text x="80" y="115" fontSize="8" fill="#9CA3AF" textAnchor="middle">Vol.250k</text>
-                    <text x="110" y="115" fontSize="8" fill="#9CA3AF" textAnchor="middle">Vol.500k</text>
-                    <text x="140" y="115" fontSize="8" fill="#9CA3AF" textAnchor="middle">Vol.1000k</text>
-                    
-                    {/* Annotation line and text for Vol.500k */}
-                    <line x1="110" y1="40" x2="110" y2="25" stroke="white" strokeWidth="1" strokeDasharray="2,2"/>
-                    <rect x="95" y="15" width="30" height="20" fill="rgba(0,0,0,0.8)" rx="2"/>
-                    <text x="110" y="22" fontSize="6" fill="white" textAnchor="middle">Earn commission</text>
-                    <text x="110" y="30" fontSize="8" fill="white" textAnchor="middle" fontWeight="bold">$2000/month</text>
+                    {/* Annotation line and text for selected point */}
+                    {selectedPoint !== null && (
+                      <g>
+                        <line 
+                          x1={rewardPoints[selectedPoint].x} 
+                          y1={rewardPoints[selectedPoint].y} 
+                          x2={rewardPoints[selectedPoint].x} 
+                          y2={rewardPoints[selectedPoint].y - 20} 
+                          stroke="white" 
+                          strokeWidth="1" 
+                          strokeDasharray="2,2"
+                        />
+                        <rect 
+                          x={rewardPoints[selectedPoint].x - 15} 
+                          y={rewardPoints[selectedPoint].y - 35} 
+                          width="30" 
+                          height="20" 
+                          fill="rgba(0,0,0,0.8)" 
+                          rx="2"
+                        />
+                        <text 
+                          x={rewardPoints[selectedPoint].x} 
+                          y={rewardPoints[selectedPoint].y - 25} 
+                          fontSize="6" 
+                          fill="white" 
+                          textAnchor="middle"
+                        >
+                          Earn commission
+                        </text>
+                        <text 
+                          x={rewardPoints[selectedPoint].x} 
+                          y={rewardPoints[selectedPoint].y - 18} 
+                          fontSize="8" 
+                          fill="white" 
+                          textAnchor="middle" 
+                          fontWeight="bold"
+                        >
+                          {rewardPoints[selectedPoint].reward}/month
+                        </text>
+                      </g>
+                    )}
                   </svg>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { X, Newspaper, TrendingUp, Calendar, Star, Zap, Users, Gift } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
 interface NewsUpdatesPopupProps {
   isOpen: boolean;
@@ -11,7 +12,35 @@ interface NewsUpdatesPopupProps {
 export default function NewsUpdatesPopup({ isOpen, onClose, triggerRef }: NewsUpdatesPopupProps) {
   console.log('NewsUpdatesPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const popupRef = useRef<HTMLDivElement>(null);
+  const { signatureColor } = useSignatureColor();
+
+  const slides = [
+    {
+      title: "New Trading Features",
+      description: "Discover the latest trading tools and features added to enhance your trading experience.",
+      image: "https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
+    },
+    {
+      title: "Performance Improvements", 
+      description: "Experience faster load times and smoother interactions with our latest performance updates.",
+      image: "https://i.ibb.co/ynd8cQB2/customtipstoastposition-ezgif-com-optimize-1.gif"
+    },
+    {
+      title: "UI/UX Enhancements",
+      description: "Enjoy a more intuitive interface with our redesigned components and improved user experience.",
+      image: "https://i.ibb.co/v4YX0JJ7/newchartindicators-ezgif-com-optimize.gif"
+    }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -69,7 +98,7 @@ export default function NewsUpdatesPopup({ isOpen, onClose, triggerRef }: NewsUp
       <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
         <div 
           ref={popupRef}
-          className="w-96 border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
+          className="w-[600px] border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
           style={{ backgroundColor: '#0E0E0E' }}
         >
           {/* Header */}
@@ -83,38 +112,59 @@ export default function NewsUpdatesPopup({ isOpen, onClose, triggerRef }: NewsUp
             </button>
           </div>
 
-          {/* Slider Content */}
+          {/* Content */}
           <div className="p-6">
-            <div className="text-center space-y-4">
-              {/* Title */}
-              <h3 className="text-white text-lg font-medium">Custom Wallet Tracker Notifications</h3>
-              <div className="text-green-500 text-sm">✅ Slider Content Updated!</div>
-              
-              {/* Description */}
-              <p className="text-zinc-400 text-sm">Customize card data items, URL opening option, Toast Duration</p>
-              
-              {/* Demo Video */}
-              <div className="w-full max-w-md mx-auto">
-                <video 
+            <div className="text-center space-y-6">
+              {/* Demo GIF */}
+              <div className="w-full max-w-lg mx-auto">
+                <img 
+                  src={slides[currentSlide].image}
+                  alt={`${slides[currentSlide].title} Demo`}
                   className="w-full rounded-lg border border-zinc-700/50"
-                  controls
-                  preload="metadata"
-                >
-                  <source src="https://gmgn.ai/static/opstatic/customwallettrackernotifications.mp4?v=1" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+                />
               </div>
               
-              {/* Pagination Dots */}
-              <div className="flex justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
-                <div className="w-2 h-2 rounded-full bg-zinc-600"></div>
+              {/* Slide Content */}
+              <div className="space-y-3">
+                <h3 className="text-white font-medium" style={{fontSize: '14px'}}>
+                  {slides[currentSlide].title}
+                </h3>
+                <p className="text-zinc-400" style={{fontSize: '12px'}}>
+                  {slides[currentSlide].description}
+                </p>
+              </div>
+              
+              {/* Navigation */}
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={prevSlide}
+                  className="p-2 rounded-full hover:bg-zinc-800 transition-colors"
+                >
+                  <ChevronLeft size={20} className="text-zinc-400" />
+                </button>
+                
+                {/* Slide Indicators */}
+                <div className="flex gap-2">
+                  {slides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        index === currentSlide ? '' : 'bg-zinc-600'
+                      }`}
+                      style={{
+                        backgroundColor: index === currentSlide ? signatureColor : undefined
+                      }}
+                    />
+                  ))}
+                </div>
+                
+                <button
+                  onClick={nextSlide}
+                  className="p-2 rounded-full hover:bg-zinc-800 transition-colors"
+                >
+                  <ChevronRight size={20} className="text-zinc-400" />
+                </button>
               </div>
             </div>
           </div>
