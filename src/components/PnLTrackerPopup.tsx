@@ -430,10 +430,10 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-1.5 hover:bg-white/10 rounded"
+                  className="grid place-items-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
                   title="Close"
                 >
-                  <X size={14} style={{ color: customization?.generalTextColor || '#ffffff' }} />
+                  <X size={14} className="text-white" />
                 </button>
               </div>
             )}

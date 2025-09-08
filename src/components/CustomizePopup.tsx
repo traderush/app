@@ -88,9 +88,9 @@ export default function CustomizePopup({ isOpen, onClose, triggerRef }: Customiz
           <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Customize Theme</h2>
           <button
             onClick={onClose}
-            className="grid place-items-center w-8 h-8 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors"
+            className="grid place-items-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
           >
-            <X size={18} />
+            <X size={14} className="text-white" />
           </button>
         </div>
 

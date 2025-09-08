@@ -61,9 +61,9 @@ export default function ProfilePopup({ isOpen, onClose, triggerRef }: ProfilePop
           <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Profile</h2>
           <button
             onClick={onClose}
-            className="grid place-items-center w-8 h-8 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+            className="grid place-items-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
           >
-            <X size={16} />
+            <X size={14} className="text-white" />
           </button>
         </div>
 

@@ -201,9 +201,9 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
             <h2 className="text-white text-sm font-medium">Watchlist</h2>
             <button
               onClick={onClose}
-              className="text-zinc-400 hover:text-white transition-colors"
+              className="grid place-items-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
             >
-              <X size={16} />
+              <X size={14} className="text-white" />
             </button>
           </div>
 
