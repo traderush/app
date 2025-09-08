@@ -84,11 +84,11 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
       '<-50%': 19
     },
     recentActivity: [
-      { result: 'Win', gameName: 'SOLANA', betAmount: '2.5 SOL', targetPrice: '+15%', age: '20s' },
-      { result: 'Loss', gameName: 'ETHEREUM', betAmount: '1.2 ETH', targetPrice: '-8%', age: '56s' },
-      { result: 'Win', gameName: 'BITCOIN', betAmount: '0.05 BTC', targetPrice: '+22%', age: '1m' },
-      { result: 'Loss', gameName: 'AVAX', betAmount: '15 AVAX', targetPrice: '-12%', age: '2m' },
-      { result: 'Win', gameName: 'MATIC', betAmount: '500 MATIC', targetPrice: '+18%', age: '3m' }
+      { result: 'Win', gameName: 'Box Hit', betAmount: '2.5 SOL', targetPrice: '+15%', age: '20s' },
+      { result: 'Loss', gameName: 'Towers', betAmount: '1.2 ETH', targetPrice: '-8%', age: '56s' },
+      { result: 'Win', gameName: 'Sketch', betAmount: '0.05 BTC', targetPrice: '+22%', age: '1m' },
+      { result: 'Loss', gameName: 'Box Hit', betAmount: '15 AVAX', targetPrice: '-12%', age: '2m' },
+      { result: 'Win', gameName: 'Towers', betAmount: '500 MATIC', targetPrice: '+18%', age: '3m' }
     ]
   };
 
@@ -227,9 +227,9 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                     <div className="text-zinc-400 text-xs mb-1">Winrate</div>
                     <div className="text-white text-sm font-medium">{mockData.winrate}</div>
                     <div className="text-xs">
-                      <span className="text-green-400">{mockData.wins}W</span>
+                      <span className="text-green-500">{mockData.wins}W</span>
                       <span className="text-zinc-500"> / </span>
-                      <span className="text-red-400">{mockData.losses}L</span>
+                      <span className="text-red-500">{mockData.losses}L</span>
                     </div>
                   </div>
                 </div>
@@ -371,15 +371,12 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                     <div key={index} className="grid grid-cols-12 gap-4 items-center py-2 hover:bg-zinc-900/30 rounded px-1 transition-colors">
                       <div className="col-span-2">
                         <span className={`text-xs font-medium ${
-                          activity.result === 'Win' ? 'text-green-400' : 'text-red-400'
+                          activity.result === 'Win' ? 'text-green-500' : 'text-red-500'
                         }`}>
                           {activity.result}
                         </span>
                       </div>
-                      <div className="col-span-3 flex items-center gap-2">
-                        <div className="w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center">
-                          <span className="text-xs">🐭</span>
-                        </div>
+                      <div className="col-span-3">
                         <span className="text-white text-xs font-medium">{activity.gameName}</span>
                       </div>
                       <div className="col-span-2 text-white text-xs">{activity.betAmount}</div>
