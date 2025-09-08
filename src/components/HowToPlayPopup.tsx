@@ -25,12 +25,12 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
     {
       title: "Advanced Strategies", 
       description: "Discover advanced trading strategies and risk management techniques.",
-      image: "https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
+      image: "https://i.ibb.co/ynd8cQB2/customtipstoastposition-ezgif-com-optimize-1.gif"
     },
     {
       title: "Community Features",
       description: "Connect with other traders, share insights, and track top performers.",
-      image: "https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
+      image: "https://i.ibb.co/ynd8cQB2/customtipstoastposition-ezgif-com-optimize-1.gif"
     }
   ];
 
@@ -118,7 +118,6 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
               {/* Demo GIF */}
               <div className="w-full max-w-lg mx-auto">
                 <img 
-                  key={currentSlide}
                   src={slides[currentSlide].image}
                   alt={`${slides[currentSlide].title} Demo`}
                   className="w-full rounded-lg border border-zinc-700/50"
