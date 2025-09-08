@@ -15,6 +15,7 @@ import WatchlistPopup from './WatchlistPopup';
 import PlayerTrackerPopup from './PlayerTrackerPopup';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SignatureColorProvider } from '@/contexts/SignatureColorContext';
+import { Slider } from '@/components/ui/slider';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -309,14 +310,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Opacity</span>
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundOpacity}%</span>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={pnLCustomization.backgroundOpacity}
-                    onChange={(e) => setPnLCustomization(prev => ({ ...prev, backgroundOpacity: parseInt(e.target.value) }))}
-                    className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer mt-2"
-                  />
+                  <div className="mt-2">
+                    <Slider
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={[pnLCustomization.backgroundOpacity]}
+                      onValueChange={(values) => setPnLCustomization(prev => ({ ...prev, backgroundOpacity: values[0] }))}
+                      className="w-full"
+                    />
+                  </div>
                 </div>
 
                 {/* Background Blur */}
@@ -325,14 +328,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Blur</span>
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundBlur}px</span>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="8"
-                    value={pnLCustomization.backgroundBlur}
-                    onChange={(e) => setPnLCustomization(prev => ({ ...prev, backgroundBlur: parseInt(e.target.value) }))}
-                    className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer mt-2"
-                  />
+                  <div className="mt-2">
+                    <Slider
+                      min={0}
+                      max={8}
+                      step={1}
+                      value={[pnLCustomization.backgroundBlur]}
+                      onValueChange={(values) => setPnLCustomization(prev => ({ ...prev, backgroundBlur: values[0] }))}
+                      className="w-full"
+                    />
+                  </div>
                 </div>
 
                 {/* Text Colors */}
