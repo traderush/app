@@ -12,6 +12,10 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
   console.log('RewardsPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState(2); // Default to middle point
+  const [referralCode] = useState(() => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  });
   const popupRef = useRef<HTMLDivElement>(null);
 
   const rewardPoints = [
@@ -20,6 +24,14 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
     { volume: "500k", reward: "$1000", x: 130, y: 90 },
     { volume: "1000k", reward: "$2000", x: 180, y: 60 }
   ];
+
+  const handleCopyReferral = async () => {
+    try {
+      await navigator.clipboard.writeText(referralCode);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -105,11 +117,11 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                 
                 {/* Referral Code */}
                 <div className="mt-3">
-                  <div className="flex items-center gap-3 p-3 bg-zinc-800/50 border border-zinc-700/50 rounded">
-                    <span className="text-white text-lg font-mono">TRADE2024</span>
+                  <div className="inline-flex items-center gap-2 px-3 py-2 bg-zinc-800/50 border border-zinc-700/50 rounded">
+                    <span className="text-zinc-400 text-lg font-mono">{referralCode}</span>
                     <button 
                       className="p-1 hover:bg-zinc-700 rounded transition-colors"
-                      onClick={() => navigator.clipboard.writeText('TRADE2024')}
+                      onClick={handleCopyReferral}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400 hover:text-white">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
