@@ -112,8 +112,11 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               <div className="space-y-1">
                 <h3 className="text-white" style={{fontSize: '14px'}}>Invite Friends and Earn</h3>
                 <p className="text-white" style={{fontSize: '14px'}}>Commissions Get up to</p>
-                <div style={{fontSize: '28px', fontWeight: 500, color: signatureColor}}>
-                  {rewardPoints[selectedPoint].reward} Commission
+                <div className="flex items-baseline gap-2">
+                  <span style={{fontSize: '28px', fontWeight: 500, color: signatureColor}}>
+                    {rewardPoints[selectedPoint].reward}
+                  </span>
+                  <span className="text-white" style={{fontSize: '14px'}}>Commission</span>
                 </div>
                 
                 {/* Referral Code */}
