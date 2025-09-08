@@ -22,9 +22,9 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
 
   const rewardPoints = [
     { volume: "50k", reward: "$100", x: 20, y: 150 },
-    { volume: "250k", reward: "$500", x: 50, y: 120 },
-    { volume: "500k", reward: "$1000", x: 80, y: 90 },
-    { volume: "1000k", reward: "$2000", x: 110, y: 60 }
+    { volume: "250k", reward: "$500", x: 50, y: 140 },
+    { volume: "500k", reward: "$1000", x: 80, y: 125 },
+    { volume: "1000k", reward: "$2000", x: 110, y: 100 }
   ];
 
   const handleCopyReferral = async () => {
@@ -137,8 +137,8 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               </div>
 
               {/* Chart */}
-              <div className="w-64">
-                <div className="relative h-48 w-full">
+              <div className="w-56">
+                <div className="relative h-40 w-full">
                   {/* Chart Area */}
                   <svg className="w-full h-full" viewBox="15 35 100 120">
                     {/* Area fill under the line */}
@@ -151,13 +151,13 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     
                     {/* Area fill */}
                     <path
-                      d="M 20 150 L 50 120 L 80 90 L 110 60 L 110 60 L 110 150 L 20 150 Z"
+                      d="M 20 150 L 50 140 L 80 125 L 110 100 L 110 100 L 110 150 L 20 150 Z"
                       fill="url(#areaGradient)"
                     />
                     
                     {/* Line */}
                     <path
-                      d="M 20 150 L 50 120 L 80 90 L 110 60"
+                      d="M 20 150 L 50 140 L 80 125 L 110 100"
                       fill="none"
                       stroke={signatureColor}
                       strokeWidth="3"
