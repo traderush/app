@@ -21,10 +21,10 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
   const { signatureColor } = useSignatureColor();
 
   const rewardPoints = [
-    { volume: "50k", reward: "$100", x: 30, y: 150 },
-    { volume: "250k", reward: "$500", x: 80, y: 120 },
-    { volume: "500k", reward: "$1000", x: 130, y: 90 },
-    { volume: "1000k", reward: "$2000", x: 180, y: 60 }
+    { volume: "50k", reward: "$100", x: 20, y: 150 },
+    { volume: "250k", reward: "$500", x: 60, y: 120 },
+    { volume: "500k", reward: "$1000", x: 100, y: 90 },
+    { volume: "1000k", reward: "$2000", x: 140, y: 60 }
   ];
 
   const handleCopyReferral = async () => {
@@ -140,7 +140,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               <div className="w-80">
                 <div className="relative h-64 w-full">
                   {/* Chart Area */}
-                  <svg className="w-full h-full" viewBox="0 0 240 200">
+                  <svg className="w-full h-full" viewBox="0 0 200 200">
                     {/* Area fill under the line */}
                     <defs>
                       <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -151,13 +151,13 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     
                     {/* Area fill */}
                     <path
-                      d="M 30 150 Q 80 120 130 90 Q 180 60 210 40"
+                      d="M 20 150 Q 60 120 100 90 Q 140 60 170 40"
                       fill="url(#areaGradient)"
                     />
                     
                     {/* Line */}
                     <path
-                      d="M 30 150 Q 80 120 130 90 Q 180 60 210 40"
+                      d="M 20 150 Q 60 120 100 90 Q 140 60 170 40"
                       fill="none"
                       stroke={signatureColor}
                       strokeWidth="3"
