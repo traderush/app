@@ -14,10 +14,11 @@ import CustomizePopup from './CustomizePopup';
 import WatchlistPopup from './WatchlistPopup';
 import PlayerTrackerPopup from './PlayerTrackerPopup';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { SignatureColorProvider } from '@/contexts/SignatureColorContext';
+import { SignatureColorProvider, useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const { signatureColor } = useSignatureColor();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
