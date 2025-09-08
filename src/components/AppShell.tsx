@@ -304,7 +304,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Background Opacity */}
-                <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
+                <div className="p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Opacity</span>
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundOpacity}%</span>
@@ -320,7 +320,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Background Blur */}
-                <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
+                <div className="p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Blur</span>
                     <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundBlur}px</span>
@@ -336,13 +336,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Text Colors */}
-                <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
+                <div className="p-3">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Text Colors</span>
                   </div>
                   
                   {/* General Text Color */}
-                  <div className="flex items-center justify-between p-2 rounded bg-zinc-700/30">
+                  <div className="flex items-center justify-between p-2">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Main</span>
                     <input
                       type="color"
@@ -353,7 +353,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
 
                   {/* Balance Text Color */}
-                  <div className="flex items-center justify-between p-2 rounded bg-zinc-700/30">
+                  <div className="flex items-center justify-between p-2">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Loss</span>
                     <input
                       type="color"
@@ -364,7 +364,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
 
                   {/* PnL Text Color */}
-                  <div className="flex items-center justify-between p-2 rounded bg-zinc-700/30">
+                  <div className="flex items-center justify-between p-2">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Profit</span>
                     <input
                       type="color"
