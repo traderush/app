@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { X, Gift, Trophy, Star, TrendingUp, Users, Target, Zap, Coins } from 'lucide-react';
+import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
 interface RewardsPopupProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
     return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   });
   const popupRef = useRef<HTMLDivElement>(null);
+  const { signatureColor } = useSignatureColor();
 
   const rewardPoints = [
     { volume: "50k", reward: "$100", x: 30, y: 150 },
@@ -108,12 +110,12 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
             <div className="flex items-center gap-6">
               {/* Text Content */}
               <div className="space-y-1">
-                <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
-                <p className="text-white text-sm">Commissions Get up to</p>
-                <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                <h3 className="text-white" style={{fontSize: '14px'}}>Invite Friends and Earn</h3>
+                <p className="text-white" style={{fontSize: '14px'}}>Commissions Get up to</p>
+                <div className="text-white" style={{fontSize: '28px', fontWeight: 500}}>
                   {rewardPoints[selectedPoint].reward}
                 </div>
-                <p className="text-white text-sm">Commission</p>
+                <p className="text-white" style={{fontSize: '14px'}}>Commission</p>
                 
                 {/* Referral Code */}
                 <div className="mt-3">
@@ -140,8 +142,8 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     {/* Area fill under the line */}
                     <defs>
                       <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#10B981" stopOpacity="0.3"/>
-                        <stop offset="100%" stopColor="#10B981" stopOpacity="0.05"/>
+                        <stop offset="0%" stopColor={signatureColor} stopOpacity="0.3"/>
+                        <stop offset="100%" stopColor={signatureColor} stopOpacity="0.05"/>
                       </linearGradient>
                     </defs>
                     
@@ -155,7 +157,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     <path
                       d="M 30 150 Q 80 120 130 90 Q 180 60 220 40"
                       fill="none"
-                      stroke="#10B981"
+                      stroke={signatureColor}
                       strokeWidth="3"
                     />
                     
@@ -176,8 +178,8 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                           cx={point.x} 
                           cy={point.y} 
                           r="6" 
-                          fill={selectedPoint === index ? "#10B981" : "white"}
-                          stroke={selectedPoint === index ? "white" : "#10B981"}
+                          fill={selectedPoint === index ? signatureColor : "white"}
+                          stroke={selectedPoint === index ? "white" : signatureColor}
                           strokeWidth="3"
                           className="pointer-events-none"
                         />
@@ -186,7 +188,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                         <text 
                           x={point.x} 
                           y="185" 
-                          fontSize="10" 
+                          fontSize="12" 
                           fill="#9CA3AF" 
                           textAnchor="middle"
                         >
