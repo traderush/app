@@ -134,15 +134,24 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     {/* Clickable Data points */}
                     {rewardPoints.map((point, index) => (
                       <g key={index}>
+                        {/* Invisible larger click area */}
+                        <circle 
+                          cx={point.x} 
+                          cy={point.y} 
+                          r="12" 
+                          fill="transparent"
+                          className="cursor-pointer"
+                          onClick={() => setSelectedPoint(index)}
+                        />
+                        {/* Visible circle */}
                         <circle 
                           cx={point.x} 
                           cy={point.y} 
                           r="6" 
                           fill={selectedPoint === index ? "#10B981" : "white"}
-                          stroke={selectedPoint === index ? "#10B981" : "#10B981"}
+                          stroke={selectedPoint === index ? "white" : "#10B981"}
                           strokeWidth="3"
-                          className="cursor-pointer hover:r-7 transition-all"
-                          onClick={() => setSelectedPoint(index)}
+                          className="pointer-events-none"
                         />
                         
                         {/* Volume labels */}
