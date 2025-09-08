@@ -292,7 +292,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {/* Background Image */}
                 <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-zinc-200">Background Image URL</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Image URL</span>
                   </div>
                   <input
                     type="text"
@@ -306,8 +306,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {/* Background Opacity */}
                 <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-zinc-200">Background Opacity</span>
-                    <span className="text-sm text-zinc-400">{pnLCustomization.backgroundOpacity}%</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Opacity</span>
+                    <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundOpacity}%</span>
                   </div>
                   <input
                     type="range"
@@ -322,8 +322,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {/* Background Blur */}
                 <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-zinc-200">Background Blur</span>
-                    <span className="text-sm text-zinc-400">{pnLCustomization.backgroundBlur}px</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Background Blur</span>
+                    <span className="text-zinc-400" style={{fontSize: '12px'}}>{pnLCustomization.backgroundBlur}px</span>
                   </div>
                   <input
                     type="range"
@@ -338,12 +338,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {/* Text Colors */}
                 <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm text-zinc-200">Text Colors</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Text Colors</span>
                   </div>
                   
                   {/* General Text Color */}
                   <div className="flex items-center justify-between p-2 rounded bg-zinc-700/30">
-                    <span className="text-sm text-zinc-200">Main</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Main</span>
                     <input
                       type="color"
                       value={pnLCustomization.generalTextColor}
@@ -354,7 +354,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
                   {/* Balance Text Color */}
                   <div className="flex items-center justify-between p-2 rounded bg-zinc-700/30">
-                    <span className="text-sm text-zinc-200">Loss</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Loss</span>
                     <input
                       type="color"
                       value={pnLCustomization.balanceTextColor}
@@ -365,7 +365,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
                   {/* PnL Text Color */}
                   <div className="flex items-center justify-between p-2 rounded bg-zinc-700/30">
-                    <span className="text-sm text-zinc-200">Profit</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Profit</span>
                     <input
                       type="color"
                       value={pnLCustomization.pnlTextColor}
@@ -388,7 +388,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         pnlTextColor: '#2fe3ac'
                       });
                     }}
-                    className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors text-sm"
+                    className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors" style={{fontSize: '12px'}}
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
