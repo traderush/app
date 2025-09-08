@@ -21,10 +21,10 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
   const { signatureColor } = useSignatureColor();
 
   const rewardPoints = [
-    { volume: "50k", reward: "$100", x: 20, y: 150 },
-    { volume: "250k", reward: "$500", x: 50, y: 140 },
-    { volume: "500k", reward: "$1000", x: 80, y: 125 },
-    { volume: "1000k", reward: "$2000", x: 110, y: 100 }
+    { volume: "50k", reward: "$100", x: 20, y: 90 },
+    { volume: "250k", reward: "$500", x: 50, y: 80 },
+    { volume: "500k", reward: "$1000", x: 80, y: 65 },
+    { volume: "1000k", reward: "$2000", x: 110, y: 40 }
   ];
 
   const handleCopyReferral = async () => {
@@ -137,10 +137,10 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               </div>
 
               {/* Chart */}
-              <div className="w-56">
-                <div className="relative h-40 w-full">
+              <div className="w-48 h-32 flex items-center justify-center">
+                <div className="relative w-full h-full">
                   {/* Chart Area */}
-                  <svg className="w-full h-full" viewBox="15 35 100 120">
+                  <svg className="w-full h-full" viewBox="0 0 120 110">
                     {/* Area fill under the line */}
                     <defs>
                       <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -151,13 +151,13 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     
                     {/* Area fill */}
                     <path
-                      d="M 20 150 L 50 140 L 80 125 L 110 100 L 110 100 L 110 150 L 20 150 Z"
+                      d="M 20 90 L 50 80 L 80 65 L 110 40 L 110 40 L 110 90 L 20 90 Z"
                       fill="url(#areaGradient)"
                     />
                     
                     {/* Line */}
                     <path
-                      d="M 20 150 L 50 140 L 80 125 L 110 100"
+                      d="M 20 90 L 50 80 L 80 65 L 110 40"
                       fill="none"
                       stroke={signatureColor}
                       strokeWidth="3"
@@ -189,7 +189,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                         {/* Volume labels */}
                       <text
                         x={point.x}
-                        y="185"
+                        y="105"
                         fontSize="6"
                         fill="#9CA3AF"
                         textAnchor="middle"
