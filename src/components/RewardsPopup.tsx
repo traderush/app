@@ -137,8 +137,8 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               </div>
 
               {/* Chart */}
-              <div className="w-80">
-                <div className="relative h-64 w-full">
+              <div className="w-64">
+                <div className="relative h-48 w-full">
                   {/* Chart Area */}
                   <svg className="w-full h-full" viewBox="15 35 100 120">
                     {/* Area fill under the line */}
