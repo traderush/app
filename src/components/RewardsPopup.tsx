@@ -13,6 +13,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
   console.log('RewardsPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState(2); // Default to middle point
+  const [copied, setCopied] = useState(false);
   const [referralCode] = useState(() => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -21,15 +22,17 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
   const { signatureColor } = useSignatureColor();
 
   const rewardPoints = [
-    { volume: "50k", reward: "$100", x: 20, y: 90 },
-    { volume: "250k", reward: "$500", x: 50, y: 80 },
-    { volume: "500k", reward: "$1000", x: 80, y: 65 },
-    { volume: "1000k", reward: "$2000", x: 110, y: 40 }
+    { volume: "50k", reward: "$1000", x: 20, y: 90 },
+    { volume: "250k", reward: "$2000", x: 50, y: 80 },
+    { volume: "500k", reward: "$3000", x: 80, y: 65 },
+    { volume: "1000k", reward: "$4000", x: 110, y: 40 }
   ];
 
   const handleCopyReferral = async () => {
     try {
       await navigator.clipboard.writeText(referralCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy: ', err);
     }
@@ -127,10 +130,16 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                       className="p-1 hover:bg-zinc-700 rounded transition-colors"
                       onClick={handleCopyReferral}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400 hover:text-white">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
+                      {copied ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
+                          <path d="M20 6L9 17l-5-5"></path>
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400 hover:text-white">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      )}
                     </button>
                   </div>
                 </div>
