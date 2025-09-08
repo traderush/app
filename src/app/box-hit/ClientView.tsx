@@ -870,26 +870,25 @@ function BoxHitCanvas({
                        // Get the most recent price line segment at the chart position
                        const i2 = series.length - 1, i1 = i2 - 1;
                        
-                                          // Use stable transform system for hit detection (same as ticker and chart)
+                       // Use EXACT same coordinate system as cell rendering for accurate hit detection
                        const stepValue = 10; // $10 between adjacent grid lines
                        const gapPx = cellH; // pixel distance between grid lines (row height)
                        const pxPerUnit = gapPx / stepValue; // shared scale factor
                        
-                       // Current view center (same as ticker and chart)
-                       const centerPrice = series[series.length - 1]?.p || center;
+                       // Use same centerPrice as cell rendering (not series-based)
                        const centerY = size.h / 2;
                        
-                       // Transform functions (same as ticker and chart)
+                       // Transform functions (same as cell rendering)
                        const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
                        
-                       // Calculate Y positions using stable transform
-                       const p1Y = priceToY(series[i1].p) - gridPosition.offsetY;
-                       const p2Y = priceToY(series[i2].p) - gridPosition.offsetY;
+                       // Calculate Y positions using EXACT same method as cell rendering
+                       const p1Y = Math.round(priceToY(series[i1].p) - newOffsetY) + 0.5;
+                       const p2Y = Math.round(priceToY(series[i2].p) - newOffsetY) + 0.5;
                        
                        const p1 = { x: NOW_X - 6, y: p1Y };
                        const p2 = { x: NOW_X - 2, y: p2Y };
                        
-                       // Create cell rectangle
+                       // Create cell rectangle using EXACT same coordinates as rendering
                        const rect = { x: screenX, y: screenY, w: cellW, h: cellH };
                        
                        // Check collision between price line and cell
