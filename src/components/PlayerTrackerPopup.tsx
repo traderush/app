@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Copy, Star, Share, Search, Calendar, ExternalLink } from 'lucide-react';
+import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
 interface PlayerTrackerPopupProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
   onClose,
   player
 }) => {
+  const { signatureColor } = useSignatureColor();
   const [selectedTimeframe, setSelectedTimeframe] = useState('Max');
   const [activeTab, setActiveTab] = useState('Activity');
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; pnl: string; date: string } | null>(null);
@@ -66,9 +68,10 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
 
   // Mock data for the player
   const mockData = {
-    totalValue: '$268K',
-    unrealizedPnl: '+$100K',
-    availableBalance: '$4.28K',
+    pnl: '$268K',
+    winrate: '65%',
+    wins: 812,
+    losses: 1477,
     realizedPnl: '+$206K',
     totalTransactions: 19479,
     buyTransactions: 9585,
@@ -81,11 +84,11 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
       '<-50%': 19
     },
     recentActivity: [
-      { type: 'Sell', token: 'RATWIZARD', amount: '1.2026', marketCap: '$159K', age: '20s' },
-      { type: 'Buy', token: 'RATWIZARD', amount: '0.9584', marketCap: '$161K', age: '56s' },
-      { type: 'Sell', token: 'RATWIZARD', amount: '2.1045', marketCap: '$164K', age: '1m' },
-      { type: 'Buy', token: 'RATWIZARD', amount: '1.5678', marketCap: '$158K', age: '2m' },
-      { type: 'Sell', token: 'RATWIZARD', amount: '0.7891', marketCap: '$162K', age: '3m' }
+      { result: 'Win', gameName: 'RATWIZARD', betAmount: '1.2026', targetPrice: '$159K', age: '20s' },
+      { result: 'Loss', gameName: 'RATWIZARD', betAmount: '0.9584', targetPrice: '$161K', age: '56s' },
+      { result: 'Win', gameName: 'RATWIZARD', betAmount: '2.1045', targetPrice: '$164K', age: '1m' },
+      { result: 'Loss', gameName: 'RATWIZARD', betAmount: '1.5678', targetPrice: '$158K', age: '2m' },
+      { result: 'Win', gameName: 'RATWIZARD', betAmount: '0.7891', targetPrice: '$162K', age: '3m' }
     ]
   };
 
@@ -188,9 +191,12 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                     onClick={() => setSelectedTimeframe(timeframe)}
                     className={`px-2 py-1 text-xs rounded transition-colors ${
                       selectedTimeframe === timeframe
-                        ? 'bg-blue-600 text-white'
+                        ? 'text-white'
                         : 'text-zinc-400 hover:text-white'
                     }`}
+                    style={{
+                      backgroundColor: selectedTimeframe === timeframe ? signatureColor : 'transparent'
+                    }}
                   >
                     {timeframe}
                   </button>
@@ -214,16 +220,13 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                 <h3 className="text-white text-sm font-medium mb-4">Balance</h3>
                 <div className="space-y-3">
                   <div>
-                    <div className="text-zinc-400 text-xs mb-1">Total Value</div>
-                    <div className="text-white text-lg font-medium">{mockData.totalValue}</div>
+                    <div className="text-zinc-400 text-xs mb-1">PNL</div>
+                    <div className="text-white text-lg font-medium">{mockData.pnl}</div>
                   </div>
                   <div>
-                    <div className="text-zinc-400 text-xs mb-1">Unrealized PNL</div>
-                    <div className="text-green-400 text-sm font-medium">{mockData.unrealizedPnl}</div>
-                  </div>
-                  <div>
-                    <div className="text-zinc-400 text-xs mb-1">Available Balance</div>
-                    <div className="text-white text-sm font-medium">{mockData.availableBalance}</div>
+                    <div className="text-zinc-400 text-xs mb-1">Winrate</div>
+                    <div className="text-white text-sm font-medium">{mockData.winrate}</div>
+                    <div className="text-zinc-500 text-xs">{mockData.wins}W / {mockData.losses}L</div>
                   </div>
                 </div>
               </div>
@@ -325,11 +328,6 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                     <div className="text-zinc-400 text-xs mb-1">Total Trades</div>
                     <div className="text-white text-sm font-medium">{mockData.totalTransactions}</div>
                   </div>
-                  <div>
-                    <div className="text-zinc-400 text-xs mb-1">Winrate</div>
-                    <div className="text-white text-sm font-medium">35%</div>
-                    <div className="text-zinc-500 text-xs">812W / 1477L</div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -356,10 +354,10 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
               {/* Activity Table */}
               <div className="mt-4">
                 <div className="grid grid-cols-12 gap-4 pb-3 border-b border-zinc-800/70 text-zinc-400 text-xs font-medium">
-                  <div className="col-span-2">Type</div>
-                  <div className="col-span-3">Token</div>
-                  <div className="col-span-2">Amount</div>
-                  <div className="col-span-2">Market Cap</div>
+                  <div className="col-span-2">Result</div>
+                  <div className="col-span-3">Game Name</div>
+                  <div className="col-span-2">Bet Amount</div>
+                  <div className="col-span-2">Target Price</div>
                   <div className="col-span-2">Age</div>
                   <div className="col-span-1">Explorer</div>
                 </div>
@@ -369,19 +367,19 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                     <div key={index} className="grid grid-cols-12 gap-4 items-center py-2 hover:bg-zinc-900/30 rounded px-1 transition-colors">
                       <div className="col-span-2">
                         <span className={`text-xs font-medium ${
-                          activity.type === 'Buy' ? 'text-green-400' : 'text-red-400'
+                          activity.result === 'Win' ? 'text-green-400' : 'text-red-400'
                         }`}>
-                          {activity.type}
+                          {activity.result}
                         </span>
                       </div>
                       <div className="col-span-3 flex items-center gap-2">
                         <div className="w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center">
                           <span className="text-xs">🐭</span>
                         </div>
-                        <span className="text-white text-xs font-medium">{activity.token}</span>
+                        <span className="text-white text-xs font-medium">{activity.gameName}</span>
                       </div>
-                      <div className="col-span-2 text-white text-xs">{activity.amount}</div>
-                      <div className="col-span-2 text-zinc-300 text-xs">{activity.marketCap}</div>
+                      <div className="col-span-2 text-white text-xs">{activity.betAmount}</div>
+                      <div className="col-span-2 text-zinc-300 text-xs">{activity.targetPrice}</div>
                       <div className="col-span-2 text-zinc-400 text-xs">{activity.age}</div>
                       <div className="col-span-1">
                         <button className="text-zinc-400 hover:text-white transition-colors">
