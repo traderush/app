@@ -81,7 +81,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
           style={{ backgroundColor: '#0E0E0E' }}
         >
           {/* Header */}
-          <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+          <div className="px-4 py-2 border-b border-zinc-800 flex items-center justify-between">
             <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Rewards</h2>
             <button
               onClick={onClose}
@@ -92,10 +92,10 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
           </div>
 
           {/* Rewards Content */}
-          <div className="p-2">
+          <div className="px-2 py-2">
             <div className="flex items-center justify-between h-96">
               {/* Left Side - Text Content */}
-              <div className="flex flex-col justify-center space-y-2 w-1/2 pr-4">
+              <div className="flex flex-col justify-center space-y-2 w-1/2 pr-2">
                 <h3 className="text-white text-xl font-medium">Invite Friends and Earn</h3>
                 <p className="text-white text-base">Commissions Get up to</p>
                 <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
@@ -105,7 +105,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               </div>
 
               {/* Right Side - Chart */}
-              <div className="w-1/2 pl-4">
+              <div className="w-1/2 pl-2">
                 <div className="relative h-80 w-full">
                   {/* Chart Area */}
                   <svg className="w-full h-full" viewBox="0 0 300 200">
