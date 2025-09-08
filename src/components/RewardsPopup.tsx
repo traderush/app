@@ -95,13 +95,31 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
           <div className="p-4">
             <div className="flex items-center gap-6">
               {/* Text Content */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
                 <p className="text-white text-sm">Commissions Get up to</p>
                 <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
                   {rewardPoints[selectedPoint].reward}
                 </div>
                 <p className="text-white text-sm">Commission</p>
+                
+                {/* Referral Link Copy Box */}
+                <div className="mt-3">
+                  <div className="flex items-center gap-2 p-2 bg-zinc-800/50 border border-zinc-700/50 rounded">
+                    <input 
+                      type="text" 
+                      value="https://traderush.app/ref/yourcode" 
+                      readOnly 
+                      className="flex-1 bg-transparent text-zinc-300 text-xs outline-none"
+                    />
+                    <button 
+                      className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors"
+                      onClick={() => navigator.clipboard.writeText('https://traderush.app/ref/yourcode')}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Chart */}
