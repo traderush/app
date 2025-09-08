@@ -124,12 +124,12 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
                     alt="SOL" 
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-white">SOL</span>
+                  <span className="text-xs text-white">SOL</span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-zinc-400 uppercase tracking-wide">Current Balance</span>
-                <span className="text-sm text-white">0.0000 SOL</span>
+                <span className="text-xs text-white">0.0000 SOL</span>
               </div>
             </div>
 
