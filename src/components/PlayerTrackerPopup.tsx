@@ -221,15 +221,15 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                 <div className="space-y-3">
                   <div>
                     <div className="text-zinc-400 text-xs mb-1">PNL</div>
-                    <div className="text-green-400 text-lg font-medium">{mockData.pnl}</div>
+                    <div className="text-lg font-medium" style={{ color: '#04DF72' }}>{mockData.pnl}</div>
                   </div>
                   <div>
                     <div className="text-zinc-400 text-xs mb-1">Winrate</div>
                     <div className="text-white text-sm font-medium">{mockData.winrate}</div>
                     <div className="text-xs">
-                      <span style={{ color: signatureColor }}>{mockData.wins}W</span>
+                      <span style={{ color: '#04DF72' }}>{mockData.wins}W</span>
                       <span className="text-zinc-500"> / </span>
-                      <span className="text-red-500">{mockData.losses}L</span>
+                      <span className="text-red-400">{mockData.losses}L</span>
                     </div>
                   </div>
                 </div>
@@ -371,10 +371,10 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                     <div key={index} className="grid grid-cols-12 gap-4 items-center py-2 hover:bg-zinc-900/30 rounded px-1 transition-colors">
                       <div className="col-span-2">
                         <span className={`text-xs font-medium ${
-                          activity.result === 'Win' ? '' : 'text-red-500'
+                          activity.result === 'Win' ? '' : 'text-red-400'
                         }`}
                         style={{
-                          color: activity.result === 'Win' ? signatureColor : undefined
+                          color: activity.result === 'Win' ? '#04DF72' : undefined
                         }}>
                           {activity.result}
                         </span>
