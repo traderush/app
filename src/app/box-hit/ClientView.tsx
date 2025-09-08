@@ -562,12 +562,9 @@ function BoxHitCanvas({
   const handleRecenter = useCallback(() => {
     setAutoFollowMode(true);
     setTargetCenterPrice(series[series.length - 1]?.p || center);
-    // Center the view so the NOW line appears at center of screen (no artificial movement)
-    const currentTimeX = NOW_X; // NOW line position (no artificial movement)
-    const centerPosition = size.w / 2; // Center of screen
-    const offsetNeeded = currentTimeX - centerPosition;
-    setGridScrollOffset(offsetNeeded);
-  }, [size.w, NOW_X, series, center]);
+    // Reset to initial horizontal position (same as page load)
+    setGridScrollOffset(0);
+  }, [series, center]);
 
 
 
