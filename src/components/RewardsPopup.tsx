@@ -93,9 +93,9 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
 
           {/* Rewards Content */}
           <div className="p-3">
-            <div className="flex gap-0 h-80">
+            <div className="flex h-80">
               {/* Left Side - Text Content */}
-              <div className="flex flex-col justify-center space-y-1 w-1/2">
+              <div className="flex flex-col justify-center space-y-1 w-80">
                 <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
                 <p className="text-white text-sm">Commissions Get up to</p>
                 <div className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
@@ -105,7 +105,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               </div>
 
               {/* Right Side - Chart */}
-              <div className="w-1/2">
+              <div className="flex-1">
                 <div className="relative h-full w-full">
                   {/* Chart Area */}
                   <svg className="w-full h-full" viewBox="0 0 300 200">
