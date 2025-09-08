@@ -17,7 +17,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SignatureColorProvider, useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const { signatureColor } = useSignatureColor();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -112,8 +112,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [watchedPlayers]);
 
   return (
-    <SignatureColorProvider>
-      <div className="text-zinc-100 min-h-screen" style={{backgroundColor: '#09090B'}}>
+    <div className="text-zinc-100 min-h-screen" style={{backgroundColor: '#09090B'}}>
         {/* Fixed navbar */}
         <div className="fixed top-0 left-0 right-0 z-50">
                   <Navbar 
@@ -439,6 +438,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           }}
           player={selectedPlayer}
         />
-      </SignatureColorProvider>
-    );
+    </div>
+  );
+}
+
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <SignatureColorProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </SignatureColorProvider>
+  );
 }
