@@ -145,7 +145,7 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
                       key={index}
                       onClick={() => setCurrentSlide(index)}
                       className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentSlide ? 'bg-green-500' : 'bg-zinc-600'
+                        index === currentSlide ? 'bg-[#2fe3ac]' : 'bg-zinc-600'
                       }`}
                     />
                   ))}
