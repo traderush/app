@@ -158,47 +158,6 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                       </g>
                     ))}
                     
-                    {/* Annotation line and text for selected point */}
-                    {selectedPoint !== null && (
-                      <g>
-                        <line 
-                          x1={rewardPoints[selectedPoint].x} 
-                          y1={rewardPoints[selectedPoint].y} 
-                          x2={rewardPoints[selectedPoint].x} 
-                          y2={rewardPoints[selectedPoint].y - 20} 
-                          stroke="white" 
-                          strokeWidth="1" 
-                          strokeDasharray="2,2"
-                        />
-                        <rect 
-                          x={rewardPoints[selectedPoint].x - 15} 
-                          y={rewardPoints[selectedPoint].y - 35} 
-                          width="30" 
-                          height="20" 
-                          fill="rgba(0,0,0,0.8)" 
-                          rx="2"
-                        />
-                        <text 
-                          x={rewardPoints[selectedPoint].x} 
-                          y={rewardPoints[selectedPoint].y - 25} 
-                          fontSize="6" 
-                          fill="white" 
-                          textAnchor="middle"
-                        >
-                          Earn commission
-                        </text>
-                        <text 
-                          x={rewardPoints[selectedPoint].x} 
-                          y={rewardPoints[selectedPoint].y - 18} 
-                          fontSize="8" 
-                          fill="white" 
-                          textAnchor="middle" 
-                          fontWeight="bold"
-                        >
-                          {rewardPoints[selectedPoint].reward}/month
-                        </text>
-                      </g>
-                    )}
                   </svg>
                 </div>
               </div>
