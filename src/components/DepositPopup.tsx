@@ -118,14 +118,14 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
             <div className="border border-zinc-700/50 rounded p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Token</span>
-                <div className="flex items-center gap-2">
+                <button className="flex items-center gap-2 px-2 py-1 rounded border border-zinc-600 bg-zinc-800/50 hover:bg-zinc-700/50 hover:border-zinc-500 transition-colors">
                   <img 
                     src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png" 
                     alt="SOL" 
                     className="w-4 h-4"
                   />
                   <span className="text-xs text-white">SOL</span>
-                </div>
+                </button>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-zinc-400 uppercase tracking-wide">Current Balance</span>
