@@ -91,11 +91,11 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
       <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
         <div 
           ref={popupRef}
-          className="w-auto border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
+          className="w-auto border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100 p-4"
           style={{ backgroundColor: '#0E0E0E' }}
         >
           {/* Header */}
-          <div className="px-4 py-2 border-b border-zinc-800 flex items-center justify-between">
+          <div className="py-2 border-b border-zinc-800 flex items-center justify-between">
             <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Rewards</h2>
             <button
               onClick={onClose}
@@ -106,18 +106,18 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
           </div>
 
           {/* Rewards Content */}
-          <div className="p-4">
-            <div className="flex items-center gap-6">
-              {/* Text Content */}
-              <div className="space-y-1">
-                <h3 className="text-white" style={{fontSize: '14px'}}>Invite Friends and Earn</h3>
-                <p className="text-white" style={{fontSize: '14px'}}>Commissions Get up to</p>
-                <div className="flex items-baseline gap-2">
-                  <span style={{fontSize: '28px', fontWeight: 500, color: signatureColor}}>
-                    {rewardPoints[selectedPoint].reward}
-                  </span>
-                  <span className="text-white" style={{fontSize: '14px'}}>Commission</span>
-                </div>
+          <div>
+            <div className="flex items-center gap-8">
+            {/* Text Content */}
+            <div className="space-y-1">
+              <h3 className="text-white" style={{fontSize: '18px'}}>Invite Friends and Earn</h3>
+              <p className="text-white" style={{fontSize: '18px'}}>Commissions Get up to</p>
+              <div className="flex items-baseline gap-2">
+                <span style={{fontSize: '28px', fontWeight: 500, color: signatureColor}}>
+                  {rewardPoints[selectedPoint].reward}
+                </span>
+                <span className="text-white" style={{fontSize: '18px'}}>Commission</span>
+              </div>
                 
                 {/* Referral Code */}
                 <div className="mt-3">
@@ -187,15 +187,15 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                         />
                         
                         {/* Volume labels */}
-                        <text 
-                          x={point.x} 
-                          y="185" 
-                          fontSize="12" 
-                          fill="#9CA3AF" 
-                          textAnchor="middle"
-                        >
-                          Vol.{point.volume}
-                        </text>
+                      <text
+                        x={point.x}
+                        y="185"
+                        fontSize="10"
+                        fill="#9CA3AF"
+                        textAnchor="middle"
+                      >
+                        Vol.{point.volume}
+                      </text>
                       </g>
                     ))}
                     
