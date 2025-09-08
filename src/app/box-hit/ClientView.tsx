@@ -517,25 +517,19 @@ function BoxHitCanvas({
     onSelectionChange?.(0, 0, [], null);
   }, [onSelectionChange]);
 
-  // Timer to update current time for the moving now line
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(prev => (prev + 0.1) % 300); // Reset every 5 minutes, increment by 0.1 for smoother movement
-    }, 100); // Update every 100ms for smooth movement
+  // Remove artificial timer - let natural grid progression handle movement
+  // currentTime stays at 0 to maintain centered position from load
 
-    return () => clearInterval(timer);
-  }, []);
-
-  // Auto-follow logic - keep 0:00 line (current time) centered on screen
+  // Auto-follow logic - keep NOW line centered on screen (no artificial movement)
   useEffect(() => {
     if (autoFollowMode) {
-      // The 0:00 line represents current time, center it on screen
-      const currentTimeX = NOW_X - (currentTime * (size.w / 300)); // Where 0:00 line currently is
+      // The NOW line stays in its centered position from load
+      const currentTimeX = NOW_X; // NOW line position (no artificial movement)
       const centerPosition = size.w / 2; // Center of screen
       const offsetNeeded = currentTimeX - centerPosition;
       setGridScrollOffset(offsetNeeded);
     }
-  }, [currentTime, autoFollowMode, size.w, NOW_X]);
+  }, [autoFollowMode, size.w, NOW_X]);
 
   // Reset grid scroll offset when recentering
   
@@ -568,12 +562,12 @@ function BoxHitCanvas({
   const handleRecenter = useCallback(() => {
     setAutoFollowMode(true);
     setTargetCenterPrice(series[series.length - 1]?.p || center);
-    // Center the view so the 0:00 line (current time) appears at center of screen
-    const currentTimeX = NOW_X - (currentTime * (size.w / 300)); // Where 0:00 line currently is
+    // Center the view so the NOW line appears at center of screen (no artificial movement)
+    const currentTimeX = NOW_X; // NOW line position (no artificial movement)
     const centerPosition = size.w / 2; // Center of screen
     const offsetNeeded = currentTimeX - centerPosition;
     setGridScrollOffset(offsetNeeded);
-  }, [currentTime, size.w, NOW_X, series, center]);
+  }, [size.w, NOW_X, series, center]);
 
 
 
