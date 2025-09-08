@@ -92,21 +92,21 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
           </div>
 
           {/* Rewards Content */}
-          <div className="p-2">
-            <div className="flex h-80">
-              {/* Left Side - Text Content */}
-              <div className="flex flex-col justify-center space-y-1 w-80">
+          <div className="p-6">
+            <div className="text-center space-y-6">
+              {/* Text Content */}
+              <div className="space-y-2">
                 <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
                 <p className="text-white text-sm">Commissions Get up to</p>
-                <div className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
                   {rewardPoints[selectedPoint].reward}
                 </div>
                 <p className="text-white text-sm">Commission</p>
               </div>
 
-              {/* Right Side - Chart */}
-              <div className="w-96">
-                <div className="relative h-full w-full">
+              {/* Chart */}
+              <div className="w-full max-w-md mx-auto">
+                <div className="relative h-64 w-full">
                   {/* Chart Area */}
                   <svg className="w-full h-full" viewBox="0 0 300 200">
                     {/* Area fill under the line */}
