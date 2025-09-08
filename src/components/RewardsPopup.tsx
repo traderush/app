@@ -140,7 +140,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
               <div className="w-80">
                 <div className="relative h-64 w-full">
                   {/* Chart Area */}
-                  <svg className="w-full h-full" viewBox="0 0 160 200">
+                  <svg className="w-full h-full" viewBox="15 35 100 120">
                     {/* Area fill under the line */}
                     <defs>
                       <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
