@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { X, Volume2, VolumeX, Moon, Sun, Monitor, Smartphone, Globe, Shield, Bell, User, Palette } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface SettingsPopupProps {
   isOpen: boolean;
@@ -83,80 +83,8 @@ export default function SettingsPopup({ isOpen, onClose, triggerRef }: SettingsP
           </div>
 
           {/* Content */}
-          <div className="p-4 space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
-                <div className="flex items-center gap-3">
-                  <Volume2 size={16} className="text-zinc-400" />
-                  <span className="text-sm text-zinc-200">Sound Effects</span>
-                </div>
-                <div className="w-12 h-6 rounded-full bg-zinc-700 relative cursor-pointer">
-                  <div className="w-5 h-5 rounded-full bg-zinc-300 absolute top-0.5 left-0.5 transition-transform"></div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
-                <div className="flex items-center gap-3">
-                  <Bell size={16} className="text-zinc-400" />
-                  <span className="text-sm text-zinc-200">Notifications</span>
-                </div>
-                <div className="w-12 h-6 rounded-full bg-zinc-700 relative cursor-pointer">
-                  <div className="w-5 h-5 rounded-full bg-zinc-300 absolute top-0.5 left-0.5 transition-transform"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
-                <div className="flex items-center gap-3">
-                  <Moon size={16} className="text-zinc-400" />
-                  <span className="text-sm text-zinc-200">Dark Mode</span>
-                </div>
-                <div className="w-12 h-6 rounded-full bg-zinc-700 relative cursor-pointer">
-                  <div className="w-5 h-5 rounded-full bg-zinc-300 absolute top-0.5 left-0.5 transition-transform"></div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
-                <div className="flex items-center gap-3">
-                  <Monitor size={16} className="text-zinc-400" />
-                  <span className="text-sm text-zinc-200">Compact Layout</span>
-                </div>
-                <div className="w-12 h-6 rounded-full bg-zinc-700 relative cursor-pointer">
-                  <div className="w-5 h-5 rounded-full bg-zinc-300 absolute top-0.5 left-0.5 transition-transform"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
-                <div className="flex items-center gap-3">
-                  <Shield size={16} className="text-zinc-400" />
-                  <span className="text-sm text-zinc-200">Two-Factor Auth</span>
-                </div>
-                <div className="w-12 h-6 rounded-full bg-zinc-700 relative cursor-pointer">
-                  <div className="w-5 h-5 rounded-full bg-zinc-300 absolute top-0.5 left-0.5 transition-transform"></div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50 border border-zinc-700/50">
-                <div className="flex items-center gap-3">
-                  <Globe size={16} className="text-zinc-400" />
-                  <span className="text-sm text-zinc-200">Location Services</span>
-                </div>
-                <div className="w-12 h-6 rounded-full bg-zinc-700 relative cursor-pointer">
-                  <div className="w-5 h-5 rounded-full bg-zinc-300 absolute top-0.5 left-0.5 transition-transform"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <button className="w-full flex items-center gap-3 p-3 rounded bg-zinc-800/50 border border-zinc-700/50 hover:bg-zinc-800 transition-colors">
-                <User size={16} className="text-zinc-400" />
-                <span className="text-sm text-zinc-200">Profile Settings</span>
-              </button>
-              <button className="w-full flex items-center gap-3 p-3 rounded bg-zinc-800/50 border border-zinc-700/50 hover:bg-zinc-800 transition-colors">
-                <Palette size={16} className="text-zinc-400" />
-                <span className="text-sm text-zinc-200">Customize Theme</span>
-              </button>
-            </div>
+          <div className="p-4 flex items-center justify-center">
+            <span className="text-zinc-400" style={{fontSize: '12px'}}>Coming Soon</span>
           </div>
         </div>
       </div>
