@@ -106,7 +106,7 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
           {/* Content */}
           <div className="p-4 space-y-4">
             {/* Deposit Token Section */}
-            <div className="bg-zinc-800/50 rounded p-3 space-y-2">
+            <div className="border border-zinc-700/50 rounded p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Token</span>
                 <div className="flex items-center gap-2">
@@ -121,7 +121,7 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
             </div>
 
             {/* Deposit Address Section */}
-            <div className="bg-zinc-800/50 rounded p-3 space-y-3">
+            <div className="border border-zinc-700/50 rounded p-3 space-y-3">
               <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Address</span>
               
               {/* QR Code */}
@@ -152,12 +152,12 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
 
             {/* Warning Section */}
             <div className="space-y-2">
-              <div className="flex items-start gap-2 bg-zinc-800/50 rounded p-3">
+              <div className="flex items-start gap-2 border border-zinc-700/50 rounded p-3">
                 <Info size={14} className="text-white mt-0.5 flex-shrink-0" />
                 <span className="text-xs text-white">Only send SOL to this address.</span>
               </div>
               
-              <div className="flex items-start gap-2 bg-zinc-800/50 rounded p-3">
+              <div className="flex items-start gap-2 border border-zinc-700/50 rounded p-3">
                 <ArrowDown size={14} className="text-white mt-0.5 flex-shrink-0" />
                 <span className="text-xs text-white">
                   This address can only receive SOL on the Solana network. Don&apos;t send SOL on any other network or it may be lost.
