@@ -520,8 +520,8 @@ function BoxHitCanvas({
   // Timer to update current time for the moving now line
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(prev => (prev + 1) % 300); // Reset every 5 minutes
-    }, 1000); // Update every second
+      setCurrentTime(prev => (prev + 0.1) % 300); // Reset every 5 minutes, increment by 0.1 for smoother movement
+    }, 100); // Update every 100ms for smooth movement
 
     return () => clearInterval(timer);
   }, []);
