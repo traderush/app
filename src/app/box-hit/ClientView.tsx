@@ -564,6 +564,8 @@ function BoxHitCanvas({
     setTargetCenterPrice(series[series.length - 1]?.p || center);
     // Reset to initial horizontal position (same as page load)
     setGridScrollOffset(0);
+    // Reset to initial vertical position (same as page load)
+    setGridPosition(prev => ({ ...prev, offsetY: 0 }));
   }, [series, center]);
 
 
