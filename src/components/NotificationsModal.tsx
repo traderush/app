@@ -101,7 +101,7 @@ export default function NotificationsPopup({ isOpen, onClose, triggerRef }: Noti
             <button
               onClick={onClose}
               aria-label="Close notifications"
-              className="grid place-items-center w-6 h-6 rounded-full hover:bg-white/5 transition-colors"
+              className="grid place-items-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
             >
               <X size={14} className="text-white" />
             </button>
