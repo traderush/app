@@ -112,7 +112,7 @@ export default function NotificationsPopup({ isOpen, onClose, triggerRef }: Noti
         <div className="max-h-96 overflow-auto">
           {/* Empty state */}
           <div className="p-6 text-center">
-            <div className="text-zinc-400 text-sm">No notifications</div>
+            <div className="text-zinc-400" style={{fontSize: '12px'}}>No notifications</div>
           </div>
         </div>
       </div>
