@@ -22,10 +22,10 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
   const { signatureColor } = useSignatureColor();
 
   const rewardPoints = [
-    { volume: "50k", reward: "$1000", x: 20, y: 90 },
-    { volume: "250k", reward: "$2000", x: 50, y: 80 },
-    { volume: "500k", reward: "$3000", x: 80, y: 65 },
-    { volume: "1000k", reward: "$4000", x: 110, y: 40 }
+    { volume: "50k", reward: "$200", x: 20, y: 90 },
+    { volume: "250k", reward: "$300", x: 50, y: 80 },
+    { volume: "500k", reward: "$400", x: 80, y: 65 },
+    { volume: "1000k", reward: "$500", x: 110, y: 40 }
   ];
 
   const handleCopyReferral = async () => {
