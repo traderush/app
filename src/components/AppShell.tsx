@@ -418,8 +418,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </>
-              )}
-        </div>
+      )}
         
         {/* Watchlist Popup */}
         <WatchlistPopup
