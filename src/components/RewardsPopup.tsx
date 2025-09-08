@@ -151,13 +151,13 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     
                     {/* Area fill */}
                     <path
-                      d="M 20 150 Q 50 120 80 90 Q 110 60 130 40"
+                      d="M 20 150 Q 50 120 80 90 Q 110 60 150 40"
                       fill="url(#areaGradient)"
                     />
                     
                     {/* Line */}
                     <path
-                      d="M 20 150 Q 50 120 80 90 Q 110 60 130 40"
+                      d="M 20 150 Q 50 120 80 90 Q 110 60 150 40"
                       fill="none"
                       stroke={signatureColor}
                       strokeWidth="3"
