@@ -110,24 +110,24 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
             <div className="flex items-center gap-8">
             {/* Text Content */}
             <div className="space-y-1">
-              <h3 className="text-white" style={{fontSize: '18px'}}>Invite Friends and Earn</h3>
-              <p className="text-white" style={{fontSize: '18px'}}>Commissions Get up to</p>
+              <h3 className="text-white" style={{fontSize: '14px'}}>Invite Friends and Earn</h3>
+              <p className="text-white" style={{fontSize: '14px'}}>Commissions Get up to</p>
               <div className="flex items-baseline gap-2">
                 <span style={{fontSize: '28px', fontWeight: 500, color: signatureColor}}>
                   {rewardPoints[selectedPoint].reward}
                 </span>
-                <span className="text-white" style={{fontSize: '18px'}}>Commission</span>
+                <span className="text-white" style={{fontSize: '14px'}}>Commission</span>
               </div>
                 
                 {/* Referral Code */}
                 <div className="mt-3">
-                  <div className="inline-flex items-center gap-2 px-3 py-2 bg-zinc-800/50 border border-zinc-700/50 rounded">
-                    <span className="text-zinc-400 text-lg font-mono">{referralCode}</span>
-                    <button 
+                  <div className="inline-flex items-center gap-2 px-2 py-1 bg-zinc-800/50 border border-zinc-700/50 rounded">
+                    <span className="text-zinc-400 font-mono" style={{fontSize: '14px'}}>{referralCode}</span>
+                    <button
                       className="p-1 hover:bg-zinc-700 rounded transition-colors"
                       onClick={handleCopyReferral}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400 hover:text-white">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400 hover:text-white">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
