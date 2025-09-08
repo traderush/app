@@ -318,7 +318,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       value={pnLCustomization.backgroundOpacity}
                       onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundOpacity: value }))}
                       className="w-full"
-                      signatureColor="#FA5616"
+                      signatureColor={signatureColor}
                     />
                   </div>
                 </div>
@@ -337,7 +337,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       value={pnLCustomization.backgroundBlur}
                       onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundBlur: value }))}
                       className="w-full"
-                      signatureColor="#FA5616"
+                      signatureColor={signatureColor}
                     />
                   </div>
                 </div>
@@ -406,7 +406,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     onClick={() => setIsPnLCustomizeOpen(false)}
                     className="px-4 py-2 font-medium rounded transition-colors"
                     style={{ 
-                      backgroundColor: '#FA5616',
+                      backgroundColor: signatureColor,
                       color: '#09090B',
                       fontSize: '12px'
                     }}
