@@ -19,15 +19,18 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
   const slides = [
     {
       title: "Getting Started",
-      description: "Learn the basics of trading and how to place your first bet on the platform."
+      description: "Learn the basics of trading and how to place your first bet on the platform.",
+      image: "https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
     },
     {
       title: "Advanced Strategies", 
-      description: "Discover advanced trading strategies and risk management techniques."
+      description: "Discover advanced trading strategies and risk management techniques.",
+      image: "https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
     },
     {
       title: "Community Features",
-      description: "Connect with other traders, share insights, and track top performers."
+      description: "Connect with other traders, share insights, and track top performers.",
+      image: "https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
     }
   ];
 
@@ -115,8 +118,8 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
               {/* Demo GIF */}
               <div className="w-full max-w-lg mx-auto">
                 <img 
-                  src="https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif"
-                  alt="How to Play Demo"
+                  src={slides[currentSlide].image}
+                  alt={`${slides[currentSlide].title} Demo`}
                   className="w-full rounded-lg border border-zinc-700/50"
                 />
               </div>
