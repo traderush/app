@@ -842,19 +842,22 @@ function BoxHitCanvas({
                  // Calculate screen position for this cell using stable transform
                  const screenX = NOW_X + cell.col * cellW - newOffsetX;
                  
-                 // Use stable transform for Y positioning - same as rendering
+                 // Use EXACT same coordinate system as cell rendering for accurate hit detection
                  const stepValue = 10; // $10 between adjacent grid lines
                  const gapPx = cellH; // pixel distance between grid lines (row height)
                  const pxPerUnit = gapPx / stepValue;
                  const centerPrice = series[series.length - 1]?.p || center; // Current view center
                  const centerY = size.h / 2;
                  
-                 // Transform functions (same as rendering)
+                 // Transform functions (same as cell rendering)
                  const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
                  
-                 // Calculate Y position based on row index and stable transform
-                 const priceAtRow = centerPrice + (cell.row - Math.floor(size.h / (2 * cellH))) * stepValue;
-                 const screenY = priceToY(priceAtRow) - newOffsetY;
+                 // Calculate Y position using EXACT same method as cell rendering
+                 // Find the nearest price that ends in 0 to the current center (same as rendering)
+                 const nearestRoundPrice = Math.round(centerPrice / stepValue) * stepValue;
+                 const priceAtRow = nearestRoundPrice + (cell.row - Math.floor(size.h / (2 * cellH))) * stepValue;
+                 // Apply same pixel snapping as cell rendering for consistent alignment
+                 const screenY = Math.round(priceToY(priceAtRow) - gridPosition.offsetY) + 0.5;
                  
                  let newState = cell.state;
                  let newCrossedTime = cell.crossedTime;
@@ -882,8 +885,8 @@ function BoxHitCanvas({
                        const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
                        
                        // Calculate Y positions using EXACT same method as cell rendering
-                       const p1Y = Math.round(priceToY(series[i1].p) - newOffsetY) + 0.5;
-                       const p2Y = Math.round(priceToY(series[i2].p) - newOffsetY) + 0.5;
+                       const p1Y = Math.round(priceToY(series[i1].p) - gridPosition.offsetY) + 0.5;
+                       const p2Y = Math.round(priceToY(series[i2].p) - gridPosition.offsetY) + 0.5;
                        
                        const p1 = { x: NOW_X - 6, y: p1Y };
                        const p2 = { x: NOW_X - 2, y: p2Y };
