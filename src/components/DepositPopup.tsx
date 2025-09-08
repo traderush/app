@@ -119,7 +119,11 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
               <div className="flex items-center justify-between">
                 <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Token</span>
                 <div className="flex items-center gap-2">
-                  <Menu size={14} className="text-white" />
+                  <img 
+                    src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png" 
+                    alt="SOL" 
+                    className="w-4 h-4"
+                  />
                   <span className="text-sm text-white">SOL</span>
                 </div>
               </div>
@@ -134,9 +138,9 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
               <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Address</span>
               
               {/* QR Code */}
-              <div className="flex justify-center">
+              <div className="flex justify-center mt-4">
                 <div className="w-32 h-32 bg-white rounded flex items-center justify-center">
-                  <div className="text-black text-2xl">=</div>
+                  <div className="text-black text-xs">QR Code</div>
                 </div>
               </div>
               
@@ -145,17 +149,19 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
                 <div className="text-xs text-white font-mono break-all">
                   4KtmTauUtwzTwy2U6v966xMNz961XP9iqk8WfFtpnKBe
                 </div>
-                <button
-                  onClick={handleCopyAddress}
-                  className={`flex items-center justify-center gap-1 mt-2 text-xs transition-colors ${
-                    isCopied 
-                      ? 'text-green-500' 
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
-                  {isCopied ? 'Copied!' : 'Click to copy'}
-                </button>
+                <div className="flex justify-center mt-2">
+                  <button
+                    onClick={handleCopyAddress}
+                    className={`flex items-center justify-center gap-1 text-xs transition-colors ${
+                      isCopied 
+                        ? 'text-green-500' 
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                    {isCopied ? 'Copied!' : 'Click to copy'}
+                  </button>
+                </div>
               </div>
               
               <div className="text-xs text-zinc-400 text-center">
