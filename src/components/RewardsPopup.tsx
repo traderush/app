@@ -93,7 +93,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
 
           {/* Rewards Content */}
           <div className="p-3">
-            <div className="flex gap-4 h-80">
+            <div className="flex gap-0 h-80">
               {/* Left Side - Text Content */}
               <div className="flex flex-col justify-center space-y-1 w-1/2">
                 <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
