@@ -15,10 +15,10 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
   const popupRef = useRef<HTMLDivElement>(null);
 
   const rewardPoints = [
-    { volume: "50k", reward: "$100", x: 20, y: 100 },
-    { volume: "250k", reward: "$500", x: 50, y: 80 },
-    { volume: "500k", reward: "$1000", x: 80, y: 60 },
-    { volume: "1000k", reward: "$2000", x: 110, y: 40 }
+    { volume: "50k", reward: "$100", x: 30, y: 150 },
+    { volume: "250k", reward: "$500", x: 80, y: 120 },
+    { volume: "500k", reward: "$1000", x: 130, y: 90 },
+    { volume: "1000k", reward: "$2000", x: 180, y: 60 }
   ];
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
       <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
         <div 
           ref={popupRef}
-          className="w-[600px] border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
+          className="w-[800px] border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
           style={{ backgroundColor: '#0E0E0E' }}
         >
           {/* Header */}
@@ -92,23 +92,23 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
           </div>
 
           {/* Rewards Content */}
-          <div className="p-4">
-            <div className="flex items-center justify-between h-80">
+          <div className="p-6">
+            <div className="flex items-center justify-between h-96">
               {/* Left Side - Text Content */}
-              <div className="flex flex-col justify-center space-y-2 w-1/2 pr-6">
-                <h3 className="text-white text-lg font-medium">Invite Friends and Earn</h3>
-                <p className="text-white text-sm">Commissions Get up to</p>
-                <div className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+              <div className="flex flex-col justify-center space-y-3 w-1/2 pr-8">
+                <h3 className="text-white text-xl font-medium">Invite Friends and Earn</h3>
+                <p className="text-white text-base">Commissions Get up to</p>
+                <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
                   {rewardPoints[selectedPoint].reward}
                 </div>
-                <p className="text-white text-sm">Commission</p>
+                <p className="text-white text-base">Commission</p>
               </div>
 
               {/* Right Side - Chart */}
-              <div className="w-1/2 pl-6">
-                <div className="relative h-72 w-full">
+              <div className="w-1/2 pl-8">
+                <div className="relative h-80 w-full">
                   {/* Chart Area */}
-                  <svg className="w-full h-full" viewBox="0 0 200 140">
+                  <svg className="w-full h-full" viewBox="0 0 300 200">
                     {/* Area fill under the line */}
                     <defs>
                       <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -119,16 +119,16 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                     
                     {/* Area fill */}
                     <path
-                      d="M 20 120 Q 50 100 80 80 Q 110 60 140 40"
+                      d="M 30 150 Q 80 120 130 90 Q 180 60 220 40"
                       fill="url(#areaGradient)"
                     />
                     
                     {/* Line */}
                     <path
-                      d="M 20 120 Q 50 100 80 80 Q 110 60 140 40"
+                      d="M 30 150 Q 80 120 130 90 Q 180 60 220 40"
                       fill="none"
                       stroke="#10B981"
-                      strokeWidth="2"
+                      strokeWidth="3"
                     />
                     
                     {/* Clickable Data points */}
@@ -137,19 +137,19 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
                         <circle 
                           cx={point.x} 
                           cy={point.y} 
-                          r="4" 
+                          r="6" 
                           fill={selectedPoint === index ? "#10B981" : "white"}
                           stroke={selectedPoint === index ? "#10B981" : "#10B981"}
-                          strokeWidth="2"
-                          className="cursor-pointer hover:r-5 transition-all"
+                          strokeWidth="3"
+                          className="cursor-pointer hover:r-7 transition-all"
                           onClick={() => setSelectedPoint(index)}
                         />
                         
                         {/* Volume labels */}
                         <text 
                           x={point.x} 
-                          y="135" 
-                          fontSize="8" 
+                          y="185" 
+                          fontSize="10" 
                           fill="#9CA3AF" 
                           textAnchor="middle"
                         >
