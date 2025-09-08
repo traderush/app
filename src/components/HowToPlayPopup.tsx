@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
 interface HowToPlayPopupProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const popupRef = useRef<HTMLDivElement>(null);
+  const { signatureColor } = useSignatureColor();
 
   const slides = [
     {
@@ -145,8 +147,11 @@ export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPla
                       key={index}
                       onClick={() => setCurrentSlide(index)}
                       className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentSlide ? 'bg-[#2fe3ac]' : 'bg-zinc-600'
+                        index === currentSlide ? '' : 'bg-zinc-600'
                       }`}
+                      style={{
+                        backgroundColor: index === currentSlide ? signatureColor : undefined
+                      }}
                     />
                   ))}
                 </div>
