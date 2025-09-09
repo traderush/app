@@ -12,7 +12,7 @@ let globalAudioContext: AudioContext | null = null;
 const getAudioContext = async (): Promise<AudioContext | null> => {
   try {
     if (!globalAudioContext) {
-      globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      globalAudioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
     
     // Resume audio context if it's suspended (common after user interaction timeout)
@@ -83,8 +83,8 @@ const getSoundEnabled = () => {
 
 // Make functions available globally
 if (typeof window !== 'undefined') {
-  (window as any).toggleSound = toggleSound;
-  (window as any).getSoundEnabled = getSoundEnabled;
+  (window as unknown as { toggleSound: typeof toggleSound; getSoundEnabled: typeof getSoundEnabled }).toggleSound = toggleSound;
+  (window as unknown as { toggleSound: typeof toggleSound; getSoundEnabled: typeof getSoundEnabled }).getSoundEnabled = getSoundEnabled;
 }
 
 /** brand */

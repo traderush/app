@@ -311,7 +311,7 @@ export default function SidebarRail({
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
             title={isMuted ? "Unmute" : "Mute"}
           >
-            {isMuted ? <Volume2 size={26} strokeWidth={1.4} /> : <VolumeX size={26} strokeWidth={1.4} />}
+            {isMuted ? <VolumeX size={26} strokeWidth={1.4} /> : <Volume2 size={26} strokeWidth={1.4} />}
           </button>
           
           <button
