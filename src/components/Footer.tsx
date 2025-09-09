@@ -48,8 +48,22 @@ export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustom
           </div>
         </div>
         
-        {/* Right side - PnL Tracker, Customize, and social links */}
+        {/* Right side - Styles for Dev, PnL Tracker, Customize, and social links */}
         <div className="flex items-center gap-4">
+          {/* Styles for Dev Button */}
+          <a 
+            href="/styles-for-dev"
+            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span>Styles for Dev</span>
+          </a>
+          
+          {/* Separator */}
+          <div className="w-px h-4 bg-white/20"></div>
+          
           {/* PnL Tracker Button */}
           <button 
             ref={pnLTrackerButtonRef}
