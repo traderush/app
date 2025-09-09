@@ -146,6 +146,7 @@ function BoxHitCanvas({
   showProbabilities = false, // whether to show probabilities heatmap overlay
   showOtherPlayers = false, // whether to show other players' selections
   signatureColor = '#FA5616', // signature color for styling
+  zoomLevel = 1.0,       // zoom level for the canvas (1.0 = normal, 0.5 = zoomed out, 2.0 = zoomed in)
 }: {
   rows?: number;
   cols?: number;
@@ -160,6 +161,7 @@ function BoxHitCanvas({
   showProbabilities?: boolean; // whether to show probabilities heatmap overlay
   showOtherPlayers?: boolean; // whether to show other players' selections
   signatureColor?: string; // signature color for styling
+  zoomLevel?: number; // zoom level for the canvas
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -176,8 +178,9 @@ function BoxHitCanvas({
   }, []);
 
   const NOW_X = size.w * leftChartFraction;  // vertical boundary between past chart (left) and future (right)
-  // Larger box sizes (3x bigger) - keep them square
-  const cellH = size.h / 7; // 3x bigger (was /20, now /7)
+  // Larger box sizes (3x bigger) - keep them square, with zoom level applied
+  const baseCellH = size.h / 7; // 3x bigger (was /20, now /7)
+  const cellH = baseCellH * zoomLevel; // Apply zoom level
   const cellW = cellH; // Keep boxes square
   const pricePPXTarget = live ? 60 : 120; // Tighter scaling for live mode to show price movements better
 
@@ -552,7 +555,7 @@ function BoxHitCanvas({
     }
     setGridCells(fresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size.w, size.h, NOW_X, cols, cellH]); // Keep dependencies for initial generation
+  }, [size.w, size.h, NOW_X, cols, cellH, zoomLevel]); // Keep dependencies for initial generation
 
   // Initialize chart with real BTC price (no fake historical data)
   useEffect(() => {
@@ -639,7 +642,7 @@ function BoxHitCanvas({
       
       return newCenter;
     });
-  }, [autoFollowMode, targetCenterPrice, series, cellH]);
+  }, [autoFollowMode, targetCenterPrice, series, cellH, zoomLevel]);
   const handleRecenter = useCallback(() => {
     setAutoFollowMode(true);
     setTargetCenterPrice(series[series.length - 1]?.p || center);
@@ -713,7 +716,7 @@ function BoxHitCanvas({
       ctx.fillStyle = heatmapColor;
       ctx.fillRect(screenX + 0.5, screenY + 0.5, cellW - 1, cellH - 1);
     });
-  }, [gridCells, gridPosition, size, cellW, cellH, NOW_X, gridScrollOffset, series, center, cellH]);
+  }, [gridCells, gridPosition, size, cellW, cellH, NOW_X, gridScrollOffset, series, center]);
 
   // Chart path using stable transform system (no recalibration)
   const pathD = useMemo(() => {
@@ -1880,6 +1883,7 @@ export default function ClientView() {
   const [minMultiplier, setMinMultiplier] = useState(1.0); // Minimum multiplier filter
   const [showOtherPlayers, setShowOtherPlayers] = useState(true); // Toggle for showing other players
   const [isTradingMode, setIsTradingMode] = useState(false); // Trading mode state
+  const [zoomLevel, setZoomLevel] = useState(1.0); // 1.0 = normal, 0.5 = zoomed out, 2.0 = zoomed in
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false); // WebSocket connection status
   const [showProbabilities, setShowProbabilities] = useState(false); // Probabilities heatmap overlay
   
@@ -2531,6 +2535,31 @@ export default function ClientView() {
                     {minMultiplier.toFixed(1)}x
                   </span>
                 </div>
+
+                {/* Zoom Controls */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
+                    className="w-8 h-8 rounded border border-zinc-600 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+                    title="Zoom Out"
+                  >
+                    <svg className="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    </svg>
+                  </button>
+                  <span className="text-zinc-400 text-xs w-8 text-center">
+                    {Math.round(zoomLevel * 100)}%
+                  </span>
+                  <button
+                    onClick={() => setZoomLevel(prev => Math.min(2.0, prev + 0.25))}
+                    className="w-8 h-8 rounded border border-zinc-600 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+                    title="Zoom In"
+                  >
+                    <svg className="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
             </div>
           </div>
           
@@ -2544,6 +2573,7 @@ export default function ClientView() {
                showProbabilities={showProbabilities}
                showOtherPlayers={showOtherPlayers}
                signatureColor={signatureColor}
+               zoomLevel={zoomLevel}
              />
           </div>
           
