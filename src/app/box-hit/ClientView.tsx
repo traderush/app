@@ -2551,22 +2551,24 @@ export default function ClientView() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
-                    className="w-8 h-8 rounded border border-zinc-600 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
                     title="Zoom Out"
                   >
-                    <svg className="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                     </svg>
                   </button>
-                  <span className="text-zinc-400 text-xs w-8 text-center">
-                    {Math.round(zoomLevel * 100)}%
-                  </span>
+                  <div className="w-8 h-6 rounded border border-zinc-600 flex items-center justify-center">
+                    <span className="text-zinc-400 text-xs">
+                      {Math.round(zoomLevel * 100)}%
+                    </span>
+                  </div>
                   <button
                     onClick={() => setZoomLevel(prev => Math.min(2.0, prev + 0.25))}
-                    className="w-8 h-8 rounded border border-zinc-600 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
                     title="Zoom In"
                   >
-                    <svg className="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
