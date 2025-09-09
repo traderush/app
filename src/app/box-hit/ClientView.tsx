@@ -2340,7 +2340,7 @@ export default function ClientView() {
         {/* Left: Box Hit Game + positions table */}
         <div className="min-w-0">
           {/* Live Market Header with Asset Selection */}
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between p-4 gap-4">
             {/* Left side: Asset info */}
             <div className="flex items-center gap-4">
               {/* Asset Icon */}
@@ -2554,7 +2554,7 @@ export default function ClientView() {
                 </div>
 
                 {/* Zoom Controls */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
                     className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
@@ -2564,7 +2564,7 @@ export default function ClientView() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                     </svg>
                   </button>
-                  <div className="w-8 h-6 rounded border border-zinc-600 flex items-center justify-center">
+                  <div className="w-8 h-6 rounded flex items-center justify-center">
                     <span className="text-zinc-400 text-xs">
                       {Math.round(zoomLevel * 100)}%
                     </span>
