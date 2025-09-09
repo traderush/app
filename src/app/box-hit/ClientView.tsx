@@ -1832,7 +1832,7 @@ export default function ClientView() {
     ETH: {
       name: 'Ethereum',
       symbol: 'ETH',
-      icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+      icon: 'https://static1.tokenterminal.com//ethereum/logo.png?logo_hash=fd8f54cab23f8f4980041f4e74607cac0c7ab880',
       price: 4300.9,
       change24h: 0.207,
       volume24h: '45.8M',
@@ -1841,7 +1841,7 @@ export default function ClientView() {
     SOL: {
       name: 'Solana',
       symbol: 'SOL',
-      icon: 'https://cryptologos.cc/logos/solana-sol-logo.png',
+      icon: 'https://avatarfiles.alphacoders.com/377/377220.png',
       price: 213.74,
       change24h: 3.621,
       volume24h: '12.3M',
