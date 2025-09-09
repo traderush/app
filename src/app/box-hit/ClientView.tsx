@@ -530,9 +530,6 @@ function BoxHitCanvas({
 
   // Initialize price-based grid system - grid cells align with stable transform system
   useEffect(() => {
-    // Only initialize if grid cells are empty
-    if (gridCells.length > 0) return;
-    
     // Generate initial grid cells using fixed row count
     const totalCols = Math.ceil((size.w + cellW * 8) / cellW); // Enough columns to prevent gaps
     const FIXED_ROW_COUNT = 20; // Use fixed row count for consistency
@@ -555,7 +552,7 @@ function BoxHitCanvas({
     }
     setGridCells(fresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size.w, size.h, NOW_X, cols, cellH, zoomLevel]); // Keep dependencies for initial generation
+  }, [size.w, size.h, NOW_X, cols, cellH, zoomLevel]); // Regenerate when zoom changes
 
   // Initialize chart with real BTC price (no fake historical data)
   useEffect(() => {
@@ -1796,6 +1793,15 @@ function BoxHitCanvas({
   const handleCanvasMouseUp = () => {
     setIsDragging(false);
   };
+
+  // Don't render canvas until grid cells are ready
+  if (gridCells.length === 0) {
+    return (
+      <div ref={hostRef} className="relative w-full h-[520px] overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#0E0E0E' }}>
+        <div className="text-zinc-400 text-sm">Loading trading grid...</div>
+      </div>
+    );
+  }
 
   return (
     <div ref={hostRef} className="relative w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
