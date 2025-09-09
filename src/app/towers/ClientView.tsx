@@ -577,22 +577,18 @@ function TowersCanvas({
             currentSide = currentSide === 'top' ? 'bottom' : 'top';
           }
           
-          // Calculate price-based row position
-          let rowPosition;
+          // Calculate tower position - towers extend from grid edges
           const totalRows = Math.floor(size.h / cellH);
           const centerRow = Math.floor(totalRows / 2);
           const corridorHeight = minGapUnits;
           
+          let rowPosition;
           if (currentSide === 'top') {
-            // Top towers: positioned in upper area
-            const topAreaStart = 0;
-            const topAreaEnd = centerRow - corridorHeight / 2 - heightUnits;
-            rowPosition = Math.floor(Math.random() * (topAreaEnd - topAreaStart + 1)) + topAreaStart;
+            // Top towers: start from the top edge and extend downward
+            rowPosition = 0; // Start from top edge
           } else {
-            // Bottom towers: positioned in lower area
-            const bottomAreaStart = centerRow + corridorHeight / 2 + heightUnits;
-            const bottomAreaEnd = totalRows - 1;
-            rowPosition = Math.floor(Math.random() * (bottomAreaEnd - bottomAreaStart + 1)) + bottomAreaStart;
+            // Bottom towers: start from the bottom edge and extend upward  
+            rowPosition = totalRows - 1; // Start from bottom edge
           }
           
           fresh.push({
@@ -1346,7 +1342,7 @@ function TowersCanvas({
         const towerWidth = cell.widthUnits * cellW; // Width based on widthUnits
         let towerHeight = cell.heightUnits * cellH; // Height in pixels
         
-        // Calculate tower position - extend from top/bottom
+        // Calculate tower position - extend from grid edges
         let towerY;
         const corridorCenterY = size.h / 2;
         const corridorHeight = 8 * cellH; // Central corridor height in pixels
@@ -1354,19 +1350,19 @@ function TowersCanvas({
         const corridorBottom = corridorCenterY + corridorHeight / 2;
         
         if (cell.side === 'top') {
-          // Top towers: extend upward from their row position
-          towerY = screenY - towerHeight;
-          // Ensure they don't overlap with corridor
+          // Top towers: extend from top edge downward
+          towerY = 0; // Start from top edge of canvas
+          // Limit height to not overlap with corridor
           if (towerY + towerHeight > corridorTop) {
             towerHeight = corridorTop - towerY;
           }
         } else {
-          // Bottom towers: extend downward from their row position
-          towerY = screenY;
-          // Ensure they don't overlap with corridor
+          // Bottom towers: extend from bottom edge upward
+          towerY = size.h - towerHeight; // Start from bottom edge of canvas
+          // Limit height to not overlap with corridor
           if (towerY < corridorBottom) {
             towerY = corridorBottom;
-            towerHeight = Math.min(towerHeight, size.h - corridorBottom);
+            towerHeight = size.h - corridorBottom;
           }
         }
         
