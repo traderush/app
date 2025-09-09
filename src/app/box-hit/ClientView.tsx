@@ -1903,6 +1903,7 @@ export default function ClientView() {
   const [zoomLevel, setZoomLevel] = useState(1.0); // 1.0 = normal, 0.5 = zoomed out, 2.0 = zoomed in
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false); // WebSocket connection status
   const [showProbabilities, setShowProbabilities] = useState(false); // Probabilities heatmap overlay
+  const [wsConnectionFailures, setWsConnectionFailures] = useState<Record<string, number>>({}); // Track connection failures
   
   // Initialize audio context on first user interaction
   useEffect(() => {
@@ -2089,12 +2090,34 @@ export default function ClientView() {
     exchanges.forEach(exchange => {
       if (wsRefs.current[exchange.name]?.readyState === WebSocket.OPEN) return;
       
+      // Skip exchanges that have failed too many times
+      if (wsConnectionFailures[exchange.name] >= 5) {
+        console.warn(`⚠️ Skipping ${exchange.name} - too many connection failures`);
+        return;
+      }
+      
       console.log(`Connecting to ${exchange.name} WebSocket for live BTC prices...`);
       
       try {
         const ws = new WebSocket(exchange.url);
         
+        // Set connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (ws.readyState === WebSocket.CONNECTING) {
+            console.warn(`⏰ ${exchange.name} WebSocket connection timeout`);
+            ws.close();
+          }
+        }, 10000); // 10 second timeout
+        
         ws.onopen = () => {
+          clearTimeout(connectionTimeout);
+          
+          // Reset failure count on successful connection
+          setWsConnectionFailures(prev => ({
+            ...prev,
+            [exchange.name]: 0
+          }));
+          
           console.log(`✅ ${exchange.name} WebSocket connected successfully`);
           
           // Subscribe to BTC price feed (different for each exchange)
@@ -2139,6 +2162,7 @@ export default function ClientView() {
         };
         
         ws.onclose = () => {
+          clearTimeout(connectionTimeout);
           console.log(`❌ ${exchange.name} WebSocket disconnected, attempting to reconnect...`);
           
           // Auto-reconnect after 1 second
@@ -2148,8 +2172,22 @@ export default function ClientView() {
         };
         
         ws.onerror = (error) => {
-          console.error(`${exchange.name} WebSocket error:`, error);
-          ws.close();
+          clearTimeout(connectionTimeout);
+          
+          // Track connection failures
+          setWsConnectionFailures(prev => ({
+            ...prev,
+            [exchange.name]: (prev[exchange.name] || 0) + 1
+          }));
+          
+          console.error(`${exchange.name} WebSocket connection failed:`, {
+            exchange: exchange.name,
+            url: exchange.url,
+            readyState: ws.readyState,
+            error: error,
+            failureCount: (wsConnectionFailures[exchange.name] || 0) + 1
+          });
+          // Don't close immediately, let onclose handle reconnection
         };
         
         wsRefs.current[exchange.name] = ws;
