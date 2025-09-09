@@ -76,9 +76,15 @@ const toggleSound = () => {
   console.log('Sound toggled:', soundEnabled ? 'ON' : 'OFF');
 };
 
-// Make toggleSound available globally
+// Get sound enabled state
+const getSoundEnabled = () => {
+  return soundEnabled;
+};
+
+// Make functions available globally
 if (typeof window !== 'undefined') {
   (window as any).toggleSound = toggleSound;
+  (window as any).getSoundEnabled = getSoundEnabled;
 }
 
 /** brand */
