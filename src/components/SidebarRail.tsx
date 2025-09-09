@@ -47,14 +47,6 @@ export default function SidebarRail({
   const [isMuted, setIsMuted] = useState(false);
   const { signatureColor } = useSignatureColor();
 
-  // Get the current sound state from global variable
-  const getSoundEnabled = () => {
-    if (typeof window !== 'undefined' && (window as any).getSoundEnabled) {
-      return (window as any).getSoundEnabled();
-    }
-    return true; // Default to enabled
-  };
-
   return (
     <aside className={clsx(
       "hidden md:block h-[calc(100vh-56px-32px)] transition-all duration-300",
@@ -313,12 +305,13 @@ export default function SidebarRail({
         )}>
           <button
             onClick={() => {
+              setIsMuted(!isMuted);
               onSoundToggle?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
-            title={getSoundEnabled() ? "Mute" : "Unmute"}
+            title={isMuted ? "Unmute" : "Mute"}
           >
-            {getSoundEnabled() ? <Volume2 size={26} strokeWidth={1.4} /> : <VolumeX size={26} strokeWidth={1.4} />}
+            {isMuted ? <VolumeX size={26} strokeWidth={1.4} /> : <Volume2 size={26} strokeWidth={1.4} />}
           </button>
           
           <button
