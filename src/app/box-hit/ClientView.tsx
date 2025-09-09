@@ -2548,7 +2548,7 @@ export default function ClientView() {
                       className="w-full"
                     />
                   </div>
-                  <span className="text-white font-medium w-12 flex-shrink-0" style={{ fontSize: '12px' }}>
+                  <span className="text-white font-medium" style={{ fontSize: '12px' }}>
                     {minMultiplier.toFixed(1)}x
                   </span>
                 </div>
