@@ -26,6 +26,7 @@ interface SidebarRailProps {
   onWatchlistOpen?: () => void;
   onPlayerClick?: (player: WatchedPlayer) => void;
   watchedPlayers?: WatchedPlayer[];
+  onSoundToggle?: () => void;
 }
 
 export default function SidebarRail({ 
@@ -40,7 +41,8 @@ export default function SidebarRail({
   rewardsButtonRef,
   onWatchlistOpen,
   onPlayerClick,
-  watchedPlayers = []
+  watchedPlayers = [],
+  onSoundToggle
 }: SidebarRailProps) {
   const [isMuted, setIsMuted] = useState(false);
   const { signatureColor } = useSignatureColor();
@@ -302,7 +304,10 @@ export default function SidebarRail({
           isCollapsed && "opacity-0 scale-95"
         )}>
           <button
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={() => {
+              setIsMuted(!isMuted);
+              onSoundToggle?.();
+            }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
             title={isMuted ? "Unmute" : "Mute"}
           >

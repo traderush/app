@@ -53,17 +53,33 @@ const createSound = async (frequency: number, duration: number, type: Oscillator
   }
 };
 
+// Global sound state
+let soundEnabled = true;
+
 // Sound effect functions
 const playSelectionSound = async () => {
+  if (!soundEnabled) return; // Don't play sound if disabled
   // Short, pleasant click sound for selection
   await createSound(800, 0.1, 'sine', 0.15);
 };
 
 const playHitSound = async () => {
+  if (!soundEnabled) return; // Don't play sound if disabled
   // Success sound with two tones for hit
   await createSound(600, 0.15, 'sine', 0.2);
   setTimeout(async () => await createSound(800, 0.2, 'sine', 0.15), 50);
 };
+
+// Sound toggle function
+const toggleSound = () => {
+  soundEnabled = !soundEnabled;
+  console.log('Sound toggled:', soundEnabled ? 'ON' : 'OFF');
+};
+
+// Make toggleSound available globally
+if (typeof window !== 'undefined') {
+  (window as any).toggleSound = toggleSound;
+}
 
 /** brand */
 // Signature color is now managed by context

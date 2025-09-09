@@ -163,6 +163,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                      setIsPlayerTrackerOpen(true);
                    }}
                    watchedPlayers={watchedPlayers}
+                   onSoundToggle={() => {
+                     // Call the global sound toggle function
+                     if (typeof window !== 'undefined' && (window as any).toggleSound) {
+                       (window as any).toggleSound();
+                     }
+                   }}
           />
           {/* Toggle button positioned outside the sidebar */}
           <button
