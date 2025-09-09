@@ -6,6 +6,43 @@ import PositionsTable from '@/games/box-hit/PositionsTable';
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
 
+// Sound effects utility
+const createSound = (frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.1) => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    oscillator.type = type;
+    
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + duration);
+  } catch (error) {
+    // Silently fail if audio context is not available
+    console.warn('Audio context not available:', error);
+  }
+};
+
+// Sound effect functions
+const playSelectionSound = () => {
+  // Short, pleasant click sound for selection
+  createSound(800, 0.1, 'sine', 0.15);
+};
+
+const playHitSound = () => {
+  // Success sound with two tones for hit
+  createSound(600, 0.15, 'sine', 0.2);
+  setTimeout(() => createSound(800, 0.2, 'sine', 0.15), 50);
+};
+
 /** brand */
 // Signature color is now managed by context
 
@@ -694,17 +731,20 @@ function BoxHitCanvas({
   const toggleCell = (row: number, col: number) => {
     // Only allow cell selection if trading mode is active
     if (!isTradingMode) {
-      console.log('Trading mode not active - cell selection disabled');
       return;
     }
     
-    console.log('Toggling cell:', row, col); // Debug log
     setGridCells(prev => {
       const updated = prev.map(cell => {
         if (cell.row !== row || cell.col !== col) return cell;
         if (cell.state === 'hit' || cell.state === 'missed') return cell;
         const newState: BoxState = cell.state === 'selected' ? 'idle' : 'selected';
-        console.log(`Cell ${row},${col} state: ${cell.state} -> ${newState}`); // Debug log
+        
+        // Play sound effect when selecting a box
+        if (newState === 'selected') {
+          playSelectionSound();
+        }
+        
         return { 
           ...cell, 
           state: newState,
@@ -901,6 +941,9 @@ function BoxHitCanvas({
                          newState = 'hit';
                          newCrossedTime = now;
                          hasChanges = true;
+                         
+                         // Play hit sound effect
+                         playHitSound();
                        }
                      }
                    }
