@@ -165,8 +165,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                    watchedPlayers={watchedPlayers}
                    onSoundToggle={() => {
                      // Call the global sound toggle function
-                     if (typeof window !== 'undefined' && (window as any).toggleSound) {
-                       (window as any).toggleSound();
+                     if (typeof window !== 'undefined' && (window as unknown as { toggleSound: () => void }).toggleSound) {
+                       (window as unknown as { toggleSound: () => void }).toggleSound();
                      }
                    }}
           />
