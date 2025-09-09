@@ -534,34 +534,84 @@ function TowersCanvas({
     }
   }, [showOtherPlayers, gridCells]);
 
-  // Initialize price-based grid system - grid cells align with stable transform system
+  // Initialize tower generation system - towers extend from top/bottom with central corridor
   useEffect(() => {
     // Add a small delay to prevent rapid regeneration
     const timeoutId = setTimeout(() => {
       // Ensure we have valid dimensions
       if (size.w > 0 && size.h > 0) {
-        // Generate initial grid cells using fixed row count
-        const totalCols = Math.ceil((size.w + cellW * 8) / cellW); // Enough columns to prevent gaps
-        const FIXED_ROW_COUNT = 20; // Use fixed row count for consistency
+        const totalCols = Math.ceil((size.w + cellW * 8) / cellW);
+        const stepValue = 10; // $10 between adjacent grid lines
+        const centerPrice = series[series.length - 1]?.p || center;
+        const minGapUnits = 8; // Minimum corridor height in grid units
+        const maxTowerHeight = 12; // Maximum tower height in grid units
         
         const fresh: GridCell[] = [];
-        for (let c = 0; c < totalCols; c++) {
-          // Generate rows using fixed count instead of dynamic calculation
-          for (let rowIndex = 0; rowIndex < FIXED_ROW_COUNT; rowIndex++) {
-            // Generate random multiplier between 1.0x and 15.0x
-            const mult = +(1.0 + Math.random() * 14.0).toFixed(1);
-            
-            fresh.push({
-              row: rowIndex,
-              col: c,
-              mult,
-              state: 'idle',
-              crossedTime: undefined,
-            });
+        let currentSide: 'top' | 'bottom' = 'top';
+        let currentCol = 0;
+        
+        while (currentCol < totalCols) {
+          // Weighted distribution for tower widths (1-4 columns)
+          const widthWeights = [0.4, 0.3, 0.2, 0.1]; // 40% 1-col, 30% 2-col, 20% 3-col, 10% 4-col
+          let widthUnits = 1;
+          let cumulative = 0;
+          for (let i = 0; i < widthWeights.length; i++) {
+            cumulative += widthWeights[i];
+            if (Math.random() <= cumulative) {
+              widthUnits = i + 1;
+              break;
+            }
           }
+          widthUnits = Math.min(widthUnits, totalCols - currentCol);
+          
+          // Generate multiplier between 1.8x and 12x
+          const mult = +(1.8 + Math.random() * 10.2).toFixed(1);
+          
+          // Generate tower height (3-12 units)
+          const heightUnits = Math.floor(Math.random() * (maxTowerHeight - 3) + 3);
+          
+          // Alternate sides with 20% chance to repeat current side
+          if (Math.random() < 0.2) {
+            // Keep current side
+          } else {
+            currentSide = currentSide === 'top' ? 'bottom' : 'top';
+          }
+          
+          // Calculate price-based row position
+          let rowPosition;
+          const totalRows = Math.floor(size.h / cellH);
+          const centerRow = Math.floor(totalRows / 2);
+          const corridorHeight = minGapUnits;
+          
+          if (currentSide === 'top') {
+            // Top towers: positioned in upper area
+            const topAreaStart = 0;
+            const topAreaEnd = centerRow - corridorHeight / 2 - heightUnits;
+            rowPosition = Math.floor(Math.random() * (topAreaEnd - topAreaStart + 1)) + topAreaStart;
+          } else {
+            // Bottom towers: positioned in lower area
+            const bottomAreaStart = centerRow + corridorHeight / 2 + heightUnits;
+            const bottomAreaEnd = totalRows - 1;
+            rowPosition = Math.floor(Math.random() * (bottomAreaEnd - bottomAreaStart + 1)) + bottomAreaStart;
+          }
+          
+          fresh.push({
+            row: rowPosition,
+            col: currentCol,
+            mult,
+            state: 'idle',
+            crossedTime: undefined,
+            xStart: currentCol * cellW,
+            xEnd: (currentCol + widthUnits) * cellW,
+            side: currentSide,
+            heightUnits: heightUnits,
+            widthUnits: widthUnits,
+          });
+          
+          currentCol += widthUnits;
         }
         setGridCells(fresh);
-        console.log('Grid cells generated:', fresh.length, 'cells');
+        console.log('Towers generated:', fresh.length, 'towers');
       } else {
         console.log('Invalid size dimensions:', size);
       }
@@ -1105,6 +1155,11 @@ function TowersCanvas({
                      mult,
                      state: 'idle',
                      crossedTime: undefined,
+                     xStart: newCol * cellW,
+                     xEnd: (newCol + 1) * cellW,
+                     side: 'top' as const,
+                     heightUnits: 1,
+                     widthUnits: 1,
                    });
                  }
                });
@@ -1150,6 +1205,11 @@ function TowersCanvas({
                       mult,
                       state: 'idle',
                       crossedTime: undefined,
+                      xStart: col * cellW,
+                      xEnd: (col + 1) * cellW,
+                      side: 'top' as const,
+                      heightUnits: 1,
+                      widthUnits: 1,
                     });
                   }
                 }
