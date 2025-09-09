@@ -6,10 +6,33 @@ import PositionsTable from '@/games/box-hit/PositionsTable';
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
 
-// Sound effects utility
-const createSound = (frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.1) => {
+// Global audio context management
+let globalAudioContext: AudioContext | null = null;
+
+const getAudioContext = async (): Promise<AudioContext | null> => {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!globalAudioContext) {
+      globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    
+    // Resume audio context if it's suspended (common after user interaction timeout)
+    if (globalAudioContext.state === 'suspended') {
+      await globalAudioContext.resume();
+    }
+    
+    return globalAudioContext;
+  } catch (error) {
+    console.warn('Audio context not available:', error);
+    return null;
+  }
+};
+
+// Sound effects utility
+const createSound = async (frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.1) => {
+  const audioContext = await getAudioContext();
+  if (!audioContext) return;
+  
+  try {
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
     
@@ -26,21 +49,20 @@ const createSound = (frequency: number, duration: number, type: OscillatorType =
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + duration);
   } catch (error) {
-    // Silently fail if audio context is not available
-    console.warn('Audio context not available:', error);
+    console.warn('Error creating sound:', error);
   }
 };
 
 // Sound effect functions
-const playSelectionSound = () => {
+const playSelectionSound = async () => {
   // Short, pleasant click sound for selection
-  createSound(800, 0.1, 'sine', 0.15);
+  await createSound(800, 0.1, 'sine', 0.15);
 };
 
-const playHitSound = () => {
+const playHitSound = async () => {
   // Success sound with two tones for hit
-  createSound(600, 0.15, 'sine', 0.2);
-  setTimeout(() => createSound(800, 0.2, 'sine', 0.15), 50);
+  await createSound(600, 0.15, 'sine', 0.2);
+  setTimeout(async () => await createSound(800, 0.2, 'sine', 0.15), 50);
 };
 
 /** brand */
@@ -1838,6 +1860,32 @@ export default function ClientView() {
   const [isTradingMode, setIsTradingMode] = useState(false); // Trading mode state
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false); // WebSocket connection status
   const [showProbabilities, setShowProbabilities] = useState(false); // Probabilities heatmap overlay
+  
+  // Initialize audio context on first user interaction
+  useEffect(() => {
+    const initializeAudio = async () => {
+      await getAudioContext();
+    };
+    
+    // Initialize audio on any user interaction
+    const handleUserInteraction = () => {
+      initializeAudio();
+      // Remove listeners after first interaction
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+    
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('keydown', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
+    
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, []);
   
   // Asset selection state
   const [selectedAsset, setSelectedAsset] = useState<'BTC' | 'ETH' | 'SOL'>('BTC');
