@@ -1826,8 +1826,7 @@ export default function ClientView() {
       icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/fd/f6/d8fdf69a-e716-1018-1740-b344df03476a/AppIcon-0-0-1x_U007epad-0-11-0-sRGB-85-220.png/460x0w.webp',
       price: currentBTCPrice || 111589,
       change24h: 0.677,
-      volume24h: '63.12M',
-      multiplier: '40x'
+      volume24h: '63.12M'
     },
     ETH: {
       name: 'Ethereum',
@@ -1835,8 +1834,7 @@ export default function ClientView() {
       icon: 'https://static1.tokenterminal.com//ethereum/logo.png?logo_hash=fd8f54cab23f8f4980041f4e74607cac0c7ab880',
       price: 4300.9,
       change24h: 0.207,
-      volume24h: '45.8M',
-      multiplier: '25x'
+      volume24h: '45.8M'
     },
     SOL: {
       name: 'Solana',
@@ -1844,8 +1842,7 @@ export default function ClientView() {
       icon: 'https://avatarfiles.alphacoders.com/377/377220.png',
       price: 213.74,
       change24h: 3.621,
-      volume24h: '12.3M',
-      multiplier: '20x'
+      volume24h: '12.3M'
     }
   };
   
@@ -2274,9 +2271,9 @@ export default function ClientView() {
                           </div>
                         </div>
                         
-                        {/* Multiplier badge */}
+                        {/* 24h Volume badge */}
                         <div className="bg-zinc-800 text-white text-xs px-2 py-1 rounded">
-                          {asset.multiplier}
+                          {asset.volume24h}
                         </div>
                       </div>
                     ))}
