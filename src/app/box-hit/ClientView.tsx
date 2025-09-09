@@ -530,29 +530,34 @@ function BoxHitCanvas({
 
   // Initialize price-based grid system - grid cells align with stable transform system
   useEffect(() => {
-    // Generate initial grid cells using fixed row count
-    const totalCols = Math.ceil((size.w + cellW * 8) / cellW); // Enough columns to prevent gaps
-    const FIXED_ROW_COUNT = 20; // Use fixed row count for consistency
-    
-    const fresh: GridCell[] = [];
-    for (let c = 0; c < totalCols; c++) {
-      // Generate rows using fixed count instead of dynamic calculation
-      for (let rowIndex = 0; rowIndex < FIXED_ROW_COUNT; rowIndex++) {
-        // Generate random multiplier between 1.0x and 15.0x
-        const mult = +(1.0 + Math.random() * 14.0).toFixed(1);
-        
-        fresh.push({
-          row: rowIndex,
-          col: c,
-          mult,
-          state: 'idle',
-          crossedTime: undefined,
-        });
+    // Add a small delay to prevent rapid regeneration
+    const timeoutId = setTimeout(() => {
+      // Generate initial grid cells using fixed row count
+      const totalCols = Math.ceil((size.w + cellW * 8) / cellW); // Enough columns to prevent gaps
+      const FIXED_ROW_COUNT = 20; // Use fixed row count for consistency
+      
+      const fresh: GridCell[] = [];
+      for (let c = 0; c < totalCols; c++) {
+        // Generate rows using fixed count instead of dynamic calculation
+        for (let rowIndex = 0; rowIndex < FIXED_ROW_COUNT; rowIndex++) {
+          // Generate random multiplier between 1.0x and 15.0x
+          const mult = +(1.0 + Math.random() * 14.0).toFixed(1);
+          
+          fresh.push({
+            row: rowIndex,
+            col: c,
+            mult,
+            state: 'idle',
+            crossedTime: undefined,
+          });
+        }
       }
-    }
-    setGridCells(fresh);
+      setGridCells(fresh);
+    }, 100); // 100ms delay to prevent rapid regeneration
+
+    return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size.w, size.h, NOW_X, cols, cellH, zoomLevel]); // Regenerate when zoom changes
+  }, [size.w, size.h, NOW_X, cols, zoomLevel]); // Regenerate when zoom changes
 
   // Initialize chart with real BTC price (no fake historical data)
   useEffect(() => {
