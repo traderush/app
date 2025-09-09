@@ -1284,7 +1284,7 @@ function TowersCanvas({
           }
         }
 
-        // Draw price-based grid cells using stable transform system
+        // Draw towers using same selection and styling as grid boxes
         gridCells.forEach(cell => {
         // Calculate screen position based on grid position and offsets + grid scroll
         // Apply same leftward offset as chart, ticker, and time grid for consistency
@@ -1342,14 +1342,70 @@ function TowersCanvas({
            ctx.fillStyle = '#0e0e0e';
          }
 
-        // Draw base cell
-        ctx.fillRect(screenX + 0.5, screenY + 0.5, cellW - 1, cellH - 1);
+        // Calculate tower dimensions
+        const towerWidth = cell.widthUnits * cellW; // Width based on widthUnits
+        let towerHeight = cell.heightUnits * cellH; // Height in pixels
+        
+        // Calculate tower position - extend from top/bottom
+        let towerY;
+        const corridorCenterY = size.h / 2;
+        const corridorHeight = 8 * cellH; // Central corridor height in pixels
+        const corridorTop = corridorCenterY - corridorHeight / 2;
+        const corridorBottom = corridorCenterY + corridorHeight / 2;
+        
+        if (cell.side === 'top') {
+          // Top towers: extend upward from their row position
+          towerY = screenY - towerHeight;
+          // Ensure they don't overlap with corridor
+          if (towerY + towerHeight > corridorTop) {
+            towerHeight = corridorTop - towerY;
+          }
+        } else {
+          // Bottom towers: extend downward from their row position
+          towerY = screenY;
+          // Ensure they don't overlap with corridor
+          if (towerY < corridorBottom) {
+            towerY = corridorBottom;
+            towerHeight = Math.min(towerHeight, size.h - corridorBottom);
+          }
+        }
+        
+        // Draw tower fill - use same styling as grid boxes
+        if (hit) {
+          ctx.fillStyle = getCachedRgba(signatureColor, 0.28 * opacity);
+        } else if (sel) {
+          ctx.fillStyle = getCachedRgba(signatureColor, 0.18 * opacity);
+        } else {
+          ctx.fillStyle = '#0e0e0e'; // Same as grid boxes
+        }
+        ctx.fillRect(screenX + 0.5, towerY, towerWidth, towerHeight);
          
-                 // Add hover overlay (no scaling, just overlay)
-         if (hoveredCell && hoveredCell.row === cell.row && hoveredCell.col === cell.col) {
-           ctx.fillStyle = sel ? getCachedRgba(signatureColor, 0.1 * opacity) : `rgba(255,255,255,${0.08 * opacity})`;
-           ctx.fillRect(screenX + 0.5, screenY + 0.5, cellW - 1, cellH - 1);
-         }
+        // Draw tower border - use same styling as grid boxes
+        let borderColor = '#2b2b2b';
+        let borderWidth = 0.6;
+        
+        if (hit || sel) {
+          borderColor = signatureColor;
+          borderWidth = (hoveredCell && hoveredCell.row === cell.row && hoveredCell.col === cell.col) ? 1.5 : 1;
+        } else if (hoveredCell && hoveredCell.row === cell.row && hoveredCell.col === cell.col) {
+          borderColor = 'rgba(255,255,255,0.4)';
+          borderWidth = 1.2;
+        }
+        
+        // Apply fade effect to borders
+        if (miss && cell.crossedTime) {
+          const timeSinceCrossed = now - cell.crossedTime;
+          if (timeSinceCrossed > 0) {
+            const fadeProgress = Math.min(timeSinceCrossed / 2000, 1);
+            const borderOpacity = 0.3 * (1 - fadeProgress);
+            borderColor = borderColor.replace(')', `,${borderOpacity})`).replace('rgb', 'rgba');
+          }
+        }
+        
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = borderWidth;
+        ctx.setLineDash([]); // Solid lines
+        ctx.strokeRect(screenX + 0.5, towerY, towerWidth, towerHeight);
 
                  // Selection outline animation - growing from center with fade in effect
          if (sel) {
@@ -1371,72 +1427,37 @@ function TowersCanvas({
           const sizeRange = 1 - minSize; // Remaining 70% to grow
           const currentSize = minSize + (sizeRange * growProgress);
           
-          const currentWidth = cellW * currentSize;
-          const currentHeight = cellH * currentSize;
-          const offsetX = (cellW - currentWidth) / 2;
-          const offsetY = (cellH - currentHeight) / 2;
+          const currentWidth = towerWidth * currentSize;
+          const currentHeight = towerHeight * currentSize;
+          const offsetX = (towerWidth - currentWidth) / 2;
+          const offsetY = (towerHeight - currentHeight) / 2;
           
           // Fade in effect
           const fadeProgress = Math.min(animationProgress * 2, 1); // Fade in faster than grow
           const outlineOpacity = 0.8 * fadeProgress;
           const fillOpacity = 0.18 * fadeProgress; // Match the original selected fill opacity
           
-                     // Draw growing solid outline (replaces the default border)
-           ctx.strokeStyle = getCachedRgba(signatureColor, outlineOpacity);
-           ctx.lineWidth = outlineWidth;
-           ctx.setLineDash([]); // Solid lines
-           
-           // Animated rectangle that grows from center
-           ctx.strokeRect(
-             screenX + offsetX + 0.5, 
-             screenY + offsetY + 0.5, 
-             currentWidth - 1, 
-             currentHeight - 1
-           );
-           
-           // Draw growing fill (replaces the default selected fill)
-           ctx.fillStyle = getCachedRgba(signatureColor, fillOpacity);
-           ctx.fillRect(
-             screenX + offsetX + 0.5, 
-             screenY + offsetY + 0.5, 
-             currentWidth - 1, 
-             currentHeight - 1
-           );
-        }
-
-        // Cell border with dotted lines and hover effect - with fade
-        let borderColor = '#2b2b2b';
-        let borderWidth = 0.6; // Default width for unselected boxes
-         
-        if (hit || sel) {
-          borderColor = signatureColor;
-          borderWidth = (hoveredCell && hoveredCell.row === cell.row && hoveredCell.col === cell.col) ? 1.5 : 1;
-        } else if (hoveredCell && hoveredCell.row === cell.row && hoveredCell.col === cell.col) {
-          borderColor = 'rgba(255,255,255,0.4)';
-          borderWidth = 1.2;
-        } else {
-          // Keep 0.6px for unselected, non-hovered boxes
-          borderWidth = 0.6;
-        }
-         
-        // Apply fade effect to borders
-        if (miss && cell.crossedTime) {
-          const timeSinceCrossed = now - cell.crossedTime;
-          if (timeSinceCrossed > 0) {
-            const fadeProgress = Math.min(timeSinceCrossed / 2000, 1);
-            const borderOpacity = 0.3 * (1 - fadeProgress);
-            borderColor = borderColor.replace(')', `,${borderOpacity})`).replace('rgb', 'rgba');
-          }
-        }
-         
-        // Only draw the default border if NOT selected (let animation handle selected state)
-        if (!sel) {
-          ctx.strokeStyle = borderColor;
-          ctx.lineWidth = borderWidth;
-          ctx.setLineDash([]); // Solid lines for non-selected cells
+          // Draw growing solid outline (replaces the default border)
+          ctx.strokeStyle = getCachedRgba(signatureColor, outlineOpacity);
+          ctx.lineWidth = outlineWidth;
+          ctx.setLineDash([]); // Solid lines
           
-          // Draw border (no scaling)
-          ctx.strokeRect(screenX + 0.5, screenY + 0.5, cellW - 1, cellH - 1);
+          // Animated rectangle that grows from center
+          ctx.strokeRect(
+            screenX + offsetX + 0.5, 
+            towerY + offsetY, 
+            currentWidth - 1, 
+            currentHeight - 1
+          );
+          
+          // Draw growing fill (replaces the default selected fill)
+          ctx.fillStyle = getCachedRgba(signatureColor, fillOpacity);
+          ctx.fillRect(
+            screenX + offsetX + 0.5, 
+            towerY + offsetY, 
+            currentWidth - 1, 
+            currentHeight - 1
+          );
         }
 
         // Multiplier text with hover effect and filtering
@@ -1460,12 +1481,15 @@ function TowersCanvas({
         ctx.font = '20px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-         
-        // Draw text (no scaling) - show placeholder for filtered cells
+        
+        // Draw text centered in tower
+        const textX = screenX + towerWidth / 2;
+        const textY = towerY + towerHeight / 2;
+        
         if (cell.mult < minMultiplier) {
-          ctx.fillText('--', screenX + cellW / 2, screenY + cellH / 2 + 4);
+          ctx.fillText('--', textX, textY + 4);
         } else {
-          ctx.fillText(`${cell.mult.toFixed(1)}x`, screenX + cellW / 2, screenY + cellH / 2 + 4);
+          ctx.fillText(`${cell.mult.toFixed(1)}x`, textX, textY + 4);
         }
 
          // New other players functionality - STACKED SYSTEM
@@ -1482,8 +1506,8 @@ function TowersCanvas({
            if (totalElements > 0) {
              // Calculate total stack width for positioning
              const stackWidth = (totalElements * rectSize) - ((totalElements - 1) * overlapAmount);
-             const startX = screenX + cellW - stackWidth - 4; // Start from right edge, accounting for stack width
-             const rectY = screenY + 4; // 4px from top edge
+             const startX = screenX + towerWidth - stackWidth - 4; // Start from right edge, accounting for stack width
+             const rectY = towerY + 4; // 4px from top edge
              
              // Calculate fade opacity for other player elements (same as grid cells)
              let otherPlayerOpacity = 1;
@@ -1586,17 +1610,17 @@ function TowersCanvas({
           }
         }
 
-        // Outcome badges
+        // Draw hit/miss status
         if (hit) {
           ctx.fillStyle = `rgba(229,229,229,${opacity})`;
           ctx.font = '11px sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText('HIT', screenX + cellW - 8, screenY + cellH - 8);
+          ctx.fillText('HIT', screenX + towerWidth - 8, towerY + towerHeight - 8);
         } else if (miss) {
           ctx.fillStyle = `rgba(156,163,175,${opacity})`;
           ctx.font = '11px sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText('MISS', screenX + cellW - 8, screenY + cellH - 8);
+          ctx.fillText('MISS', screenX + towerWidth - 8, towerY + towerHeight - 8);
         }
       });
 
