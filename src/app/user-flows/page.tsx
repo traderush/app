@@ -117,7 +117,7 @@ export default function Page() {
                 <div className="bg-zinc-800 rounded p-4">
                   <h4 className="text-md font-medium text-zinc-300 mb-2">2. Betting Flow</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• Click "Place Trade" mode</div>
+                    <div>• Click &quot;Place Trade&quot; mode</div>
                     <div>• Set bet amount (10, 50, 100, 250, custom)</div>
                     <div>• Click grid cells to select</div>
                     <div>• Selected cells show orange border</div>
@@ -156,7 +156,7 @@ export default function Page() {
                 <div className="bg-zinc-800 rounded p-4">
                   <h4 className="text-md font-medium text-zinc-300 mb-2">2. Betting Flow</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• Click "Place Trade" mode</div>
+                    <div>• Click &quot;Place Trade&quot; mode</div>
                     <div>• Set bet amount</div>
                     <div>• Click towers to select</div>
                     <div>• Selected towers show orange border</div>
@@ -205,7 +205,7 @@ export default function Page() {
               <div>
                 <h4 className="text-md font-medium text-zinc-300 mb-3">Deposit Modal</h4>
                 <div className="text-sm text-zinc-400 space-y-1">
-                  <div>• Click "Deposit" button → Deposit modal opens</div>
+                    <div>• Click &quot;Deposit&quot; button → Deposit modal opens</div>
                   <div>• Select deposit method</div>
                   <div>• Complete deposit flow</div>
                   <div>• Click X or outside → Modal closes</div>
@@ -256,9 +256,9 @@ export default function Page() {
               <div>
                 <h4 className="text-md font-medium text-zinc-300 mb-3">Trade Mode Toggle</h4>
                 <div className="text-sm text-zinc-400 space-y-1">
-                  <div>• Click "Place Trade" → Enter betting mode</div>
-                  <div>• Click "Copy Trade" → Enter copy mode</div>
-                  <div>• Click "Exit Trade Mode" → Exit betting</div>
+                  <div>• Click &quot;Place Trade&quot; → Enter betting mode</div>
+                  <div>• Click &quot;Copy Trade&quot; → Enter copy mode</div>
+                    <div>• Click &quot;Exit Trade Mode&quot; → Exit betting</div>
                   <div>• Mode affects interaction behavior</div>
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function Page() {
                   <h4 className="text-md font-medium text-zinc-300 mb-2">1. Setup</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
                     <div>• Select game (Box Hit/Towers)</div>
-                    <div>• Click "Place Trade"</div>
+                    <div>• Click &quot;Place Trade&quot;</div>
                     <div>• Set bet amount</div>
                     <div>• View potential payout</div>
                   </div>
@@ -323,7 +323,7 @@ export default function Page() {
                 <div className="bg-zinc-800 rounded p-4">
                   <h4 className="text-md font-medium text-zinc-300 mb-2">1. Copy Mode</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• Click "Copy Trade" mode</div>
+                    <div>• Click &quot;Copy Trade&quot; mode</div>
                     <div>• Set copy amount</div>
                     <div>• Select trader to copy</div>
                     <div>• Enable auto-copy</div>
@@ -332,7 +332,7 @@ export default function Page() {
                 <div className="bg-zinc-800 rounded p-4">
                   <h4 className="text-md font-medium text-zinc-300 mb-2">2. Auto Execution</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• System copies trader's moves</div>
+                    <div>• System copies trader&apos;s moves</div>
                     <div>• Proportional bet sizing</div>
                     <div>• Real-time synchronization</div>
                     <div>• Risk management applied</div>
