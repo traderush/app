@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https: wss:",
+              "connect-src 'self' https: wss: ws://localhost:8080",
               "media-src 'self' data: blob:",
               "object-src 'none'",
               "base-uri 'self'",

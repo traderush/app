@@ -1,0 +1,329 @@
+/**
+ * Streaming service for real-time data updates
+ */
+
+import {
+  ServerMessageType,
+  createMessage,
+  GameMode,
+  GameContract,
+  BoxHitContract,
+  TowersContract,
+  PriceUpdatePayload,
+  ContractUpdatePayload,
+  BalanceUpdatePayload,
+  TradeResultPayload
+} from '../types';
+import { TimeFrame } from '../../clearingHouse/types';
+import { createLogger } from '../utils/logger';
+import { MessageRouter } from '../core/MessageRouter';
+import { clearingHouseAPI } from '../../clearingHouse';
+import { GameEngineManager } from '../games/GameEngineManager';
+import { UserService } from './UserService';
+import { SessionManager } from './SessionManager';
+
+const logger = createLogger('StreamingService');
+
+export interface StreamingConfig {
+  priceUpdateInterval?: number;
+  contractUpdateInterval?: number;
+  batchSize?: number;
+}
+
+export class StreamingService {
+  private router: MessageRouter;
+  private gameEngineManager: GameEngineManager;
+  private userService: UserService;
+  private sessionManager: SessionManager;
+  private subscriptions: Set<() => void> = new Set();
+  private lastPrice: number = 0;
+
+  constructor(
+    router: MessageRouter,
+    gameEngineManager: GameEngineManager,
+    userService: UserService,
+    sessionManager: SessionManager,
+    _config: StreamingConfig = {}
+  ) {
+    this.router = router;
+    this.gameEngineManager = gameEngineManager;
+    this.userService = userService;
+    this.sessionManager = sessionManager;
+  }
+
+  /**
+   * Start streaming services
+   */
+  start(): void {
+    // Subscribe to clearing house events
+    this.subscribeToClearingHouse();
+    
+    // Subscribe to game engine events
+    this.subscribeToGameEngines();
+
+    logger.info('Streaming service started');
+  }
+
+  /**
+   * Stop streaming services
+   */
+  stop(): void {
+    // Unsubscribe from all events
+    for (const unsubscribe of this.subscriptions) {
+      unsubscribe();
+    }
+    this.subscriptions.clear();
+
+    logger.info('Streaming service stopped');
+  }
+
+  /**
+   * Subscribe to clearing house events
+   */
+  private subscribeToClearingHouse(): void {
+    // Price updates
+    clearingHouseAPI.onPriceUpdate((price, timestamp) => {
+      this.handlePriceUpdate(price, timestamp);
+    });
+
+    // Balance updates
+    clearingHouseAPI.onBalanceUpdate((userId, balance) => {
+      this.handleBalanceUpdate(userId, balance);
+    });
+
+    // Contract settlements
+    clearingHouseAPI.onContractSettlement((settlement) => {
+      this.handleContractSettlement(settlement);
+    });
+  }
+
+  /**
+   * Subscribe to game engine events
+   */
+  private subscribeToGameEngines(): void {
+    // Listen for contract updates from game engines
+    this.gameEngineManager.on('contracts_updated', async ({ gameMode, timeframe, newContracts, isInitial }: any) => {
+      if (isInitial) {
+        // Initial load - send all contracts
+        await this.streamContractUpdates(gameMode, timeframe);
+      } else if (newContracts) {
+        // New contracts only - send just the new ones
+        await this.streamNewContracts(gameMode, timeframe, newContracts);
+      }
+    });
+  }
+
+  /**
+   * Handle price updates
+   */
+  private handlePriceUpdate(price: number, timestamp: number): void {
+    const change = price - this.lastPrice;
+    const changePercent = this.lastPrice > 0 ? (change / this.lastPrice) * 100 : 0;
+
+    const payload: PriceUpdatePayload = {
+      price,
+      timestamp,
+      change,
+      changePercent
+    };
+
+    // Broadcast to all users with active sessions
+    const sessions = this.sessionManager.getAllSessions();
+    const userIds = [...new Set(sessions.map(s => s.userId))];
+
+    this.router.broadcast(
+      createMessage(ServerMessageType.PRICE_UPDATE, payload),
+      userIds
+    );
+
+    this.lastPrice = price;
+  }
+
+  /**
+   * Handle balance updates
+   */
+  private handleBalanceUpdate(userId: string, balance: number): void {
+    const payload: BalanceUpdatePayload = {
+      balance,
+      change: 0, // TODO: Track balance changes
+      reason: 'trade'
+    };
+
+    this.router.sendToUser(
+      userId,
+      createMessage(ServerMessageType.BALANCE_UPDATE, payload)
+    );
+  }
+
+  /**
+   * Handle contract settlement
+   */
+  private async handleContractSettlement(settlement: any): Promise<void> {
+    logger.info('Processing contract settlement', {
+      contractId: settlement.contractId,
+      type: settlement.type,
+      settlementCount: settlement.settlements?.length || 0
+    });
+
+    // Handle the actual data structure from clearing house
+    // settlements array contains: { userId, position, payout }
+    if (!settlement.settlements || settlement.settlements.length === 0) {
+      logger.warn('No settlements found in contract settlement event', { contractId: settlement.contractId });
+      return;
+    }
+
+    for (const settlementItem of settlement.settlements) {
+      const { userId, position: trade, payout } = settlementItem;
+      
+      // Determine if this is a win or loss
+      const won = payout > 0;
+      const profit = won ? payout - trade : -trade;
+      
+      // Update user stats
+      await this.userService.recordTradeResult(
+        userId,
+        won,
+        profit,
+        trade
+      );
+
+      // Update session stats
+      const session = this.sessionManager.getUserSession(userId);
+      if (session) {
+        this.sessionManager.recordTrade(
+          session.sessionId,
+          trade,
+          won,
+          profit
+        );
+      }
+
+      // Send trade result to user
+      const payload: TradeResultPayload = {
+        tradeId: `settlement_${Date.now()}_${userId}`,
+        contractId: settlement.contractId,
+        won,
+        payout: won ? payout : 0,
+        balance: await this.userService.getUserBalance(userId),
+        profit
+      };
+
+      logger.info('Sending trade result to user', {
+        userId,
+        contractId: settlement.contractId,
+        won,
+        payout,
+        profit
+      });
+
+      this.router.sendToUser(
+        userId,
+        createMessage(ServerMessageType.TRADE_RESULT, payload)
+      );
+    }
+  }
+
+  /**
+   * Stream contract updates to users in specific games
+   */
+  async streamContractUpdates(
+    gameMode: GameMode,
+    timeframe: TimeFrame
+  ): Promise<void> {
+    const contracts = await this.gameEngineManager.getActiveContracts(
+      gameMode,
+      timeframe
+    );
+
+    const payload: ContractUpdatePayload = {
+      gameMode,
+      timeframe,
+      contracts,
+      updateType: 'update'
+    };
+
+    // Send to users in this game mode
+    const sessions = this.sessionManager.getSessionsByGameMode(gameMode);
+    const userIds = sessions
+      .filter(s => s.timeframe === timeframe)
+      .map(s => s.userId);
+
+    if (userIds.length > 0) {
+      this.router.broadcast(
+        createMessage(ServerMessageType.CONTRACT_UPDATE, payload),
+        userIds
+      );
+    }
+  }
+
+  /**
+   * Stream only new contracts to relevant users
+   */
+  private async streamNewContracts(
+    gameMode: GameMode,
+    timeframe: TimeFrame,
+    newContracts: any[]
+  ): Promise<void> {
+    // Transform contracts based on game mode
+    let transformedContracts: GameContract[] = [];
+    
+    if (gameMode === GameMode.BOX_HIT) {
+      // Transform Iron Condor contracts
+      transformedContracts = newContracts.map(c => ({
+        contractId: c.id,
+        returnMultiplier: c.returnMultiplier,
+        isActive: c.status === 'active',
+        totalVolume: c.totalVolume,
+        playerCount: c.positions.size,
+        lowerStrike: c.strikeRange.lower,
+        upperStrike: c.strikeRange.upper,
+        startTime: c.exerciseWindow.start,
+        endTime: c.exerciseWindow.end,
+      } as BoxHitContract));
+    } else if (gameMode === GameMode.TOWERS) {
+      // Transform Spread contracts
+      transformedContracts = newContracts.map(c => ({
+        contractId: c.id,
+        returnMultiplier: c.returnMultiplier,
+        isActive: c.status === 'active',
+        totalVolume: c.totalVolume,
+        playerCount: c.positions.size,
+        strikePrice: c.strikePrice,
+        type: c.spreadType,
+        startTime: c.exerciseWindow.start,
+        endTime: c.exerciseWindow.end,
+      } as TowersContract));
+    }
+
+    const payload: ContractUpdatePayload = {
+      gameMode,
+      timeframe,
+      contracts: transformedContracts,
+      updateType: 'new' // Indicates these are new contracts only
+    };
+
+    // Send to users in this game mode
+    const sessions = this.sessionManager.getSessionsByGameMode(gameMode);
+    const userIds = sessions
+      .filter(s => s.timeframe === timeframe)
+      .map(s => s.userId);
+
+    if (userIds.length > 0) {
+      this.router.broadcast(
+        createMessage(ServerMessageType.CONTRACT_UPDATE, payload),
+        userIds
+      );
+    }
+  }
+
+  /**
+   * Get streaming statistics
+   */
+  getStats() {
+    return {
+      subscriptions: this.subscriptions.size,
+      lastPrice: this.lastPrice,
+      activeSessions: this.sessionManager.getAllSessions().length
+    };
+  }
+}
