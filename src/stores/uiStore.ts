@@ -5,7 +5,7 @@ import { createPersistentStorage } from '@/utils/persistence';
 export interface ModalState {
   isOpen: boolean;
   type: string | null;
-  data?: any;
+  data?: unknown;
 }
 
 export interface ToastNotification {
@@ -44,6 +44,7 @@ export interface UISettings {
   notificationsEnabled: boolean;
   compactMode: boolean;
   developerMode: boolean;
+  signatureColor: string;
 }
 
 export interface PnLCustomization {
@@ -75,11 +76,11 @@ interface UIState {
   lastActivity: number;
   
   // Actions - Modals
-  openModal: (type: string, data?: any) => void;
+  openModal: (type: string, data?: unknown) => void;
   closeModal: (type: string) => void;
   closeAllModals: () => void;
   isModalOpen: (type: string) => boolean;
-  getModalData: (type: string) => any;
+  getModalData: (type: string) => unknown;
   
   // Actions - Notifications
   addNotification: (notification: Omit<ToastNotification, 'id' | 'timestamp'>) => void;
@@ -136,6 +137,7 @@ const initialSettings: UISettings = {
   notificationsEnabled: true,
   compactMode: false,
   developerMode: false,
+  signatureColor: '#FA5616',
 };
 
 const initialPnLCustomization: PnLCustomization = {
@@ -333,7 +335,7 @@ export const useUIStore = create<UIState>()(
   )
 );
 
-// Convenience hooks for common UI actions
+// Optimized selector hooks to prevent unnecessary re-renders
 export const useModal = (type: string) => {
   const isOpen = useUIStore((state) => state.isModalOpen(type));
   const data = useUIStore((state) => state.getModalData(type));
@@ -343,10 +345,21 @@ export const useModal = (type: string) => {
   return {
     isOpen,
     data,
-    open: (modalData?: any) => openModal(type, modalData),
+    open: (modalData?: unknown) => openModal(type, modalData),
     close: () => closeModal(type),
   };
 };
+
+// Optimized selectors for specific UI state
+export const useUITheme = () => useUIStore((state) => state.theme);
+export const useUILayout = () => useUIStore((state) => state.layout);
+export const useUISettings = () => useUIStore((state) => state.settings);
+export const useUIPnLCustomization = () => useUIStore((state) => state.pnLCustomization);
+
+// Optimized selectors for specific settings
+export const useSoundEnabled = () => useUIStore((state) => state.settings.soundEnabled);
+export const useSignatureColor = () => useUIStore((state) => state.settings.signatureColor);
+export const useSidebarCollapsed = () => useUIStore((state) => state.layout.sidebarCollapsed);
 
 export const useNotifications = () => {
   const notifications = useUIStore((state) => state.notifications);

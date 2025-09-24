@@ -87,7 +87,7 @@ export const storeUtils = {
   /**
    * Import store data from JSON
    */
-  importStores: (data: any) => {
+  importStores: (data: unknown) => {
     if (data.game) {
       useGameStore.getState().updateGameSettings(data.game.gameSettings || {});
       useGameStore.getState().updateGameStats(data.game.gameStats || {});
@@ -126,7 +126,7 @@ export const storeDebug = {
   /**
    * Subscribe to all store changes for debugging
    */
-  subscribeToAll: (callback: (state: any, prevState: any, action: string) => void) => {
+  subscribeToAll: (callback: (state: unknown, prevState: unknown, action: string) => void) => {
     const unsubscribeFunctions = [
       useGameStore.subscribe(callback),
       usePlayerStore.subscribe(callback),

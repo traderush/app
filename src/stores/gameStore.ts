@@ -105,7 +105,7 @@ interface GameState {
 }
 
 const initialGameSettings: GameSettings = {
-  betAmount: 1,
+  betAmount: 200,
   selectedCount: 0,
   selectedMultipliers: [],
   bestMultiplier: 0,
@@ -413,3 +413,15 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
+
+// Optimized selector hooks for game store
+export const useGameSettings = () => useGameStore((state) => state.gameSettings);
+export const useGameStats = () => useGameStore((state) => state.gameStats);
+export const useSelectedCells = () => useGameStore((state) => state.selectedCells);
+export const useActivePositions = () => useGameStore((state) => state.activePositions);
+export const useIsGameActive = () => useGameStore((state) => state.isGameActive);
+
+// Optimized selectors for specific game settings
+export const useBetAmount = () => useGameStore((state) => state.gameSettings.betAmount);
+export const useSelectedCount = () => useGameStore((state) => state.gameSettings.selectedCount);
+export const useBestMultiplier = () => useGameStore((state) => state.gameSettings.bestMultiplier);

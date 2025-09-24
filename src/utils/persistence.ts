@@ -94,11 +94,11 @@ export const persistenceUtils = {
   /**
    * Get all persistent data for a specific store
    */
-  getStoreData: (storeName: string): Record<string, any> => {
+  getStoreData: (storeName: string): Record<string, unknown> => {
     try {
       if (typeof window === 'undefined') return {};
       
-      const data: Record<string, any> = {};
+      const data: Record<string, unknown> = {};
       const keys = Object.keys(localStorage);
       
       keys.forEach(key => {
@@ -128,7 +128,7 @@ export const persistenceUtils = {
     try {
       if (typeof window === 'undefined') return '{}';
       
-      const data: Record<string, any> = {};
+      const data: Record<string, unknown> = {};
       const keys = Object.keys(localStorage);
       
       keys.forEach(key => {
@@ -208,7 +208,7 @@ export const migrationUtils = {
   migrateStoreData: <T>(
     storeName: string,
     currentVersion: string,
-    migrations: Record<string, (data: any) => any>
+    migrations: Record<string, (data: unknown) => unknown>
   ): T | null => {
     try {
       if (typeof window === 'undefined') return null;
