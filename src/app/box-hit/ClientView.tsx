@@ -9,6 +9,7 @@ import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sou
 import { useGameStore, usePriceStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useConnectionStatus } from '@/contexts/ConnectionContext';
+import { logger } from '@/utils/logger';
 
 // Sound management is now handled by SoundManager.ts
 
@@ -227,10 +228,10 @@ function BoxHitCanvas({
 
   // Generate random player counts and tracked player selections
   useEffect(() => {
-    console.log('Other players useEffect triggered:', { showOtherPlayers, gridCellsLength: gridCells.length });
+    logger.debug('Other players useEffect triggered', { showOtherPlayers, gridCellsLength: gridCells.length }, 'CANVAS');
     
     if (!showOtherPlayers) {
-      console.log('showOtherPlayers is false, clearing data');
+      logger.debug('showOtherPlayers is false, clearing data', undefined, 'CANVAS');
       setRandomPlayerCounts({});
       setTrackedPlayerSelections({});
       return;
@@ -261,7 +262,7 @@ function BoxHitCanvas({
         pool.push(Math.floor(Math.random() * 8) + 1); // 1-8 players
       }
       setAvailablePlayerCounts(pool);
-      console.log(`Initialized player count pool with ${poolSize} selections`);
+      logger.debug(`Initialized player count pool with ${poolSize} selections`, undefined, 'CANVAS');
     };
 
     // Fluid player count assignment - appears gradually as boxes approach NOW line
@@ -345,7 +346,7 @@ function BoxHitCanvas({
       }
       
       setAvailableTrackedSelections(pool);
-      console.log(`Initialized tracked player pool with ${poolSize} selections`);
+      logger.debug(`Initialized tracked player pool with ${poolSize} selections`, undefined, 'CANVAS');
     };
 
     // Fluid tracked player assignment - appears gradually as boxes approach NOW line
@@ -411,21 +412,21 @@ function BoxHitCanvas({
 
     // Preload images for tracked players
     const preloadImages = () => {
-      console.log('Preloading images for tracked players:', trackedPlayers);
+      logger.debug('Preloading images for tracked players', trackedPlayers, 'CANVAS');
       trackedPlayers.forEach(player => {
         if (!loadedImages[player.id]) {
-          console.log(`Loading image for ${player.name}: ${player.avatar}`);
+          logger.debug(`Loading image for ${player.name}`, { avatar: player.avatar }, 'CANVAS');
           const img = new Image();
           img.crossOrigin = 'anonymous';
           img.onload = () => {
-            console.log(`Successfully loaded image for ${player.name}`);
+            logger.debug(`Successfully loaded image for ${player.name}`, undefined, 'CANVAS');
             setLoadedImages(prev => ({
               ...prev,
               [player.id]: img
             }));
           };
           img.onerror = () => {
-            console.log(`Failed to load image for ${player.name}: ${player.avatar}`);
+            logger.warn(`Failed to load image for ${player.name}`, { avatar: player.avatar }, 'CANVAS');
           };
           img.src = player.avatar;
         }
@@ -449,7 +450,7 @@ function BoxHitCanvas({
         lastGenerationTimeRef.current = now;
       }
     } else {
-      console.log('No grid cells available yet, skipping generation');
+      logger.debug('No grid cells available yet, skipping generation', undefined, 'CANVAS');
     }
   }, [showOtherPlayers, gridCells]);
 
@@ -480,9 +481,9 @@ function BoxHitCanvas({
           }
         }
         setGridCells(fresh);
-        console.log('Grid cells generated:', fresh.length, 'cells');
+        logger.debug('Grid cells generated', { count: fresh.length }, 'CANVAS');
       } else {
-        console.log('Invalid size dimensions:', size);
+        logger.warn('Invalid size dimensions', size, 'CANVAS');
       }
     }, 100); // 100ms delay to prevent rapid regeneration
 
@@ -2083,11 +2084,11 @@ export default function ClientView() {
       
       // Skip exchanges that have failed too many times
       if (wsConnectionFailures[exchange.name] >= 5) {
-        console.warn(`⚠️ Skipping ${exchange.name} - too many connection failures`);
+        logger.warn(`Skipping ${exchange.name} - too many connection failures`, undefined, 'WS');
         return;
       }
       
-      console.log(`Connecting to ${exchange.name} WebSocket for live BTC prices...`);
+      logger.info(`Connecting to ${exchange.name} WebSocket for live BTC prices`, undefined, 'WS');
       
       try {
         const ws = new WebSocket(exchange.url);
@@ -2095,7 +2096,7 @@ export default function ClientView() {
         // Set connection timeout
         const connectionTimeout = setTimeout(() => {
           if (ws.readyState === WebSocket.CONNECTING) {
-            console.warn(`⏰ ${exchange.name} WebSocket connection timeout`);
+            logger.warn(`${exchange.name} WebSocket connection timeout`, undefined, 'WS');
             ws.close();
           }
         }, 10000); // 10 second timeout
@@ -2109,7 +2110,7 @@ export default function ClientView() {
             [exchange.name]: 0
           }));
           
-          console.log(`✅ ${exchange.name} WebSocket connected successfully`);
+          logger.info(`${exchange.name} WebSocket connected successfully`, undefined, 'WS');
           
           // Update connection status
           setIsWebSocketConnected(true);
@@ -2167,13 +2168,13 @@ export default function ClientView() {
               );
             }
           } catch (error) {
-            console.error(`${exchange.name} WebSocket parse error:`, error);
+            logger.error(`${exchange.name} WebSocket parse error`, error, 'WS');
           }
         };
         
         ws.onclose = () => {
           clearTimeout(connectionTimeout);
-          console.log(`❌ ${exchange.name} WebSocket disconnected, attempting to reconnect...`);
+          logger.warn(`${exchange.name} WebSocket disconnected, attempting to reconnect`, undefined, 'WS');
           
           // Check if any connections are still active
           const activeConnections = Object.values(wsRefs.current).filter(ws => ws?.readyState === WebSocket.OPEN);
@@ -2210,20 +2211,20 @@ export default function ClientView() {
             showToast(`🔴 ${exchange.name} connection unstable. Switching to demo mode.`);
           }
           
-          console.error(`${exchange.name} WebSocket connection failed:`, {
+          logger.error(`${exchange.name} WebSocket connection failed`, {
             exchange: exchange.name,
             url: exchange.url,
             readyState: ws.readyState,
-            errorMessage: (error as any)?.message || 'Unknown error',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
             failureCount
-          });
+          }, 'WS');
           
           // Don't close immediately, let onclose handle reconnection
         };
         
         wsRefs.current[exchange.name] = ws;
       } catch (error) {
-        console.error(`Failed to connect to ${exchange.name}:`, error);
+        logger.error(`Failed to connect to ${exchange.name}`, error, 'WS');
         showToast(`❌ Failed to connect to ${exchange.name}. Check your internet connection.`);
         
         // Track connection failures for this exchange
@@ -2306,10 +2307,10 @@ export default function ClientView() {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         // Tab is hidden - pause expensive operations
-        console.log('Tab hidden, pausing operations');
+        logger.debug('Tab hidden, pausing operations', undefined, 'PERF');
       } else {
         // Tab is visible again - resume operations
-        console.log('Tab visible, resuming operations');
+        logger.debug('Tab visible, resuming operations', undefined, 'PERF');
       }
     };
     
@@ -2669,7 +2670,7 @@ export default function ClientView() {
                 </div>
               }
               onError={(error, errorInfo) => {
-                console.error('Canvas Error:', error, errorInfo);
+                logger.error('Canvas Error', { error, errorInfo }, 'CANVAS');
                 showToast('⚠️ Game canvas error occurred. Please refresh if issues persist.');
               }}
             >
@@ -2694,11 +2695,11 @@ export default function ClientView() {
             currentBTCPrice={assetData[selectedAsset].price}
             onPositionHit={(positionId) => {
               // Handle position hit - this will be called when a box is hit
-              console.log('Position hit:', positionId);
+              logger.info('Position hit', { positionId }, 'GAME');
             }}
             onPositionMiss={(positionId) => {
               // Handle position missed - this will be called when a box is missed
-              console.log('Position missed:', positionId);
+              logger.info('Position missed', { positionId }, 'GAME');
             }}
             hitBoxes={[]} // TODO: Connect to actual hit detection
             missedBoxes={[]} // TODO: Connect to actual hit detection
