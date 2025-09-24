@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "backend": "cd backend && bun --watch run src/index.ts",
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "bun run next dev",
+    "dev:turbo": "bun run next dev --turbopack",
+    "build": "bun run next build",
+    "build:turbo": "bun run next build --turbopack",
+    "start": "bun run next start",
+    "lint": "bun run eslint"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",

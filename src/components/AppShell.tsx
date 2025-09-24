@@ -3,26 +3,29 @@ import React, { useRef } from 'react';
 import Navbar from './Navbar';
 import SidebarRail from './SidebarRail';
 import Footer from './Footer';
-import DepositPopup from './DepositPopup';
-import NotificationsPopup from './NotificationsModal';
-import SettingsPopup from './SettingsPopup';
-import HowToPlayPopup from './HowToPlayPopup';
-import NewsUpdatesPopup from './NewsUpdatesPopup';
-import RewardsPopup from './RewardsPopup';
-import PnLTrackerPopup from './PnLTrackerPopup';
-import CustomizePopup from './CustomizePopup';
-import WatchlistPopup from './WatchlistPopup';
-import PlayerTrackerPopup from './PlayerTrackerPopup';
+// Lazy load popup components for better performance
+const LazyDepositPopup = React.lazy(() => import('./DepositPopup'));
+const LazyNotificationsModal = React.lazy(() => import('./NotificationsModal'));
+const LazySettingsPopup = React.lazy(() => import('./SettingsPopup'));
+const LazyHowToPlayPopup = React.lazy(() => import('./HowToPlayPopup'));
+const LazyNewsUpdatesPopup = React.lazy(() => import('./NewsUpdatesPopup'));
+const LazyRewardsPopup = React.lazy(() => import('./RewardsPopup'));
+const LazyPnLTrackerPopup = React.lazy(() => import('./PnLTrackerPopup'));
+const LazyCustomizePopup = React.lazy(() => import('./CustomizePopup'));
+const LazyWatchlistPopup = React.lazy(() => import('./WatchlistPopup'));
+const LazyPlayerTrackerPopup = React.lazy(() => import('./PlayerTrackerPopup'));
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SignatureColorProvider, useSignatureColor } from '@/contexts/SignatureColorContext';
+import { ConnectionProvider, useConnectionStatus } from '@/contexts/ConnectionContext';
 import CustomSlider from '@/components/CustomSlider';
 import { useUIStore, usePlayerStore, useModal } from '@/stores';
 
 const AppShellContent = React.memo(function AppShellContent({ children }: { children: React.ReactNode }) {
   const { signatureColor } = useSignatureColor();
+  const { connectionStatus } = useConnectionStatus();
   
   // Zustand stores
-  const { layout, updateLayout, pnLCustomization, updatePnLCustomization } = useUIStore();
+  const { layout, updateLayout } = useUIStore();
   const { watchedPlayers, selectedPlayer, setSelectedPlayer, setIsPlayerTrackerOpen } = usePlayerStore();
   
   // Modal hooks
@@ -37,7 +40,15 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
   const pnLCustomizeModal = useModal('pnLCustomize');
   const watchlistModal = useModal('watchlist');
   
-  // PnL customization is now managed by Zustand store
+  // PnL customization state (could be moved to UI store later)
+  const [pnLCustomization, setPnLCustomization] = React.useState({
+    backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
+    backgroundOpacity: 100,
+    backgroundBlur: 0,
+    generalTextColor: '#ffffff',
+    balanceTextColor: '#ffffff',
+    pnlTextColor: '#2fe3ac'
+  });
 
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
@@ -129,68 +140,90 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
         pnLTrackerButtonRef={pnLTrackerButtonRef}
         onCustomizeOpen={() => customizeModal.open()}
         customizeButtonRef={customizeButtonRef}
+        isWebSocketConnected={connectionStatus.isWebSocketConnected}
+        connectedExchanges={connectionStatus.connectedExchanges}
+        lastUpdateTime={connectionStatus.lastUpdateTime}
+        currentBTCPrice={connectionStatus.currentBTCPrice}
+        currentETHPrice={connectionStatus.currentETHPrice}
+        currentSOLPrice={connectionStatus.currentSOLPrice}
       />
       
       {/* Deposit Modal */}
-      <DepositPopup 
-        isOpen={depositModal.isOpen} 
-        onClose={() => depositModal.close()}
-        triggerRef={{ current: null }}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazyDepositPopup 
+          isOpen={depositModal.isOpen} 
+          onClose={() => depositModal.close()}
+          triggerRef={{ current: null }}
+        />
+      </React.Suspense>
       
       {/* Notifications Popup */}
-      <NotificationsPopup 
-        isOpen={notificationsModal.isOpen} 
-        onClose={() => notificationsModal.close()}
-        triggerRef={notificationsButtonRef}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazyNotificationsModal 
+          isOpen={notificationsModal.isOpen} 
+          onClose={() => notificationsModal.close()}
+          triggerRef={notificationsButtonRef}
+        />
+      </React.Suspense>
       
       {/* Settings Popup */}
-      <SettingsPopup 
-        isOpen={settingsModal.isOpen} 
-        onClose={() => settingsModal.close()}
-        triggerRef={settingsButtonRef}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazySettingsPopup 
+          isOpen={settingsModal.isOpen} 
+          onClose={() => settingsModal.close()}
+          triggerRef={settingsButtonRef}
+        />
+      </React.Suspense>
       
       {/* How to Play Popup */}
-      <HowToPlayPopup 
-        isOpen={howToPlayModal.isOpen} 
-        onClose={() => howToPlayModal.close()}
-        triggerRef={howToPlayButtonRef}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazyHowToPlayPopup 
+          isOpen={howToPlayModal.isOpen} 
+          onClose={() => howToPlayModal.close()}
+          triggerRef={howToPlayButtonRef}
+        />
+      </React.Suspense>
       
       {/* News & Updates Popup */}
-      <NewsUpdatesPopup 
-        isOpen={newsUpdatesModal.isOpen} 
-        onClose={() => newsUpdatesModal.close()}
-        triggerRef={newsUpdatesButtonRef}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazyNewsUpdatesPopup 
+          isOpen={newsUpdatesModal.isOpen} 
+          onClose={() => newsUpdatesModal.close()}
+          triggerRef={newsUpdatesButtonRef}
+        />
+      </React.Suspense>
       
       {/* Rewards Popup */}
-      <RewardsPopup 
-        isOpen={rewardsModal.isOpen} 
-        onClose={() => rewardsModal.close()}
-        triggerRef={rewardsButtonRef}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazyRewardsPopup 
+          isOpen={rewardsModal.isOpen} 
+          onClose={() => rewardsModal.close()}
+          triggerRef={rewardsButtonRef}
+        />
+      </React.Suspense>
       
       {/* PnL Tracker Popup */}
-      <PnLTrackerPopup 
-        isOpen={pnLTrackerModal.isOpen} 
-        onClose={() => pnLTrackerModal.close()}
-        triggerRef={pnLTrackerButtonRef}
-        isCustomizeOpen={pnLCustomizeModal.isOpen}
-        onCustomizeOpen={() => pnLCustomizeModal.open()}
-        onCustomizeClose={() => pnLCustomizeModal.close()}
-        customization={pnLCustomization}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazyPnLTrackerPopup 
+          isOpen={pnLTrackerModal.isOpen} 
+          onClose={() => pnLTrackerModal.close()}
+          triggerRef={pnLTrackerButtonRef}
+          isCustomizeOpen={pnLCustomizeModal.isOpen}
+          onCustomizeOpen={() => pnLCustomizeModal.open()}
+          onCustomizeClose={() => pnLCustomizeModal.close()}
+          customization={pnLCustomization}
+        />
+      </React.Suspense>
       
       
       {/* Customize Popup */}
-      <CustomizePopup 
-        isOpen={customizeModal.isOpen} 
-        onClose={() => customizeModal.close()}
-        triggerRef={customizeButtonRef}
-      />
+      <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+        <LazyCustomizePopup 
+          isOpen={customizeModal.isOpen} 
+          onClose={() => customizeModal.close()}
+          triggerRef={customizeButtonRef}
+        />
+      </React.Suspense>
 
       {/* PnL Customization Popup */}
       {pnLCustomizeModal.isOpen && (
@@ -231,7 +264,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                   <input
                     type="text"
                     value={pnLCustomization.backgroundImage}
-                    onChange={(e) => updatePnLCustomization({ backgroundImage: e.target.value })}
+                    onChange={(e) => setPnLCustomization(prev => ({ ...prev, backgroundImage: e.target.value }))}
                     placeholder="Enter image URL"
                     className="w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600 rounded text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 mt-2"
                   />
@@ -249,7 +282,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                       max={100}
                       step={1}
                       value={pnLCustomization.backgroundOpacity}
-                      onChange={(value) => updatePnLCustomization({ backgroundOpacity: value })}
+                      onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundOpacity: value }))}
                       className="w-full"
                       signatureColor={signatureColor}
                     />
@@ -268,7 +301,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                       max={8}
                       step={1}
                       value={pnLCustomization.backgroundBlur}
-                      onChange={(value) => updatePnLCustomization({ backgroundBlur: value })}
+                      onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundBlur: value }))}
                       className="w-full"
                       signatureColor={signatureColor}
                     />
@@ -287,7 +320,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     <input
                       type="color"
                       value={pnLCustomization.generalTextColor}
-                      onChange={(e) => updatePnLCustomization({ generalTextColor: e.target.value })}
+                      onChange={(e) => setPnLCustomization(prev => ({ ...prev, generalTextColor: e.target.value }))}
                       className="w-8 h-8 bg-zinc-700/50 border border-zinc-600 rounded cursor-pointer"
                     />
                   </div>
@@ -298,7 +331,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     <input
                       type="color"
                       value={pnLCustomization.balanceTextColor}
-                      onChange={(e) => updatePnLCustomization({ balanceTextColor: e.target.value })}
+                      onChange={(e) => setPnLCustomization(prev => ({ ...prev, balanceTextColor: e.target.value }))}
                       className="w-8 h-8 bg-zinc-700/50 border border-zinc-700/50 rounded cursor-pointer"
                     />
                   </div>
@@ -309,7 +342,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     <input
                       type="color"
                       value={pnLCustomization.pnlTextColor}
-                      onChange={(e) => updatePnLCustomization({ pnlTextColor: e.target.value })}
+                      onChange={(e) => setPnLCustomization(prev => ({ ...prev, pnlTextColor: e.target.value }))}
                       className="w-8 h-8 bg-zinc-700/50 border border-zinc-700/50 rounded cursor-pointer"
                     />
                   </div>
@@ -319,7 +352,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                 <div className="flex items-center justify-between pt-1">
                   <button
                     onClick={() => {
-                      updatePnLCustomization({
+                      setPnLCustomization({
                         backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
                         backgroundOpacity: 100,
                         backgroundBlur: 0,
@@ -354,34 +387,40 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
       )}
         
         {/* Watchlist Popup */}
-        <WatchlistPopup
-          isOpen={watchlistModal.isOpen}
-          onClose={() => watchlistModal.close()}
-          watchedPlayers={watchedPlayers}
-          setWatchedPlayers={(players) => {
-            const currentPlayers = usePlayerStore.getState().watchedPlayers;
-            const newPlayers = typeof players === 'function' ? players(currentPlayers) : players;
-            usePlayerStore.getState().setWatchedPlayers(newPlayers);
-          }}
-        />
+        <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+          <LazyWatchlistPopup
+            isOpen={watchlistModal.isOpen}
+            onClose={() => watchlistModal.close()}
+            watchedPlayers={watchedPlayers}
+            setWatchedPlayers={(players) => {
+              const currentPlayers = usePlayerStore.getState().watchedPlayers;
+              const newPlayers = typeof players === 'function' ? players(currentPlayers) : players;
+              usePlayerStore.getState().setWatchedPlayers(newPlayers);
+            }}
+          />
+        </React.Suspense>
 
         {/* Player Tracker Popup */}
-        <PlayerTrackerPopup
-          isOpen={usePlayerStore.getState().isPlayerTrackerOpen}
-          onClose={() => {
-            setIsPlayerTrackerOpen(false);
-            setSelectedPlayer(null);
-          }}
-          player={selectedPlayer}
-        />
+        <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
+          <LazyPlayerTrackerPopup
+            isOpen={usePlayerStore.getState().isPlayerTrackerOpen}
+            onClose={() => {
+              setIsPlayerTrackerOpen(false);
+              setSelectedPlayer(null);
+            }}
+            player={selectedPlayer}
+          />
+        </React.Suspense>
     </div>
   );
 });
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <SignatureColorProvider>
-      <AppShellContent>{children}</AppShellContent>
-    </SignatureColorProvider>
+    <ConnectionProvider>
+      <SignatureColorProvider>
+        <AppShellContent>{children}</AppShellContent>
+      </SignatureColorProvider>
+    </ConnectionProvider>
   );
 }

@@ -1,12 +1,14 @@
 'use client';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, Bell, Wallet } from 'lucide-react';
 import clsx from 'clsx';
 import { useState, useRef } from 'react';
 import ScrollableGameTabs, { type GameTab } from './ScrollableGameTabs';
-import NotificationsPopup from './NotificationsModal';
-import DepositPopup from './DepositPopup';
+// Lazy load popup components
+const NotificationsPopup = React.lazy(() => import('./NotificationsModal'));
+const DepositPopup = React.lazy(() => import('./DepositPopup'));
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
 const gameTabs: GameTab[] = [
@@ -36,7 +38,7 @@ interface NavbarProps {
   onProfileOpen: () => void;
 }
 
-export default function Navbar({ onDepositOpen, onNotificationsOpen, notificationsButtonRef, onSettingsOpen, settingsButtonRef, onProfileOpen }: NavbarProps) {
+const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, notificationsButtonRef, onSettingsOpen, settingsButtonRef, onProfileOpen }: NavbarProps) {
   const path = usePathname();
   const { signatureColor } = useSignatureColor();
 
@@ -156,4 +158,6 @@ export default function Navbar({ onDepositOpen, onNotificationsOpen, notificatio
 
     </>
   );
-}
+});
+
+export default Navbar;

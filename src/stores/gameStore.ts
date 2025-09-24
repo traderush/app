@@ -34,6 +34,12 @@ export interface GameSettings {
   bestMultiplier: number;
   soundEnabled: boolean;
   autoPlay: boolean;
+  minMultiplier: number;
+  showOtherPlayers: boolean;
+  isTradingMode: boolean;
+  zoomLevel: number;
+  showProbabilities: boolean;
+  selectedAsset: 'BTC' | 'ETH' | 'SOL';
 }
 
 export interface GameStats {
@@ -47,6 +53,7 @@ export interface GameStats {
   longestWinStreak: number;
   longestLossStreak: number;
   currentStreak: number;
+  bestMultiplier: number;
 }
 
 interface GameState {
@@ -111,6 +118,12 @@ const initialGameSettings: GameSettings = {
   bestMultiplier: 0,
   soundEnabled: true,
   autoPlay: false,
+  minMultiplier: 1.0,
+  showOtherPlayers: true,
+  isTradingMode: false,
+  zoomLevel: 1.0,
+  showProbabilities: false,
+  selectedAsset: 'BTC',
 };
 
 const initialGameStats: GameStats = {
@@ -124,6 +137,7 @@ const initialGameStats: GameStats = {
   longestWinStreak: 0,
   longestLossStreak: 0,
   currentStreak: 0,
+  bestMultiplier: 0,
 };
 
 export const useGameStore = create<GameState>()(
@@ -347,7 +361,7 @@ export const useGameStore = create<GameState>()(
       }),
 
     processGameTick: () =>
-      set((state) => {
+      set(() => {
         const now = Date.now();
         return {
           currentTime: now,
@@ -413,15 +427,3 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
-
-// Optimized selector hooks for game store
-export const useGameSettings = () => useGameStore((state) => state.gameSettings);
-export const useGameStats = () => useGameStore((state) => state.gameStats);
-export const useSelectedCells = () => useGameStore((state) => state.selectedCells);
-export const useActivePositions = () => useGameStore((state) => state.activePositions);
-export const useIsGameActive = () => useGameStore((state) => state.isGameActive);
-
-// Optimized selectors for specific game settings
-export const useBetAmount = () => useGameStore((state) => state.gameSettings.betAmount);
-export const useSelectedCount = () => useGameStore((state) => state.gameSettings.selectedCount);
-export const useBestMultiplier = () => useGameStore((state) => state.gameSettings.bestMultiplier);

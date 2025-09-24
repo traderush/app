@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Filter, ChevronRight, Edit3, ExternalLink } from 'lucide-react';
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
@@ -23,7 +23,7 @@ interface RightPanelProps {
   onBetAmountChange: (amount: number) => void; // Callback when bet amount changes
 }
 
-export default function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange }: RightPanelProps) {
+const RightPanel = React.memo(function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange }: RightPanelProps) {
 
   const [activeTab, setActiveTab] = useState<'place' | 'copy'>('place');
   const { signatureColor } = useSignatureColor();
@@ -437,4 +437,6 @@ export default function RightPanel({ isTradingMode, onTradingModeChange, selecte
       </div>
     </aside>
   );
-}
+});
+
+export default RightPanel;

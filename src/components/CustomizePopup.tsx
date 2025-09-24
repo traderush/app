@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { X, Paintbrush, RotateCcw } from 'lucide-react';
-import { useUIStore } from '@/stores/uiStore';
+import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
 interface CustomizePopupProps {
   isOpen: boolean;
@@ -10,8 +10,8 @@ interface CustomizePopupProps {
 }
 
 export default function CustomizePopup({ isOpen, onClose, triggerRef }: CustomizePopupProps) {
-  const { settings, updateSettings } = useUIStore();
-  const [localSignatureColor, setLocalSignatureColor] = useState(settings.signatureColor);
+  const { signatureColor, setSignatureColor } = useSignatureColor();
+  const [localSignatureColor, setLocalSignatureColor] = useState(signatureColor);
   const popupRef = useRef<HTMLDivElement>(null);
 
   // Handle click outside to close
@@ -57,14 +57,14 @@ export default function CustomizePopup({ isOpen, onClose, triggerRef }: Customiz
 
   // Apply the signature color changes
   const handleApply = () => {
-    updateSettings({ signatureColor: localSignatureColor });
+    setSignatureColor(localSignatureColor);
     onClose();
   };
 
   // Update local color when signature color changes
   useEffect(() => {
-    setLocalSignatureColor(settings.signatureColor);
-  }, [settings.signatureColor]);
+    setLocalSignatureColor(signatureColor);
+  }, [signatureColor]);
 
   if (!isOpen) return null;
 

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
 
 /** centralized trading colors */
@@ -19,7 +19,7 @@ interface PositionsTableProps {
   missedBoxes?: string[]; // Array of box IDs that were missed
 }
 
-export default function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [] }: PositionsTableProps) {
+const PositionsTable = React.memo(function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [] }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
   const { signatureColor } = useSignatureColor();
   
@@ -409,4 +409,6 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
         )}
     </div>
   );
-}
+});
+
+export default PositionsTable;

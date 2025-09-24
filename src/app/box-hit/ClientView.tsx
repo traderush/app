@@ -8,6 +8,7 @@ import CustomSlider from '@/components/CustomSlider';
 import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sound/SoundManager';
 import { useGameStore, usePriceStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { useConnectionStatus } from '@/contexts/ConnectionContext';
 
 // Sound management is now handled by SoundManager.ts
 
@@ -1847,6 +1848,9 @@ export default function ClientView() {
   
   const { signatureColor } = useSignatureColor();
   
+  // Connection context for footer status
+  const { setWebSocketConnected, setConnectedExchanges, setLastUpdateTime, setCurrentPrices } = useConnectionStatus();
+  
   // Zustand stores for game and price data
   const { 
     gameSettings, 
@@ -2107,6 +2111,16 @@ export default function ClientView() {
           
           console.log(`✅ ${exchange.name} WebSocket connected successfully`);
           
+          // Update connection status
+          setIsWebSocketConnected(true);
+          setWebSocketConnected(true);
+          
+          // Update connected exchanges list
+          const connectedExchanges = Object.keys(wsRefs.current).filter(
+            key => wsRefs.current[key]?.readyState === WebSocket.OPEN
+          );
+          setConnectedExchanges(connectedExchanges);
+          
           // Subscribe to BTC price feed (different for each exchange)
           if (exchange.name === 'coinbase') {
             ws.send(JSON.stringify({
@@ -2141,7 +2155,16 @@ export default function ClientView() {
             if (price > 0) {
               exchangePricesRef.current[exchange.name] = price;
               setIsWebSocketConnected(true);
+              setWebSocketConnected(true);
+              setLastUpdateTime(Date.now());
               setIsPriceUpdating(false);
+              
+              // Update current prices in context
+              setCurrentPrices(
+                assetData[selectedAsset].price,
+                assetData.ETH.price,
+                assetData.SOL.price
+              );
             }
           } catch (error) {
             console.error(`${exchange.name} WebSocket parse error:`, error);
@@ -2155,6 +2178,13 @@ export default function ClientView() {
           // Check if any connections are still active
           const activeConnections = Object.values(wsRefs.current).filter(ws => ws?.readyState === WebSocket.OPEN);
           setIsWebSocketConnected(activeConnections.length > 0);
+          setWebSocketConnected(activeConnections.length > 0);
+          
+          // Update connected exchanges list
+          const connectedExchanges = Object.keys(wsRefs.current).filter(
+            key => wsRefs.current[key]?.readyState === WebSocket.OPEN
+          );
+          setConnectedExchanges(connectedExchanges);
           
           // Auto-reconnect after 1 second
           reconnectTimeoutRefs.current[exchange.name] = setTimeout(() => {

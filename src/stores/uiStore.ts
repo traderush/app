@@ -44,16 +44,6 @@ export interface UISettings {
   notificationsEnabled: boolean;
   compactMode: boolean;
   developerMode: boolean;
-  signatureColor: string;
-}
-
-export interface PnLCustomization {
-  backgroundImage: string;
-  backgroundOpacity: number;
-  backgroundBlur: number;
-  generalTextColor: string;
-  balanceTextColor: string;
-  pnlTextColor: string;
 }
 
 interface UIState {
@@ -67,7 +57,6 @@ interface UIState {
   theme: UITheme;
   layout: UILayout;
   settings: UISettings;
-  pnLCustomization: PnLCustomization;
   
   // Global UI State
   isLoading: boolean;
@@ -92,7 +81,6 @@ interface UIState {
   updateTheme: (theme: Partial<UITheme>) => void;
   updateLayout: (layout: Partial<UILayout>) => void;
   updateSettings: (settings: Partial<UISettings>) => void;
-  updatePnLCustomization: (customization: Partial<PnLCustomization>) => void;
   
   // Actions - Global State
   setLoading: (loading: boolean, message?: string) => void;
@@ -137,16 +125,6 @@ const initialSettings: UISettings = {
   notificationsEnabled: true,
   compactMode: false,
   developerMode: false,
-  signatureColor: '#FA5616',
-};
-
-const initialPnLCustomization: PnLCustomization = {
-  backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
-  backgroundOpacity: 100,
-  backgroundBlur: 0,
-  generalTextColor: '#ffffff',
-  balanceTextColor: '#ffffff',
-  pnlTextColor: '#2fe3ac'
 };
 
 export const useUIStore = create<UIState>()(
@@ -158,7 +136,6 @@ export const useUIStore = create<UIState>()(
       theme: initialTheme,
       layout: initialLayout,
       settings: initialSettings,
-      pnLCustomization: initialPnLCustomization,
       isLoading: false,
       loadingMessage: '',
       isConnected: true,
@@ -256,11 +233,6 @@ export const useUIStore = create<UIState>()(
           settings: { ...state.settings, ...settingsUpdates },
         })),
 
-      updatePnLCustomization: (customizationUpdates) =>
-        set((state) => ({
-          pnLCustomization: { ...state.pnLCustomization, ...customizationUpdates },
-        })),
-
       // Global State Actions
       setLoading: (loading, message = '') =>
         set({
@@ -329,13 +301,12 @@ export const useUIStore = create<UIState>()(
         theme: state.theme,
         layout: state.layout,
         settings: state.settings,
-        pnLCustomization: state.pnLCustomization,
       }),
     }
   )
 );
 
-// Optimized selector hooks to prevent unnecessary re-renders
+// Convenience hooks for common UI actions
 export const useModal = (type: string) => {
   const isOpen = useUIStore((state) => state.isModalOpen(type));
   const data = useUIStore((state) => state.getModalData(type));
@@ -349,17 +320,6 @@ export const useModal = (type: string) => {
     close: () => closeModal(type),
   };
 };
-
-// Optimized selectors for specific UI state
-export const useUITheme = () => useUIStore((state) => state.theme);
-export const useUILayout = () => useUIStore((state) => state.layout);
-export const useUISettings = () => useUIStore((state) => state.settings);
-export const useUIPnLCustomization = () => useUIStore((state) => state.pnLCustomization);
-
-// Optimized selectors for specific settings
-export const useSoundEnabled = () => useUIStore((state) => state.settings.soundEnabled);
-export const useSignatureColor = () => useUIStore((state) => state.settings.signatureColor);
-export const useSidebarCollapsed = () => useUIStore((state) => state.layout.sidebarCollapsed);
 
 export const useNotifications = () => {
   const notifications = useUIStore((state) => state.notifications);

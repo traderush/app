@@ -252,7 +252,7 @@ export const usePriceStore = create<PriceState>()(
           };
 
           ws.onerror = (error) => {
-            console.error(`WebSocket error for ${exchange}:`, error);
+            console.error(`WebSocket error for ${exchange}:`, error.message || 'Unknown error');
             get().setError(`Connection error for ${exchange}`);
           };
 
@@ -283,7 +283,7 @@ export const usePriceStore = create<PriceState>()(
           delete wsConnections[exchange];
         }
 
-        const { [exchange]: removed, ...remainingConnections } = state.connections;
+        const { [exchange]: _removed, ...remainingConnections } = state.connections;
         const isConnected = Object.values(remainingConnections).some((conn) => conn.isConnected);
 
         return {

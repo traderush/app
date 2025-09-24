@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { usePathname } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import clsx from 'clsx';
@@ -11,7 +12,7 @@ export type GameTab = {
   locked?: boolean;   // locked overrides href
 };
 
-export default function ScrollableGameTabs({
+const ScrollableGameTabs = React.memo(function ScrollableGameTabs({
   items,
   bg = '#0B0B0C',     // navbar bg so fade matches perfectly
 }: {
@@ -146,4 +147,6 @@ export default function ScrollableGameTabs({
       </button>
     </div>
   );
-}
+});
+
+export default ScrollableGameTabs;

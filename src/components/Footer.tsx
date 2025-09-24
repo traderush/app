@@ -11,9 +11,27 @@ interface FooterProps {
   pnLTrackerButtonRef: React.RefObject<HTMLButtonElement | null>;
   onCustomizeOpen: () => void;
   customizeButtonRef: React.RefObject<HTMLButtonElement | null>;
+  // Connection status props
+  isWebSocketConnected?: boolean;
+  connectedExchanges?: string[];
+  lastUpdateTime?: number | null;
+  currentBTCPrice?: number;
+  currentETHPrice?: number;
+  currentSOLPrice?: number;
 }
 
-const Footer = React.memo(function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustomizeOpen, customizeButtonRef }: FooterProps) {
+const Footer = React.memo(function Footer({ 
+  onPnLTrackerOpen, 
+  pnLTrackerButtonRef, 
+  onCustomizeOpen, 
+  customizeButtonRef,
+  isWebSocketConnected = false,
+  connectedExchanges = [],
+  lastUpdateTime,
+  currentBTCPrice = 108200,
+  currentETHPrice = 4385,
+  currentSOLPrice = 200.67
+}: FooterProps) {
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
       <div className="h-8 px-4 flex items-center justify-between text-xs text-zinc-400">
@@ -30,7 +48,7 @@ const Footer = React.memo(function Footer({ onPnLTrackerOpen, pnLTrackerButtonRe
               alt="Bitcoin" 
               className="w-4 h-4 rounded object-cover"
             />
-            <span style={{color: '#FFA21C'}}>$108.2K</span>
+            <span style={{color: '#FFA21C'}}>${(currentBTCPrice / 1000).toFixed(1)}K</span>
           </div>
           <div className="flex items-center gap-2">
             <img 
@@ -38,7 +56,7 @@ const Footer = React.memo(function Footer({ onPnLTrackerOpen, pnLTrackerButtonRe
               alt="Ethereum" 
               className="w-4 h-4 rounded object-cover"
             />
-            <span style={{color: '#5080A0'}}>$4385</span>
+            <span style={{color: '#5080A0'}}>${currentETHPrice.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-2">
             <img 
@@ -46,98 +64,54 @@ const Footer = React.memo(function Footer({ onPnLTrackerOpen, pnLTrackerButtonRe
               alt="Solana" 
               className="w-4 h-4 rounded object-cover"
             />
-            <span style={{color: '#26FFA4'}}>$200.67</span>
+            <span style={{color: '#26FFA4'}}>${currentSOLPrice.toFixed(2)}</span>
           </div>
           
-          {/* Connection Status - Matching Live indicator style */}
+          {/* Connection Status - Dynamic styling based on connection */}
           <div className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 relative group" style={{ 
-            backgroundColor: '#0E2923', 
-            color: '#10AE80' 
+            backgroundColor: isWebSocketConnected ? '#0E2923' : '#2A1A0E', 
+            color: isWebSocketConnected ? '#10AE80' : '#EC397A' 
           }}>
             <div className="w-3 h-3 rounded-full" style={{ 
-              backgroundColor: '#10AE80', 
-              border: '2px solid #134335' 
+              backgroundColor: isWebSocketConnected ? '#10AE80' : '#EC397A', 
+              border: `2px solid ${isWebSocketConnected ? '#134335' : '#4A2F1A'}` 
             }}></div>
-            Connected
+            {isWebSocketConnected ? 'Connected' : 'Disconnected'}
             
-            {/* Comprehensive System Diagnostics Tooltip */}
-            <div className="absolute bottom-full right-0 mb-2 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[320px]">
-              <div className="text-xs text-zinc-300 space-y-2">
-                {/* Header */}
-                <div className="font-medium text-green-400 border-b border-zinc-700 pb-1">🔗 System Diagnostics</div>
-                
-                {/* Connection Status */}
-                <div className="space-y-1">
-                  <div className="font-medium text-zinc-200">📡 Live Data Feed</div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span>3/3 exchanges connected</span>
-                  </div>
-                  <div className="text-zinc-400 pl-4">Binance • Coinbase • Kraken</div>
-                  <div className="text-zinc-500 pl-4">Last update: 2s ago</div>
+            {/* Tooltip with detailed connection info */}
+            <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+              <div className="text-xs text-zinc-300 space-y-1">
+                <div className={`font-medium ${isWebSocketConnected ? 'text-green-400' : 'text-red-400'}`}>
+                  {isWebSocketConnected ? 'Live Data Feed' : 'Connection Failed'}
                 </div>
                 
-                {/* Performance Metrics */}
-                <div className="space-y-1 border-t border-zinc-700 pt-2">
-                  <div className="font-medium text-zinc-200">⚡ Performance</div>
-                  <div className="flex justify-between pl-4">
-                    <span>Canvas FPS:</span>
-                    <span className="text-green-400">60/60</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Memory Usage:</span>
-                    <span className="text-blue-400">47MB</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Latency:</span>
-                    <span className="text-green-400">12ms</span>
-                  </div>
-                </div>
-                
-                {/* Testing Status */}
-                <div className="space-y-1 border-t border-zinc-700 pt-2">
-                  <div className="font-medium text-zinc-200">🧪 Testing Status</div>
-                  <div className="flex justify-between pl-4">
-                    <span>Unit Tests:</span>
-                    <span className="text-green-400">✅ 95%</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Integration:</span>
-                    <span className="text-green-400">✅ 92%</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Error Boundaries:</span>
-                    <span className="text-green-400">✅ Active</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Performance:</span>
-                    <span className="text-green-400">✅ Optimal</span>
-                  </div>
-                </div>
-                
-                {/* System Health */}
-                <div className="space-y-1 border-t border-zinc-700 pt-2">
-                  <div className="font-medium text-zinc-200">🏥 System Health</div>
-                  <div className="flex justify-between pl-4">
-                    <span>WebSocket:</span>
-                    <span className="text-green-400">Healthy</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Canvas:</span>
-                    <span className="text-green-400">Stable</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Memory:</span>
-                    <span className="text-green-400">Clean</span>
-                  </div>
-                  <div className="flex justify-between pl-4">
-                    <span>Overall:</span>
-                    <span className="text-green-400 font-medium">10/10</span>
-                  </div>
-                </div>
+                {isWebSocketConnected ? (
+                  <>
+                    <div>{connectedExchanges.length} exchanges connected</div>
+                    <div>{connectedExchanges.join(' • ')}</div>
+                    <div className="text-zinc-500">
+                      Last update: {lastUpdateTime ? `${Math.floor((Date.now() - lastUpdateTime) / 1000)}s ago` : 'Just now'}
+                    </div>
+                    <div className="text-zinc-500">
+                      BTC: ${currentBTCPrice.toLocaleString()}
+                    </div>
+                    <div className="text-zinc-500">
+                      ETH: ${currentETHPrice.toLocaleString()}
+                    </div>
+                    <div className="text-zinc-500">
+                      SOL: ${currentSOLPrice.toFixed(2)}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>No active connections</div>
+                    <div className="text-zinc-500">Check your internet connection</div>
+                    <div className="text-zinc-500">Retrying automatically...</div>
+                  </>
+                )}
               </div>
               {/* Arrow */}
-              <div className="absolute top-full right-6 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-zinc-800"></div>
+              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-zinc-800"></div>
             </div>
           </div>
         </div>
