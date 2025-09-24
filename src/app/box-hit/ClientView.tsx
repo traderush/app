@@ -6,6 +6,7 @@ import PositionsTable from '@/games/box-hit/PositionsTable';
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
 import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sound/SoundManager';
+import { useGameStore, usePriceStore } from '@/stores';
 
 // Sound management is now handled by SoundManager.ts
 
@@ -1817,7 +1818,28 @@ export default function ClientView() {
       cleanupSoundManager();
     };
   }, []);
+  
   const { signatureColor } = useSignatureColor();
+  
+  // Zustand stores for game and price data
+  const { 
+    gameSettings, 
+    updateGameSettings, 
+    updateGameStats
+  } = useGameStore();
+  
+  // Zustand setter functions
+  const setIsTradingMode = (mode: boolean) => updateGameSettings({ isTradingMode: mode });
+  const setSelectedAsset = (asset: 'BTC' | 'ETH' | 'SOL') => updateGameSettings({ selectedAsset: asset });
+  const setShowProbabilities = (show: boolean) => updateGameSettings({ showProbabilities: show });
+  const setShowOtherPlayers = (show: boolean) => updateGameSettings({ showOtherPlayers: show });
+  const setMinMultiplier = (mult: number) => updateGameSettings({ minMultiplier: mult });
+  const setZoomLevel = (level: number) => updateGameSettings({ zoomLevel: level });
+  
+  const { 
+    addPricePoint 
+  } = usePriceStore();
+  // Local state for UI-specific data (not part of game logic)
   const [selectedCount, setSelectedCount] = useState(0);
   const [bestMultiplier, setBestMultiplier] = useState(0);
   const [selectedMultipliers, setSelectedMultipliers] = useState<number[]>([]);
@@ -1825,18 +1847,21 @@ export default function ClientView() {
   const [currentBTCPrice, setCurrentBTCPrice] = useState<number | null>(null); // Current BTC price for display - null until we get real data
   const [btc24hChange, setBtc24hChange] = useState(0); // 24h price change percentage
   const [isPriceUpdating, setIsPriceUpdating] = useState(false); // Loading state for price updates
-  const [minMultiplier, setMinMultiplier] = useState(1.0); // Minimum multiplier filter
-  const [showOtherPlayers, setShowOtherPlayers] = useState(true); // Toggle for showing other players
-  const [isTradingMode, setIsTradingMode] = useState(false); // Trading mode state
-  const [zoomLevel, setZoomLevel] = useState(1.0); // 1.0 = normal, 0.5 = zoomed out, 2.0 = zoomed in
+  
+  // Use Zustand store for game settings
+  const { 
+    minMultiplier,
+    showOtherPlayers,
+    isTradingMode,
+    zoomLevel,
+    showProbabilities,
+    selectedAsset,
+    betAmount: gameBetAmount
+  } = gameSettings;
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false); // WebSocket connection status
-  const [showProbabilities, setShowProbabilities] = useState(false); // Probabilities heatmap overlay
   const [wsConnectionFailures, setWsConnectionFailures] = useState<Record<string, number>>({}); // Track connection failures
   
   // Audio context initialization is now handled by SoundManager
-  
-  // Asset selection state
-  const [selectedAsset, setSelectedAsset] = useState<'BTC' | 'ETH' | 'SOL'>('BTC');
   const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
   const [favoriteAssets, setFavoriteAssets] = useState<Set<'BTC' | 'ETH' | 'SOL'>>(new Set(['BTC'])); // BTC is favorited by default
   
@@ -2088,7 +2113,7 @@ export default function ClientView() {
             exchange: exchange.name,
             url: exchange.url,
             readyState: ws.readyState,
-            error: error,
+            errorMessage: (error as any)?.message || 'Unknown error',
             failureCount: (wsConnectionFailures[exchange.name] || 0) + 1
           });
           // Don't close immediately, let onclose handle reconnection
@@ -2498,7 +2523,7 @@ export default function ClientView() {
                 {/* Zoom Controls */}
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
+                    onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
                     className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
                     title="Zoom Out"
                   >
@@ -2512,7 +2537,7 @@ export default function ClientView() {
                     </span>
                   </div>
                   <button
-                    onClick={() => setZoomLevel(prev => Math.min(2.0, prev + 0.25))}
+                    onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.25))}
                     className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
                     title="Zoom In"
                   >
