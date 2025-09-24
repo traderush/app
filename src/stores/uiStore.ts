@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createPersistentStorage } from '@/utils/persistence';
 
 export interface ModalState {
   isOpen: boolean;
@@ -295,6 +296,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'ui-store',
+      storage: createPersistentStorage('ui'),
       partialize: (state) => ({
         theme: state.theme,
         layout: state.layout,

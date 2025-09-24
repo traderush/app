@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { createPersistentStorage } from '@/utils/persistence';
 
 export interface GameCell {
   id: string;
@@ -125,7 +127,8 @@ const initialGameStats: GameStats = {
 };
 
 export const useGameStore = create<GameState>()(
-  subscribeWithSelector((set, get) => ({
+  persist(
+    subscribeWithSelector((set, get) => ({
     // Initial State
     gridCells: [],
     activePositions: [],
@@ -397,5 +400,16 @@ export const useGameStore = create<GameState>()(
       ).length;
       return (completedPositions / state.activePositions.length) * 100;
     },
-  }))
+  })),
+    {
+      name: 'game-store',
+      storage: createPersistentStorage('game'),
+      partialize: (state) => ({
+        gameSettings: state.gameSettings,
+        gameStats: state.gameStats,
+        showGrid: state.showGrid,
+        showStats: state.showStats,
+      }),
+    }
+  )
 );

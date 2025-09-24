@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createPersistentStorage } from '@/utils/persistence';
 
 export interface WatchedPlayer {
   id: string;
@@ -376,6 +377,7 @@ export const usePlayerStore = create<PlayerState>()(
     }),
     {
       name: 'player-store',
+      storage: createPersistentStorage('player'),
       partialize: (state) => ({
         watchedPlayers: state.watchedPlayers,
         preferences: state.preferences,
