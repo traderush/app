@@ -7,6 +7,7 @@ import { useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
 import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sound/SoundManager';
 import { useGameStore, usePriceStore } from '@/stores';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Sound management is now handled by SoundManager.ts
 
@@ -1954,6 +1955,38 @@ export default function ClientView() {
   // Toast notification state - support up to 5 stacked toasts with animation states
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; timestamp: number; isVisible: boolean }>>([]);
   
+  // Toast notification function
+  const showToast = useCallback((message: string) => {
+    const newToastId = Date.now();
+    const newToast = {
+      id: newToastId,
+      message,
+      timestamp: Date.now(),
+      isVisible: true
+    };
+    
+    setToasts(prev => {
+      const updated = [...prev, newToast];
+      // Archive oldest toasts if we exceed 5, keeping only the latest 5
+      if (updated.length > 5) {
+        return updated.slice(-5);
+      }
+      return updated;
+    });
+    
+    // Start fade out after 2.5 seconds, then remove after 3 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.map(toast => 
+        toast.id === newToastId ? { ...toast, isVisible: false } : toast
+      ));
+    }, 2500);
+    
+    // Remove toast completely after fade out completes
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== newToastId));
+    }, 3000);
+  }, []);
+  
   // Ref to track the previous count to detect actual new selections
   const previousCountRef = useRef<number>(0);
   
@@ -2128,25 +2161,42 @@ export default function ClientView() {
         ws.onerror = (error) => {
           clearTimeout(connectionTimeout);
           
+          const failureCount = (wsConnectionFailures[exchange.name] || 0) + 1;
+          
           // Track connection failures
           setWsConnectionFailures(prev => ({
             ...prev,
-            [exchange.name]: (prev[exchange.name] || 0) + 1
+            [exchange.name]: failureCount
           }));
+          
+          // Show user-friendly error notification
+          if (failureCount === 1) {
+            showToast(`⚠️ Connection issue with ${exchange.name}. Retrying...`);
+          } else if (failureCount === 3) {
+            showToast(`🔴 ${exchange.name} connection unstable. Switching to demo mode.`);
+          }
           
           console.error(`${exchange.name} WebSocket connection failed:`, {
             exchange: exchange.name,
             url: exchange.url,
             readyState: ws.readyState,
             errorMessage: (error as any)?.message || 'Unknown error',
-            failureCount: (wsConnectionFailures[exchange.name] || 0) + 1
+            failureCount
           });
+          
           // Don't close immediately, let onclose handle reconnection
         };
         
         wsRefs.current[exchange.name] = ws;
       } catch (error) {
         console.error(`Failed to connect to ${exchange.name}:`, error);
+        showToast(`❌ Failed to connect to ${exchange.name}. Check your internet connection.`);
+        
+        // Track connection failures for this exchange
+        setWsConnectionFailures(prev => ({
+          ...prev,
+          [exchange.name]: (prev[exchange.name] || 0) + 1
+        }));
       }
     });
   }, [exchangeWeights]);
@@ -2575,17 +2625,32 @@ export default function ClientView() {
           </div>
           
           <div className="border-t border-b border-zinc-800">
-          <BoxHitCanvas 
-               live={true} 
-            minMultiplier={minMultiplier}
-            onSelectionChange={handleSelectionChange}
-            isTradingMode={isTradingMode}
-               realBTCPrice={assetData[selectedAsset].price}
-            showProbabilities={showProbabilities}
-            showOtherPlayers={showOtherPlayers}
-            signatureColor={signatureColor}
-            zoomLevel={zoomLevel}
-          />
+            <ErrorBoundary 
+              fallback={
+                <div className="h-96 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-red-500 text-lg mb-2">⚠️ Canvas Error</div>
+                    <div className="text-zinc-400 text-sm">The game canvas encountered an error. Please refresh the page.</div>
+                  </div>
+                </div>
+              }
+              onError={(error, errorInfo) => {
+                console.error('Canvas Error:', error, errorInfo);
+                showToast('⚠️ Game canvas error occurred. Please refresh if issues persist.');
+              }}
+            >
+              <BoxHitCanvas 
+                live={true} 
+                minMultiplier={minMultiplier}
+                onSelectionChange={handleSelectionChange}
+                isTradingMode={isTradingMode}
+                realBTCPrice={assetData[selectedAsset].price}
+                showProbabilities={showProbabilities}
+                showOtherPlayers={showOtherPlayers}
+                signatureColor={signatureColor}
+                zoomLevel={zoomLevel}
+              />
+            </ErrorBoundary>
           </div>
           
           <PositionsTable 
