@@ -49,16 +49,16 @@ const Footer = React.memo(function Footer({ onPnLTrackerOpen, pnLTrackerButtonRe
             <span style={{color: '#26FFA4'}}>$200.67</span>
           </div>
           
-          {/* Connection Status */}
-          <div className="flex items-center gap-2 relative group">
-            <div 
-              className="w-2 h-2 rounded-full animate-pulse" 
-              style={{
-                backgroundColor: '#10AE80',
-                boxShadow: '0 0 6px #10AE80'
-              }}
-            />
-            <span className="text-zinc-300">Connected</span>
+          {/* Connection Status - Matching Live indicator style */}
+          <div className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 relative group" style={{ 
+            backgroundColor: '#0E2923', 
+            color: '#10AE80' 
+          }}>
+            <div className="w-3 h-3 rounded-full" style={{ 
+              backgroundColor: '#10AE80', 
+              border: '2px solid #134335' 
+            }}></div>
+            Connected
             
             {/* Tooltip with detailed connection info */}
             <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
