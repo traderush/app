@@ -96,7 +96,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
       id: 'demo4',
       name: 'TradingGuru',
       address: '0x4567...8901',
-      avatar: 'https://pbs.twimg.com/profile_images/1962797155623608320/hOVUVd1G_400x400.jpg',
+      avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg',
       game: 'Box Hit',
       isOnline: false
     }

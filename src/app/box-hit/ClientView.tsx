@@ -5,87 +5,9 @@ import RightPanel from '@/games/box-hit/RightPanel';
 import PositionsTable from '@/games/box-hit/PositionsTable';
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
+import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sound/SoundManager';
 
-// Global audio context management
-let globalAudioContext: AudioContext | null = null;
-
-const getAudioContext = async (): Promise<AudioContext | null> => {
-  try {
-    if (!globalAudioContext) {
-      globalAudioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    }
-    
-    // Resume audio context if it's suspended (common after user interaction timeout)
-    if (globalAudioContext.state === 'suspended') {
-      await globalAudioContext.resume();
-    }
-    
-    return globalAudioContext;
-  } catch (error) {
-    console.warn('Audio context not available:', error);
-    return null;
-  }
-};
-
-// Sound effects utility
-const createSound = async (frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.1) => {
-  const audioContext = await getAudioContext();
-  if (!audioContext) return;
-  
-  try {
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-    oscillator.type = type;
-    
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + duration);
-  } catch (error) {
-    console.warn('Error creating sound:', error);
-  }
-};
-
-// Global sound state
-let soundEnabled = true;
-
-// Sound effect functions
-const playSelectionSound = async () => {
-  if (!soundEnabled) return; // Don't play sound if disabled
-  // Short, pleasant click sound for selection
-  await createSound(800, 0.1, 'sine', 0.15);
-};
-
-const playHitSound = async () => {
-  if (!soundEnabled) return; // Don't play sound if disabled
-  // Success sound with two tones for hit
-  await createSound(600, 0.15, 'sine', 0.2);
-  setTimeout(async () => await createSound(800, 0.2, 'sine', 0.15), 50);
-};
-
-// Sound toggle function
-const toggleSound = () => {
-  soundEnabled = !soundEnabled;
-  console.log('Sound toggled:', soundEnabled ? 'ON' : 'OFF');
-};
-
-// Get sound enabled state
-const getSoundEnabled = () => {
-  return soundEnabled;
-};
-
-// Make functions available globally
-if (typeof window !== 'undefined') {
-  (window as unknown as { toggleSound: typeof toggleSound; getSoundEnabled: typeof getSoundEnabled }).toggleSound = toggleSound;
-  (window as unknown as { toggleSound: typeof toggleSound; getSoundEnabled: typeof getSoundEnabled }).getSoundEnabled = getSoundEnabled;
-}
+// Sound management is now handled by SoundManager.ts
 
 /** brand */
 // Signature color is now managed by context
@@ -322,7 +244,7 @@ function BoxHitCanvas({
       { id: 'watchlist1', name: 'MoonTrader', avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg', type: 'watchlist' },
       { id: 'watchlist2', name: 'DiamondHands', avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png', type: 'watchlist' },
       { id: 'watchlist3', name: 'BullRun', avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg', type: 'watchlist' },
-      { id: 'watchlist4', name: 'HODLer', avatar: 'https://pbs.twimg.com/profile_images/1962797155623608320/hOVUVd1G_400x400.jpg', type: 'watchlist' },
+      { id: 'watchlist4', name: 'HODLer', avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg', type: 'watchlist' },
       { id: 'watchlist5', name: 'CryptoKing', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'watchlist' }
     ];
 
@@ -797,8 +719,8 @@ function BoxHitCanvas({
         
         // Play sound effect when selecting a box
         if (newState === 'selected') {
-          playSelectionSound();
-        }
+      playSelectionSound();
+    }
         
         return { 
           ...cell, 
@@ -807,22 +729,22 @@ function BoxHitCanvas({
         };
       });
       
-      // Update selection count and best multiplier (only active selections)
-      const activeSelectedCells = updated.filter(cell => 
-        cell.state === 'selected' && !cell.crossedTime
-      );
-      const count = activeSelectedCells.length;
-      const best = activeSelectedCells.length > 0 ? Math.max(...activeSelectedCells.map(cell => cell.mult)) : 0;
-      const multipliers = activeSelectedCells.map(cell => cell.mult);
-      
-      // Update parent component
-      onSelectionChange?.(count, best, multipliers, undefined);
-      
       return updated;
     });
   };
 
-
+  // Watch for selection changes and notify parent component
+  useEffect(() => {
+    const activeSelectedCells = gridCells.filter(cell => 
+      cell.state === 'selected' && !cell.crossedTime
+    );
+    const count = activeSelectedCells.length;
+    const best = activeSelectedCells.length > 0 ? Math.max(...activeSelectedCells.map(cell => cell.mult)) : 0;
+    const multipliers = activeSelectedCells.map(cell => cell.mult);
+    
+    // Update parent component
+    onSelectionChange?.(count, best, multipliers, undefined);
+  }, [gridCells, onSelectionChange]);
 
   // Unified animation loop for maximum fluidity - after all calculations
   useEffect(() => {
@@ -1889,6 +1811,12 @@ function BoxHitCanvas({
   }
 
 export default function ClientView() {
+  // Cleanup sound manager on unmount
+  useEffect(() => {
+    return () => {
+      cleanupSoundManager();
+    };
+  }, []);
   const { signatureColor } = useSignatureColor();
   const [selectedCount, setSelectedCount] = useState(0);
   const [bestMultiplier, setBestMultiplier] = useState(0);
@@ -1905,31 +1833,7 @@ export default function ClientView() {
   const [showProbabilities, setShowProbabilities] = useState(false); // Probabilities heatmap overlay
   const [wsConnectionFailures, setWsConnectionFailures] = useState<Record<string, number>>({}); // Track connection failures
   
-  // Initialize audio context on first user interaction
-  useEffect(() => {
-    const initializeAudio = async () => {
-      await getAudioContext();
-    };
-    
-    // Initialize audio on any user interaction
-    const handleUserInteraction = () => {
-      initializeAudio();
-      // Remove listeners after first interaction
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-    };
-    
-    document.addEventListener('click', handleUserInteraction);
-    document.addEventListener('keydown', handleUserInteraction);
-    document.addEventListener('touchstart', handleUserInteraction);
-    
-    return () => {
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-    };
-  }, []);
+  // Audio context initialization is now handled by SoundManager
   
   // Asset selection state
   const [selectedAsset, setSelectedAsset] = useState<'BTC' | 'ETH' | 'SOL'>('BTC');
@@ -2256,9 +2160,9 @@ export default function ClientView() {
         }
       });
       Object.entries(wsRefs.current).forEach(([exchange, ws]) => {
-        if (ws) {
+      if (ws) {
           ws.close();
-        }
+      }
       });
     };
   }, [connectWebSockets]);
@@ -2621,17 +2525,17 @@ export default function ClientView() {
           </div>
           
           <div className="border-t border-b border-zinc-800">
-                         <BoxHitCanvas 
+          <BoxHitCanvas 
                live={true} 
-               minMultiplier={minMultiplier}
-               onSelectionChange={handleSelectionChange}
-               isTradingMode={isTradingMode}
+            minMultiplier={minMultiplier}
+            onSelectionChange={handleSelectionChange}
+            isTradingMode={isTradingMode}
                realBTCPrice={assetData[selectedAsset].price}
-               showProbabilities={showProbabilities}
-               showOtherPlayers={showOtherPlayers}
-               signatureColor={signatureColor}
-               zoomLevel={zoomLevel}
-             />
+            showProbabilities={showProbabilities}
+            showOtherPlayers={showOtherPlayers}
+            signatureColor={signatureColor}
+            zoomLevel={zoomLevel}
+          />
           </div>
           
           <PositionsTable 
