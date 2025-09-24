@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import Navbar from './Navbar';
 import SidebarRail from './SidebarRail';
 import Footer from './Footer';
@@ -16,34 +16,29 @@ import PlayerTrackerPopup from './PlayerTrackerPopup';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SignatureColorProvider, useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
-import { usePlayerData } from '@/hooks/usePlayerData';
+import { useUIStore, usePlayerStore, useModal } from '@/stores';
 
 const AppShellContent = React.memo(function AppShellContent({ children }: { children: React.ReactNode }) {
   const { signatureColor } = useSignatureColor();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isDepositOpen, setIsDepositOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
-  const [isNewsUpdatesOpen, setIsNewsUpdatesOpen] = useState(false);
-  const [isRewardsOpen, setIsRewardsOpen] = useState(false);
-  const [isPnLTrackerOpen, setIsPnLTrackerOpen] = useState(false);
-  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
-  const [isPnLCustomizeOpen, setIsPnLCustomizeOpen] = useState(false);
-  const [isWatchlistOpen, setIsWatchlistOpen] = useState(false);
-  const [isPlayerTrackerOpen, setIsPlayerTrackerOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<{
-    id: string;
-    name: string;
-    address: string;
-    avatar: string;
-    game: string;
-    isOnline: boolean;
-  } | null>(null);
   
-  // Use the custom hook for player data management
-  const { watchedPlayers, setWatchedPlayers, isClient } = usePlayerData();
-  const [pnLCustomization, setPnLCustomization] = useState({
+  // Zustand stores
+  const { layout, updateLayout } = useUIStore();
+  const { watchedPlayers, selectedPlayer, setSelectedPlayer, setIsPlayerTrackerOpen } = usePlayerStore();
+  
+  // Modal hooks
+  const depositModal = useModal('deposit');
+  const notificationsModal = useModal('notifications');
+  const settingsModal = useModal('settings');
+  const howToPlayModal = useModal('howToPlay');
+  const newsUpdatesModal = useModal('newsUpdates');
+  const rewardsModal = useModal('rewards');
+  const pnLTrackerModal = useModal('pnLTracker');
+  const customizeModal = useModal('customize');
+  const pnLCustomizeModal = useModal('pnLCustomize');
+  const watchlistModal = useModal('watchlist');
+  
+  // PnL customization state (could be moved to UI store later)
+  const [pnLCustomization, setPnLCustomization] = React.useState({
     backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
     backgroundOpacity: 100,
     backgroundBlur: 0,
@@ -60,82 +55,66 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
   const pnLTrackerButtonRef = useRef<HTMLButtonElement>(null);
   const customizeButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Save watchlist to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('watchedPlayers', JSON.stringify(watchedPlayers));
-    }
-  }, [watchedPlayers]);
-
   return (
     <div className="text-zinc-100 min-h-screen" style={{backgroundColor: '#09090B'}}>
         {/* Fixed navbar */}
         <div className="fixed top-0 left-0 right-0 z-50">
-                  <Navbar 
-          onDepositOpen={() => setIsDepositOpen(true)}
-          onNotificationsOpen={() => setIsNotificationsOpen(true)}
-          notificationsButtonRef={notificationsButtonRef}
-          onSettingsOpen={() => setIsSettingsOpen(true)}
-          settingsButtonRef={settingsButtonRef}
-          onProfileOpen={() => {
-            setSelectedPlayer({
-              id: 'personal',
-              name: 'Personal Profile',
-              address: '0x1234...5678',
-              avatar: 'https://i.imgflip.com/2/1vq853.jpg',
-              game: 'Box Hit',
-              isOnline: true
-            });
-            setIsPlayerTrackerOpen(true);
-          }}
-        />
+          <Navbar 
+            onDepositOpen={() => depositModal.open()}
+            onNotificationsOpen={() => notificationsModal.open()}
+            notificationsButtonRef={notificationsButtonRef}
+            onSettingsOpen={() => settingsModal.open()}
+            settingsButtonRef={settingsButtonRef}
+            onProfileOpen={() => {
+              setSelectedPlayer({
+                id: 'personal',
+                name: 'Personal Profile',
+                address: '0x1234...5678',
+                avatar: 'https://i.imgflip.com/2/1vq853.jpg',
+                game: 'Box Hit',
+                isOnline: true
+              });
+              setIsPlayerTrackerOpen(true);
+            }}
+          />
         </div>
       
       {/* Fixed sidebar */}
       <div className="fixed left-0 top-14 z-30">
         <div className="relative">
           <SidebarRail 
-            isCollapsed={isSidebarCollapsed} 
-            onSettingsOpen={() => setIsSettingsOpen(true)}
+            isCollapsed={layout.sidebarCollapsed} 
+            onSettingsOpen={() => settingsModal.open()}
             settingsButtonRef={settingsButtonRef}
-            onHowToPlayOpen={() => {
-              console.log('Setting How to Play open to true');
-              setIsHowToPlayOpen(true);
-            }}
+            onHowToPlayOpen={() => howToPlayModal.open()}
             howToPlayButtonRef={howToPlayButtonRef}
-            onNewsUpdatesOpen={() => {
-              console.log('Setting News Updates open to true');
-              setIsNewsUpdatesOpen(true);
-            }}
+            onNewsUpdatesOpen={() => newsUpdatesModal.open()}
             newsUpdatesButtonRef={newsUpdatesButtonRef}
-            onRewardsOpen={() => {
-              console.log('Setting Rewards open to true');
-              setIsRewardsOpen(true);
-            }}
+            onRewardsOpen={() => rewardsModal.open()}
             rewardsButtonRef={rewardsButtonRef}
-                               onWatchlistOpen={() => setIsWatchlistOpen(true)}
-                   onPlayerClick={(player) => {
-                     setSelectedPlayer(player);
-                     setIsPlayerTrackerOpen(true);
-                   }}
-                   watchedPlayers={watchedPlayers}
-                   onSoundToggle={() => {
-                     // Call the global sound toggle function
-                     if (typeof window !== 'undefined' && (window as unknown as { toggleSound: () => void }).toggleSound) {
-                       (window as unknown as { toggleSound: () => void }).toggleSound();
-                     }
-                   }}
+            onWatchlistOpen={() => watchlistModal.open()}
+            onPlayerClick={(player) => {
+              setSelectedPlayer(player);
+              setIsPlayerTrackerOpen(true);
+            }}
+            watchedPlayers={watchedPlayers}
+            onSoundToggle={() => {
+              // Call the global sound toggle function
+              if (typeof window !== 'undefined' && (window as unknown as { toggleSound: () => void }).toggleSound) {
+                (window as unknown as { toggleSound: () => void }).toggleSound();
+              }
+            }}
           />
           {/* Toggle button positioned outside the sidebar */}
           <button
             onClick={() => {
               console.log('Button clicked from AppShell!');
-              setIsSidebarCollapsed(!isSidebarCollapsed);
+              updateLayout({ sidebarCollapsed: !layout.sidebarCollapsed });
             }}
             className="absolute -right-6 top-1/2 -translate-y-1/2 grid place-items-center w-6 h-12 bg-zinc-800/60 border border-zinc-700/60 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-700/80 transition-all z-20 rounded-r cursor-pointer"
-            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={layout.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isSidebarCollapsed ? (
+            {layout.sidebarCollapsed ? (
               <ChevronRight size={14} />
             ) : (
               <ChevronLeft size={14} />
@@ -145,7 +124,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
       </div>
       
       {/* Main content with top and left margins for navbar and sidebar */}
-      <main className={`pt-14 transition-all duration-300 ${isSidebarCollapsed ? 'ml-0' : 'ml-16'} min-h-[calc(100vh-56px-32px)]`}>
+      <main className={`pt-14 transition-all duration-300 ${layout.sidebarCollapsed ? 'ml-0' : 'ml-16'} min-h-[calc(100vh-56px-32px)]`}>
         {/* Gradient background */}
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(244,114,182,0.10),transparent)]" />
         <div className="w-full h-full">
@@ -154,80 +133,80 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
       </main>
       
       <Footer 
-        onPnLTrackerOpen={() => setIsPnLTrackerOpen(!isPnLTrackerOpen)}
+        onPnLTrackerOpen={() => pnLTrackerModal.isOpen ? pnLTrackerModal.close() : pnLTrackerModal.open()}
         pnLTrackerButtonRef={pnLTrackerButtonRef}
-        onCustomizeOpen={() => setIsCustomizeOpen(true)}
+        onCustomizeOpen={() => customizeModal.open()}
         customizeButtonRef={customizeButtonRef}
       />
       
       {/* Deposit Modal */}
       <DepositPopup 
-        isOpen={isDepositOpen} 
-        onClose={() => setIsDepositOpen(false)}
+        isOpen={depositModal.isOpen} 
+        onClose={() => depositModal.close()}
         triggerRef={{ current: null }}
       />
       
       {/* Notifications Popup */}
       <NotificationsPopup 
-        isOpen={isNotificationsOpen} 
-        onClose={() => setIsNotificationsOpen(false)}
+        isOpen={notificationsModal.isOpen} 
+        onClose={() => notificationsModal.close()}
         triggerRef={notificationsButtonRef}
       />
       
       {/* Settings Popup */}
       <SettingsPopup 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)}
+        isOpen={settingsModal.isOpen} 
+        onClose={() => settingsModal.close()}
         triggerRef={settingsButtonRef}
       />
       
       {/* How to Play Popup */}
       <HowToPlayPopup 
-        isOpen={isHowToPlayOpen} 
-        onClose={() => setIsHowToPlayOpen(false)}
+        isOpen={howToPlayModal.isOpen} 
+        onClose={() => howToPlayModal.close()}
         triggerRef={howToPlayButtonRef}
       />
       
       {/* News & Updates Popup */}
       <NewsUpdatesPopup 
-        isOpen={isNewsUpdatesOpen} 
-        onClose={() => setIsNewsUpdatesOpen(false)}
+        isOpen={newsUpdatesModal.isOpen} 
+        onClose={() => newsUpdatesModal.close()}
         triggerRef={newsUpdatesButtonRef}
       />
       
       {/* Rewards Popup */}
       <RewardsPopup 
-        isOpen={isRewardsOpen} 
-        onClose={() => setIsRewardsOpen(false)}
+        isOpen={rewardsModal.isOpen} 
+        onClose={() => rewardsModal.close()}
         triggerRef={rewardsButtonRef}
       />
       
       {/* PnL Tracker Popup */}
       <PnLTrackerPopup 
-        isOpen={isPnLTrackerOpen} 
-        onClose={() => setIsPnLTrackerOpen(false)}
+        isOpen={pnLTrackerModal.isOpen} 
+        onClose={() => pnLTrackerModal.close()}
         triggerRef={pnLTrackerButtonRef}
-        isCustomizeOpen={isPnLCustomizeOpen}
-        onCustomizeOpen={() => setIsPnLCustomizeOpen(true)}
-        onCustomizeClose={() => setIsPnLCustomizeOpen(false)}
+        isCustomizeOpen={pnLCustomizeModal.isOpen}
+        onCustomizeOpen={() => pnLCustomizeModal.open()}
+        onCustomizeClose={() => pnLCustomizeModal.close()}
         customization={pnLCustomization}
       />
       
       
       {/* Customize Popup */}
       <CustomizePopup 
-        isOpen={isCustomizeOpen} 
-        onClose={() => setIsCustomizeOpen(false)}
+        isOpen={customizeModal.isOpen} 
+        onClose={() => customizeModal.close()}
         triggerRef={customizeButtonRef}
       />
 
       {/* PnL Customization Popup */}
-      {isPnLCustomizeOpen && (
+      {pnLCustomizeModal.isOpen && (
         <>
           {/* Overlay */}
           <div 
             className="fixed inset-0 bg-black/60 z-[1000] transition-all duration-300 ease-out opacity-60"
-            onClick={() => setIsPnLCustomizeOpen(false)}
+            onClick={() => pnLCustomizeModal.close()}
           />
           
           {/* Modal */}
@@ -240,7 +219,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
               <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
                 <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Customize PnL Card</h2>
                 <button
-                  onClick={() => setIsPnLCustomizeOpen(false)}
+                  onClick={() => pnLCustomizeModal.close()}
                   className="grid place-items-center w-8 h-8 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -365,7 +344,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     Reset to Default
                   </button>
                   <button
-                    onClick={() => setIsPnLCustomizeOpen(false)}
+                    onClick={() => pnLCustomizeModal.close()}
                     className="px-4 py-2 font-medium rounded transition-colors"
                     style={{ 
                       backgroundColor: signatureColor,
@@ -384,15 +363,19 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
         
         {/* Watchlist Popup */}
         <WatchlistPopup
-          isOpen={isWatchlistOpen}
-          onClose={() => setIsWatchlistOpen(false)}
+          isOpen={watchlistModal.isOpen}
+          onClose={() => watchlistModal.close()}
           watchedPlayers={watchedPlayers}
-          setWatchedPlayers={setWatchedPlayers}
+          setWatchedPlayers={(players) => {
+            const currentPlayers = usePlayerStore.getState().watchedPlayers;
+            const newPlayers = typeof players === 'function' ? players(currentPlayers) : players;
+            usePlayerStore.getState().setWatchedPlayers(newPlayers);
+          }}
         />
 
         {/* Player Tracker Popup */}
         <PlayerTrackerPopup
-          isOpen={isPlayerTrackerOpen}
+          isOpen={usePlayerStore.getState().isPlayerTrackerOpen}
           onClose={() => {
             setIsPlayerTrackerOpen(false);
             setSelectedPlayer(null);

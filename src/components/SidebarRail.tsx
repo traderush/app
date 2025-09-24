@@ -1,9 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Play, Globe, Gift, Settings, Volume2, VolumeX, Coins } from 'lucide-react';
 import clsx from 'clsx';
 import { useSignatureColor } from '@/contexts/SignatureColorContext';
-import { WatchedPlayer } from '@/hooks/usePlayerData';
+import { WatchedPlayer } from '@/stores/playerStore';
+import { useUIStore, usePlayerStore } from '@/stores';
 
 // WatchedPlayer interface is now imported from usePlayerData hook
 
@@ -38,9 +39,13 @@ const SidebarRail = React.memo(function SidebarRail({
   watchedPlayers = [],
   onSoundToggle
 }: SidebarRailProps) {
-  const [isMuted, setIsMuted] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const { signatureColor } = useSignatureColor();
+  const { settings } = useUIStore();
+  const { watchedPlayers: storeWatchedPlayers } = usePlayerStore();
+  const [isClient, setIsClient] = React.useState(false);
+
+  // Use store players if not provided via props
+  const displayPlayers = watchedPlayers.length > 0 ? watchedPlayers : storeWatchedPlayers;
 
   // Ensure consistent rendering between server and client
   useEffect(() => {
@@ -217,7 +222,7 @@ const SidebarRail = React.memo(function SidebarRail({
           isCollapsed && "opacity-0 scale-95"
         )}>
           {/* Dynamic watchlist players - only render on client to avoid hydration mismatch */}
-          {isClient && watchedPlayers.map((player) => (
+          {isClient && displayPlayers.map((player) => (
             <div key={player.id} className="relative">
               <img 
                 src={player.avatar}
@@ -305,13 +310,13 @@ const SidebarRail = React.memo(function SidebarRail({
         )}>
           <button
             onClick={() => {
-              setIsMuted(!isMuted);
+              useUIStore.getState().toggleSound();
               onSoundToggle?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
-            title={isMuted ? "Unmute" : "Mute"}
+            title={settings.soundEnabled ? "Mute" : "Unmute"}
           >
-            {isMuted ? <VolumeX size={26} strokeWidth={1.4} /> : <Volume2 size={26} strokeWidth={1.4} />}
+            {settings.soundEnabled ? <Volume2 size={26} strokeWidth={1.4} /> : <VolumeX size={26} strokeWidth={1.4} />}
           </button>
           
           <button
