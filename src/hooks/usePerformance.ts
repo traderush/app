@@ -10,6 +10,10 @@ export const usePerformance = (componentName: string) => {
   const renderStartRef = useRef<number>(0);
   const frameCountRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  const performanceMetricsRef = useRef<PerformanceMetrics>({
+    renderTime: 0,
+    frameRate: 0
+  });
 
   // Track render time
   useEffect(() => {
@@ -69,7 +73,15 @@ export const usePerformance = (componentName: string) => {
       const start = performance.now();
       fn();
       const end = performance.now();
-      return end - start;
+      const renderTime = end - start;
+      performanceMetricsRef.current.renderTime = renderTime;
+      return renderTime;
+    },
+    getMetrics: () => performanceMetricsRef.current,
+    logMetrics: () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`${componentName} Performance:`, performanceMetricsRef.current);
+      }
     }
   };
 };

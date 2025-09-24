@@ -1,5 +1,5 @@
 // Store exports and utilities
-export { useGameStore } from './gameStore';
+export { useGameStore, useGameSelectors, useGameComputed } from './gameStore';
 export { usePlayerStore } from './playerStore';
 export { useUIStore, useModal, useNotifications, useSidebar } from './uiStore';
 export { usePriceStore } from './priceStore';

@@ -26,6 +26,17 @@ class WebSocketService {
   private sessionId: string | null = null;
   private isAuthenticated = false;
   
+  // Performance optimizations
+  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private isDestroyed = false;
+  private connectionHealth = {
+    lastPing: 0,
+    lastPong: 0,
+    missedPongs: 0,
+    maxMissedPongs: 3
+  };
+  
   // Callbacks
   private onConnectedCallback?: () => void;
   private onDisconnectedCallback?: () => void;
@@ -57,6 +68,10 @@ class WebSocketService {
           console.log('WebSocket connected successfully');
           clearTimeout(timeoutId); // Clear the timeout
           this.reconnectAttempts = 0;
+          this.isDestroyed = false;
+          
+          // Start heartbeat monitoring
+          this.startHeartbeat();
           
           // Send auth message immediately
           this.send({
@@ -113,15 +128,16 @@ class WebSocketService {
             wasClean: event.wasClean
           });
           clearTimeout(timeoutId); // Clear the timeout on close
+          this.stopHeartbeat();
           this.isAuthenticated = false;
           
           if (this.onDisconnectedCallback) {
             this.onDisconnectedCallback();
           }
           
-          // Attempt reconnection
-          if (this.reconnectAttempts < this.config.reconnectAttempts) {
-            setTimeout(() => {
+          // Attempt reconnection only if not destroyed and within limits
+          if (!this.isDestroyed && this.reconnectAttempts < this.config.reconnectAttempts) {
+            this.reconnectTimeout = setTimeout(() => {
               console.log(`Reconnecting... (attempt ${this.reconnectAttempts + 1})`);
               this.reconnect(username);
             }, this.config.reconnectDelay * Math.pow(2, this.reconnectAttempts));
@@ -158,15 +174,38 @@ class WebSocketService {
   }
 
   disconnect(): void {
+    this.isDestroyed = true;
+    
+    // Clear all timeouts and intervals
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    // Close WebSocket connection
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
+    
+    // Clear all data structures
     this.messageHandlers.clear();
     this.messageQueue = [];
     this.userId = null;
     this.sessionId = null;
     this.isAuthenticated = false;
+    this.reconnectAttempts = 0;
+    this.connectionHealth = {
+      lastPing: 0,
+      lastPong: 0,
+      missedPongs: 0,
+      maxMissedPongs: 3
+    };
   }
 
   send(message: any): void {
@@ -220,6 +259,12 @@ class WebSocketService {
   }
 
   private handleMessage(message: any): void {
+    // Handle pong responses for connection health
+    if (message.type === 'pong') {
+      this.handlePong();
+      return;
+    }
+    
     // Store session ID when game is joined
     if (message.type === 'game_joined') {
       this.sessionId = message.sessionId;
@@ -283,6 +328,49 @@ class WebSocketService {
 
   onError(callback: (error: Error) => void): void {
     this.onErrorCallback = callback;
+  }
+
+  // Performance optimization methods
+  private startHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+    
+    this.heartbeatInterval = setInterval(() => {
+      if (this.isDestroyed || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      
+      // Check connection health
+      const now = Date.now();
+      if (this.connectionHealth.missedPongs >= this.connectionHealth.maxMissedPongs) {
+        console.warn('WebSocket connection unhealthy, attempting reconnect');
+        // Note: reconnect will be handled by the onclose event
+        this.ws?.close();
+        return;
+      }
+      
+      // Send ping
+      this.connectionHealth.lastPing = now;
+      this.send({ type: 'ping', timestamp: now });
+      
+      // Check for missed pongs
+      if (this.connectionHealth.lastPong < this.connectionHealth.lastPing - 10000) {
+        this.connectionHealth.missedPongs++;
+      }
+    }, 30000); // 30 seconds
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  private handlePong(): void {
+    this.connectionHealth.lastPong = Date.now();
+    this.connectionHealth.missedPongs = 0;
   }
 }
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { persist } from 'zustand/middleware';
 import { createPersistentStorage } from '@/utils/persistence';
+import { shallow } from 'zustand/shallow';
 
 export interface GameCell {
   id: string;
@@ -48,7 +49,7 @@ export interface GameStats {
   totalLosses: number;
   winRate: number;
   totalWinnings: number;
-  totalLosses: number;
+  totalLossesAmount: number;
   netProfit: number;
   longestWinStreak: number;
   longestLossStreak: number;
@@ -132,7 +133,7 @@ const initialGameStats: GameStats = {
   totalLosses: 0,
   winRate: 0,
   totalWinnings: 0,
-  totalLosses: 0,
+  totalLossesAmount: 0,
   netProfit: 0,
   longestWinStreak: 0,
   longestLossStreak: 0,
@@ -143,278 +144,289 @@ const initialGameStats: GameStats = {
 export const useGameStore = create<GameState>()(
   persist(
     subscribeWithSelector((set, get) => ({
-    // Initial State
-    gridCells: [],
-    activePositions: [],
-    gameSettings: initialGameSettings,
-    gameStats: initialGameStats,
-    isGameActive: false,
-    isGamePaused: false,
-    currentTime: 0,
-    lastUpdate: 0,
-    selectedCells: [],
-    hoveredCell: null,
-    showGrid: true,
-    showStats: false,
+      // Initial State
+      gridCells: [],
+      activePositions: [],
+      gameSettings: initialGameSettings,
+      gameStats: initialGameStats,
+      isGameActive: false,
+      isGamePaused: false,
+      currentTime: 0,
+      lastUpdate: 0,
+      selectedCells: [],
+      hoveredCell: null,
+      showGrid: true,
+      showStats: false,
 
-    // Basic Actions
-    setGridCells: (cells) => set({ gridCells: cells }),
-    
-    updateCell: (cellId, updates) =>
-      set((state) => ({
-        gridCells: state.gridCells.map((cell) =>
-          cell.id === cellId ? { ...cell, ...updates } : cell
-        ),
-      })),
+      // Basic Actions
+      setGridCells: (cells) => set({ gridCells: cells }),
+      
+      updateCell: (cellId, updates) =>
+        set((state) => ({
+          gridCells: state.gridCells.map((cell) =>
+            cell.id === cellId ? { ...cell, ...updates } : cell
+          ),
+        })),
 
-    toggleCellSelection: (cellId) =>
-      set((state) => {
-        const cell = state.gridCells.find((c) => c.id === cellId);
-        if (!cell) return state;
+      toggleCellSelection: (cellId) =>
+        set((state) => {
+          const cell = state.gridCells.find((c) => c.id === cellId);
+          if (!cell) return state;
 
-        const isSelected = cell.state === 'selected';
-        const newState = isSelected ? 'empty' : 'selected';
-        
-        const updatedCells = state.gridCells.map((c) =>
-          c.id === cellId
-            ? {
-                ...c,
-                state: newState,
-                selectionTime: newState === 'selected' ? Date.now() : undefined,
-              }
-            : c
-        );
+          const isSelected = cell.state === 'selected';
+          const newState: 'empty' | 'selected' = isSelected ? 'empty' : 'selected';
+          
+          const updatedCells = state.gridCells.map((c) =>
+            c.id === cellId
+              ? {
+                  ...c,
+                  state: newState,
+                  selectionTime: newState === 'selected' ? Date.now() : undefined,
+                }
+              : c
+          );
 
-        // Update selected cells list
-        const selectedCells = updatedCells
-          .filter((c) => c.state === 'selected')
-          .map((c) => c.id);
+          // Update selected cells list
+          const selectedCells = updatedCells
+            .filter((c) => c.state === 'selected')
+            .map((c) => c.id);
 
-        // Update game settings
-        const selectedMultipliers = updatedCells
-          .filter((c) => c.state === 'selected')
-          .map((c) => c.mult);
+          // Update game settings
+          const selectedMultipliers = updatedCells
+            .filter((c) => c.state === 'selected')
+            .map((c) => c.mult);
 
-        const bestMultiplier = selectedMultipliers.length > 0 
-          ? Math.max(...selectedMultipliers) 
-          : 0;
+          const bestMultiplier = selectedMultipliers.length > 0 
+            ? Math.max(...selectedMultipliers) 
+            : 0;
 
-        return {
-          gridCells: updatedCells,
-          selectedCells,
+          return {
+            ...state,
+            gridCells: updatedCells,
+            selectedCells,
+            gameSettings: {
+              ...state.gameSettings,
+              selectedCount: selectedCells.length,
+              selectedMultipliers,
+              bestMultiplier,
+            },
+          };
+        }),
+
+      clearSelection: () =>
+        set((state) => ({
+          ...state,
+          gridCells: state.gridCells.map((cell) => ({
+            ...cell,
+            state: 'empty',
+            selectionTime: undefined,
+          })),
+          selectedCells: [],
           gameSettings: {
             ...state.gameSettings,
-            selectedCount: selectedCells.length,
-            selectedMultipliers,
-            bestMultiplier,
+            selectedCount: 0,
+            selectedMultipliers: [],
+            bestMultiplier: 0,
           },
-        };
-      }),
-
-    clearSelection: () =>
-      set((state) => ({
-        gridCells: state.gridCells.map((cell) => ({
-          ...cell,
-          state: 'empty',
-          selectionTime: undefined,
         })),
-        selectedCells: [],
-        gameSettings: {
-          ...state.gameSettings,
-          selectedCount: 0,
-          selectedMultipliers: [],
-          bestMultiplier: 0,
-        },
-      })),
 
-    // Position Management
-    addPosition: (positionData) =>
-      set((state) => {
-        const newPosition: GamePosition = {
-          ...positionData,
-          id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: Date.now(),
-        };
+      // Position Management
+      addPosition: (positionData) =>
+        set((state) => {
+          const newPosition: GamePosition = {
+            ...positionData,
+            id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            createdAt: Date.now(),
+          };
 
-        return {
-          activePositions: [...state.activePositions, newPosition],
-          gameStats: {
-            ...state.gameStats,
-            totalBets: state.gameStats.totalBets + 1,
-          },
-        };
-      }),
+          return {
+            ...state,
+            activePositions: [...state.activePositions, newPosition],
+            gameStats: {
+              ...state.gameStats,
+              totalBets: state.gameStats.totalBets + 1,
+            },
+          };
+        }),
 
-    updatePosition: (positionId, updates) =>
-      set((state) => ({
-        activePositions: state.activePositions.map((pos) =>
-          pos.id === positionId ? { ...pos, ...updates } : pos
-        ),
-      })),
-
-    removePosition: (positionId) =>
-      set((state) => ({
-        activePositions: state.activePositions.filter((pos) => pos.id !== positionId),
-      })),
-
-    clearPositions: () => set({ activePositions: [] }),
-
-    // Settings & Stats
-    updateGameSettings: (settings) =>
-      set((state) => ({
-        gameSettings: { ...state.gameSettings, ...settings },
-      })),
-
-    updateGameStats: (stats) =>
-      set((state) => ({
-        gameStats: { ...state.gameStats, ...stats },
-      })),
-
-    // Game State
-    setGameActive: (active) => set({ isGameActive: active }),
-    setGamePaused: (paused) => set({ isGamePaused: paused }),
-    setCurrentTime: (time) => set({ currentTime: time, lastUpdate: Date.now() }),
-
-    // UI State
-    setSelectedCells: (cells) => set({ selectedCells: cells }),
-    setHoveredCell: (cellId) => set({ hoveredCell: cellId }),
-    setShowGrid: (show) => set({ showGrid: show }),
-    setShowStats: (show) => set({ showStats: show }),
-
-    // Complex Actions
-    hitCell: (cellId) =>
-      set((state) => {
-        const updatedCells = state.gridCells.map((cell) =>
-          cell.id === cellId
-            ? { ...cell, state: 'hit', hitTime: Date.now() }
-            : cell
-        );
-
-        // Update positions that include this cell
-        const updatedPositions = state.activePositions.map((pos) => {
-          if (pos.cellIds.includes(cellId) && !pos.hitTime) {
-            return { ...pos, hitTime: Date.now(), isActive: false };
-          }
-          return pos;
-        });
-
-        // Update stats
-        const hitPositions = updatedPositions.filter((pos) => pos.hitTime);
-        const newWins = state.gameStats.totalWins + hitPositions.length;
-        const totalWinnings = state.gameStats.totalWinnings + 
-          hitPositions.reduce((sum, pos) => sum + pos.potentialPayout, 0);
-
-        return {
-          gridCells: updatedCells,
-          activePositions: updatedPositions,
-          gameStats: {
-            ...state.gameStats,
-            totalWins: newWins,
-            totalWinnings,
-            winRate: newWins / state.gameStats.totalBets || 0,
-            currentStreak: state.gameStats.currentStreak + 1,
-            longestWinStreak: Math.max(
-              state.gameStats.longestWinStreak,
-              state.gameStats.currentStreak + 1
-            ),
-          },
-        };
-      }),
-
-    missCell: (cellId) =>
-      set((state) => {
-        const updatedCells = state.gridCells.map((cell) =>
-          cell.id === cellId
-            ? { ...cell, state: 'missed' }
-            : cell
-        );
-
-        // Update positions that include this cell
-        const updatedPositions = state.activePositions.map((pos) => {
-          if (pos.cellIds.includes(cellId) && !pos.missTime) {
-            return { ...pos, missTime: Date.now(), isActive: false };
-          }
-          return pos;
-        });
-
-        // Update stats
-        const missedPositions = updatedPositions.filter((pos) => pos.missTime);
-        const newLosses = state.gameStats.totalLosses + missedPositions.length;
-        const totalLosses = state.gameStats.totalLosses + 
-          missedPositions.reduce((sum, pos) => sum + pos.betAmount, 0);
-
-        return {
-          gridCells: updatedCells,
-          activePositions: updatedPositions,
-          gameStats: {
-            ...state.gameStats,
-            totalLosses: newLosses,
-            totalLosses,
-            winRate: state.gameStats.totalWins / state.gameStats.totalBets || 0,
-            currentStreak: 0,
-            longestLossStreak: Math.max(
-              state.gameStats.longestLossStreak,
-              state.gameStats.currentStreak + 1
-            ),
-          },
-        };
-      }),
-
-    processGameTick: () =>
-      set(() => {
-        const now = Date.now();
-        return {
-          currentTime: now,
-          lastUpdate: now,
-        };
-      }),
-
-    resetGame: () =>
-      set((state) => ({
-        gridCells: state.gridCells.map((cell) => ({
-          ...cell,
-          state: 'empty',
-          selectionTime: undefined,
-          crossedTime: undefined,
-          hitTime: undefined,
+      updatePosition: (positionId, updates) =>
+        set((state) => ({
+          ...state,
+          activePositions: state.activePositions.map((pos) =>
+            pos.id === positionId ? { ...pos, ...updates } : pos
+          ),
         })),
-        activePositions: [],
-        selectedCells: [],
-        gameSettings: {
-          ...state.gameSettings,
-          selectedCount: 0,
-          selectedMultipliers: [],
-          bestMultiplier: 0,
-        },
-        isGameActive: false,
-        isGamePaused: false,
-      })),
 
-    // Computed Values
-    getSelectedCells: () => {
-      const state = get();
-      return state.gridCells.filter((cell) => cell.state === 'selected');
-    },
+      removePosition: (positionId) =>
+        set((state) => ({
+          ...state,
+          activePositions: state.activePositions.filter((pos) => pos.id !== positionId),
+        })),
 
-    getActivePositions: () => {
-      const state = get();
-      return state.activePositions.filter((pos) => pos.isActive);
-    },
+      clearPositions: () => set((state) => ({ ...state, activePositions: [] })),
 
-    getTotalPotentialPayout: () => {
-      const state = get();
-      return state.activePositions.reduce((sum, pos) => sum + pos.potentialPayout, 0);
-    },
+      // Settings & Stats
+      updateGameSettings: (settings) =>
+        set((state) => ({
+          ...state,
+          gameSettings: { ...state.gameSettings, ...settings },
+        })),
 
-    getGameProgress: () => {
-      const state = get();
-      if (state.activePositions.length === 0) return 0;
-      const completedPositions = state.activePositions.filter(
-        (pos) => pos.hitTime || pos.missTime
-      ).length;
-      return (completedPositions / state.activePositions.length) * 100;
-    },
-  })),
+      updateGameStats: (stats) =>
+        set((state) => ({
+          ...state,
+          gameStats: { ...state.gameStats, ...stats },
+        })),
+
+      // Game State
+      setGameActive: (active) => set((state) => ({ ...state, isGameActive: active })),
+      setGamePaused: (paused) => set((state) => ({ ...state, isGamePaused: paused })),
+      setCurrentTime: (time) => set((state) => ({ ...state, currentTime: time, lastUpdate: Date.now() })),
+
+      // UI State
+      setSelectedCells: (cells) => set((state) => ({ ...state, selectedCells: cells })),
+      setHoveredCell: (cellId) => set((state) => ({ ...state, hoveredCell: cellId })),
+      setShowGrid: (show) => set((state) => ({ ...state, showGrid: show })),
+      setShowStats: (show) => set((state) => ({ ...state, showStats: show })),
+
+      // Complex Actions
+      hitCell: (cellId) =>
+        set((state) => {
+          const updatedCells = state.gridCells.map((cell) =>
+            cell.id === cellId
+              ? { ...cell, state: 'hit' as const, hitTime: Date.now() }
+              : cell
+          );
+
+          // Update positions that include this cell
+          const updatedPositions = state.activePositions.map((pos) => {
+            if (pos.cellIds.includes(cellId) && !pos.hitTime) {
+              return { ...pos, hitTime: Date.now(), isActive: false };
+            }
+            return pos;
+          });
+
+          // Update stats
+          const hitPositions = updatedPositions.filter((pos) => pos.hitTime);
+          const newWins = state.gameStats.totalWins + hitPositions.length;
+          const totalWinnings = state.gameStats.totalWinnings + 
+            hitPositions.reduce((sum, pos) => sum + pos.potentialPayout, 0);
+
+          return {
+            ...state,
+            gridCells: updatedCells,
+            activePositions: updatedPositions,
+            gameStats: {
+              ...state.gameStats,
+              totalWins: newWins,
+              totalWinnings,
+              winRate: newWins / state.gameStats.totalBets || 0,
+              currentStreak: state.gameStats.currentStreak + 1,
+              longestWinStreak: Math.max(
+                state.gameStats.longestWinStreak,
+                state.gameStats.currentStreak + 1
+              ),
+            },
+          };
+        }),
+
+      missCell: (cellId) =>
+        set((state) => {
+          const updatedCells = state.gridCells.map((cell) =>
+            cell.id === cellId
+              ? { ...cell, state: 'missed' as const }
+              : cell
+          );
+
+          // Update positions that include this cell
+          const updatedPositions = state.activePositions.map((pos) => {
+            if (pos.cellIds.includes(cellId) && !pos.missTime) {
+              return { ...pos, missTime: Date.now(), isActive: false };
+            }
+            return pos;
+          });
+
+          // Update stats
+          const missedPositions = updatedPositions.filter((pos) => pos.missTime);
+          const newLosses = state.gameStats.totalLosses + missedPositions.length;
+          const totalLossesAmount = state.gameStats.totalLossesAmount + 
+            missedPositions.reduce((sum, pos) => sum + pos.betAmount, 0);
+
+          return {
+            ...state,
+            gridCells: updatedCells,
+            activePositions: updatedPositions,
+            gameStats: {
+              ...state.gameStats,
+              totalLosses: newLosses,
+              totalLossesAmount,
+              winRate: state.gameStats.totalWins / state.gameStats.totalBets || 0,
+              currentStreak: 0,
+              longestLossStreak: Math.max(
+                state.gameStats.longestLossStreak,
+                state.gameStats.currentStreak + 1
+              ),
+            },
+          };
+        }),
+
+      processGameTick: () =>
+        set((state) => {
+          const now = Date.now();
+          return {
+            ...state,
+            currentTime: now,
+            lastUpdate: now,
+          };
+        }),
+
+      resetGame: () =>
+        set((state) => ({
+          ...state,
+          gridCells: state.gridCells.map((cell) => ({
+            ...cell,
+            state: 'empty',
+            selectionTime: undefined,
+            crossedTime: undefined,
+            hitTime: undefined,
+          })),
+          activePositions: [],
+          selectedCells: [],
+          gameSettings: {
+            ...state.gameSettings,
+            selectedCount: 0,
+            selectedMultipliers: [],
+            bestMultiplier: 0,
+          },
+          isGameActive: false,
+          isGamePaused: false,
+        })),
+
+      // Computed Values
+      getSelectedCells: () => {
+        const state = get();
+        return state.gridCells.filter((cell) => cell.state === 'selected');
+      },
+
+      getActivePositions: () => {
+        const state = get();
+        return state.activePositions.filter((pos) => pos.isActive);
+      },
+
+      getTotalPotentialPayout: () => {
+        const state = get();
+        return state.activePositions.reduce((sum, pos) => sum + pos.potentialPayout, 0);
+      },
+
+      getGameProgress: () => {
+        const state = get();
+        if (state.activePositions.length === 0) return 0;
+        const completedPositions = state.activePositions.filter(
+          (pos) => pos.hitTime || pos.missTime
+        ).length;
+        return (completedPositions / state.activePositions.length) * 100;
+      },
+    })),
     {
       name: 'game-store',
       storage: createPersistentStorage('game'),
@@ -427,3 +439,80 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
+
+// Performance-enhanced selectors that maintain the same API
+export const useGameSelectors = () => {
+  // Selected cells selector
+  const selectedCells = useGameStore(
+    (state) => state.gridCells.filter(cell => cell.state === 'selected')
+  );
+
+  // Game settings selector
+  const gameSettings = useGameStore(
+    (state) => state.gameSettings
+  );
+
+  // Active positions selector
+  const activePositions = useGameStore(
+    (state) => state.activePositions.filter(pos => pos.isActive)
+  );
+
+  // Game stats selector
+  const gameStats = useGameStore(
+    (state) => state.gameStats
+  );
+
+  // UI state selector
+  const uiState = useGameStore(
+    (state) => ({
+      isGameActive: state.isGameActive,
+      isGamePaused: state.isGamePaused,
+      showGrid: state.showGrid,
+      showStats: state.showStats,
+      hoveredCell: state.hoveredCell
+    })
+  );
+
+  return {
+    selectedCells,
+    gameSettings,
+    activePositions,
+    gameStats,
+    uiState
+  };
+};
+
+// Performance-enhanced computed values with memoization
+export const useGameComputed = () => {
+  const totalPotentialPayout = useGameStore(
+    (state) => state.activePositions.reduce((sum, pos) => sum + pos.potentialPayout, 0)
+  );
+
+  const gameProgress = useGameStore((state) => {
+    if (state.activePositions.length === 0) return 0;
+    const completedPositions = state.activePositions.filter(
+      (pos) => pos.hitTime || pos.missTime
+    ).length;
+    return (completedPositions / state.activePositions.length) * 100;
+  });
+
+  const selectedCount = useGameStore(
+    (state) => state.gameSettings.selectedCount
+  );
+
+  const bestMultiplier = useGameStore(
+    (state) => state.gameSettings.bestMultiplier
+  );
+
+  const selectedMultipliers = useGameStore(
+    (state) => state.gameSettings.selectedMultipliers
+  );
+
+  return {
+    totalPotentialPayout,
+    gameProgress,
+    selectedCount,
+    bestMultiplier,
+    selectedMultipliers
+  };
+};

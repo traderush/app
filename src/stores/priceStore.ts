@@ -114,6 +114,49 @@ const initialStats: PriceStats = {
 let simulationInterval: NodeJS.Timeout | null = null;
 let wsConnections: Record<string, WebSocket> = {};
 
+// Performance optimization: Connection pool to prevent memory leaks
+class WebSocketConnectionPool {
+  private connections = new Map<string, WebSocket>();
+  private maxConnections = 10;
+  
+  getConnection(url: string): WebSocket | null {
+    if (this.connections.has(url)) {
+      return this.connections.get(url)!;
+    }
+    return null;
+  }
+  
+  addConnection(url: string, ws: WebSocket): void {
+    if (this.connections.size >= this.maxConnections) {
+      // Remove oldest connection
+      const firstKey = this.connections.keys().next().value;
+      if (firstKey) {
+        this.removeConnection(firstKey);
+      }
+    }
+    this.connections.set(url, ws);
+  }
+  
+  removeConnection(url: string): void {
+    const ws = this.connections.get(url);
+    if (ws) {
+      ws.close();
+      this.connections.delete(url);
+    }
+  }
+  
+  clearAll(): void {
+    this.connections.forEach(ws => ws.close());
+    this.connections.clear();
+  }
+  
+  getConnectionCount(): number {
+    return this.connections.size;
+  }
+}
+
+const connectionPool = new WebSocketConnectionPool();
+
 export const usePriceStore = create<PriceState>()(
   subscribeWithSelector((set, get) => ({
     // Initial State
@@ -154,12 +197,15 @@ export const usePriceStore = create<PriceState>()(
     // WebSocket Management
     connectWebSocket: (exchange, url) =>
       set((state) => {
-        if (wsConnections[exchange]) {
-          wsConnections[exchange].close();
+        // Check if connection already exists in pool
+        const existingConnection = connectionPool.getConnection(url);
+        if (existingConnection) {
+          existingConnection.close();
         }
 
         try {
           const ws = new WebSocket(url);
+          connectionPool.addConnection(url, ws);
           wsConnections[exchange] = ws;
 
           ws.onopen = () => {
@@ -279,6 +325,10 @@ export const usePriceStore = create<PriceState>()(
     disconnectWebSocket: (exchange) =>
       set((state) => {
         if (wsConnections[exchange]) {
+          const url = state.connections[exchange]?.url;
+          if (url) {
+            connectionPool.removeConnection(url);
+          }
           wsConnections[exchange].close();
           delete wsConnections[exchange];
         }
@@ -419,7 +469,8 @@ export const usePriceStore = create<PriceState>()(
 
     resetPriceData: () =>
       set(() => {
-        // Close all WebSocket connections
+        // Close all WebSocket connections using connection pool
+        connectionPool.clearAll();
         Object.values(wsConnections).forEach((ws) => ws.close());
         wsConnections = {};
 
