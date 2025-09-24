@@ -1812,10 +1812,35 @@ function BoxHitCanvas({
   }
 
 export default function ClientView() {
-  // Cleanup sound manager on unmount
+  // Cleanup sound manager and WebSocket connections on unmount
   useEffect(() => {
     return () => {
+      // Cleanup sound manager
       cleanupSoundManager();
+      
+      // Cleanup WebSocket connections
+      Object.values(wsRefs.current).forEach(ws => {
+        if (ws) {
+          ws.close();
+        }
+      });
+      
+      // Cleanup timers
+      Object.values(reconnectTimeoutRefs.current).forEach(timeout => {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+      });
+      
+      // Cleanup composite price timer
+      if (compositeTimerRef.current) {
+        clearInterval(compositeTimerRef.current);
+      }
+      
+      // Cleanup selection update timeout
+      if (selectionUpdateTimeoutRef.current) {
+        clearTimeout(selectionUpdateTimeoutRef.current);
+      }
     };
   }, []);
   
