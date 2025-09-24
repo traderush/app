@@ -46,6 +46,15 @@ export interface UISettings {
   developerMode: boolean;
 }
 
+export interface PnLCustomization {
+  backgroundImage: string;
+  backgroundOpacity: number;
+  backgroundBlur: number;
+  generalTextColor: string;
+  balanceTextColor: string;
+  pnlTextColor: string;
+}
+
 interface UIState {
   // Modal Management
   modals: Record<string, ModalState>;
@@ -57,6 +66,7 @@ interface UIState {
   theme: UITheme;
   layout: UILayout;
   settings: UISettings;
+  pnLCustomization: PnLCustomization;
   
   // Global UI State
   isLoading: boolean;
@@ -81,6 +91,7 @@ interface UIState {
   updateTheme: (theme: Partial<UITheme>) => void;
   updateLayout: (layout: Partial<UILayout>) => void;
   updateSettings: (settings: Partial<UISettings>) => void;
+  updatePnLCustomization: (customization: Partial<PnLCustomization>) => void;
   
   // Actions - Global State
   setLoading: (loading: boolean, message?: string) => void;
@@ -127,6 +138,15 @@ const initialSettings: UISettings = {
   developerMode: false,
 };
 
+const initialPnLCustomization: PnLCustomization = {
+  backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
+  backgroundOpacity: 100,
+  backgroundBlur: 0,
+  generalTextColor: '#ffffff',
+  balanceTextColor: '#ffffff',
+  pnlTextColor: '#2fe3ac'
+};
+
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
@@ -136,6 +156,7 @@ export const useUIStore = create<UIState>()(
       theme: initialTheme,
       layout: initialLayout,
       settings: initialSettings,
+      pnLCustomization: initialPnLCustomization,
       isLoading: false,
       loadingMessage: '',
       isConnected: true,
@@ -233,6 +254,11 @@ export const useUIStore = create<UIState>()(
           settings: { ...state.settings, ...settingsUpdates },
         })),
 
+      updatePnLCustomization: (customizationUpdates) =>
+        set((state) => ({
+          pnLCustomization: { ...state.pnLCustomization, ...customizationUpdates },
+        })),
+
       // Global State Actions
       setLoading: (loading, message = '') =>
         set({
@@ -301,6 +327,7 @@ export const useUIStore = create<UIState>()(
         theme: state.theme,
         layout: state.layout,
         settings: state.settings,
+        pnLCustomization: state.pnLCustomization,
       }),
     }
   )

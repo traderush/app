@@ -22,7 +22,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
   const { signatureColor } = useSignatureColor();
   
   // Zustand stores
-  const { layout, updateLayout } = useUIStore();
+  const { layout, updateLayout, pnLCustomization, updatePnLCustomization } = useUIStore();
   const { watchedPlayers, selectedPlayer, setSelectedPlayer, setIsPlayerTrackerOpen } = usePlayerStore();
   
   // Modal hooks
@@ -37,15 +37,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
   const pnLCustomizeModal = useModal('pnLCustomize');
   const watchlistModal = useModal('watchlist');
   
-  // PnL customization state (could be moved to UI store later)
-  const [pnLCustomization, setPnLCustomization] = React.useState({
-    backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
-    backgroundOpacity: 100,
-    backgroundBlur: 0,
-    generalTextColor: '#ffffff',
-    balanceTextColor: '#ffffff',
-    pnlTextColor: '#2fe3ac'
-  });
+  // PnL customization is now managed by Zustand store
 
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
@@ -239,7 +231,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                   <input
                     type="text"
                     value={pnLCustomization.backgroundImage}
-                    onChange={(e) => setPnLCustomization(prev => ({ ...prev, backgroundImage: e.target.value }))}
+                    onChange={(e) => updatePnLCustomization({ backgroundImage: e.target.value })}
                     placeholder="Enter image URL"
                     className="w-full px-3 py-2 bg-zinc-700/50 border border-zinc-600 rounded text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 mt-2"
                   />
@@ -257,7 +249,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                       max={100}
                       step={1}
                       value={pnLCustomization.backgroundOpacity}
-                      onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundOpacity: value }))}
+                      onChange={(value) => updatePnLCustomization({ backgroundOpacity: value })}
                       className="w-full"
                       signatureColor={signatureColor}
                     />
@@ -276,7 +268,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                       max={8}
                       step={1}
                       value={pnLCustomization.backgroundBlur}
-                      onChange={(value) => setPnLCustomization(prev => ({ ...prev, backgroundBlur: value }))}
+                      onChange={(value) => updatePnLCustomization({ backgroundBlur: value })}
                       className="w-full"
                       signatureColor={signatureColor}
                     />
@@ -295,7 +287,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     <input
                       type="color"
                       value={pnLCustomization.generalTextColor}
-                      onChange={(e) => setPnLCustomization(prev => ({ ...prev, generalTextColor: e.target.value }))}
+                      onChange={(e) => updatePnLCustomization({ generalTextColor: e.target.value })}
                       className="w-8 h-8 bg-zinc-700/50 border border-zinc-600 rounded cursor-pointer"
                     />
                   </div>
@@ -306,7 +298,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     <input
                       type="color"
                       value={pnLCustomization.balanceTextColor}
-                      onChange={(e) => setPnLCustomization(prev => ({ ...prev, balanceTextColor: e.target.value }))}
+                      onChange={(e) => updatePnLCustomization({ balanceTextColor: e.target.value })}
                       className="w-8 h-8 bg-zinc-700/50 border border-zinc-700/50 rounded cursor-pointer"
                     />
                   </div>
@@ -317,7 +309,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     <input
                       type="color"
                       value={pnLCustomization.pnlTextColor}
-                      onChange={(e) => setPnLCustomization(prev => ({ ...prev, pnlTextColor: e.target.value }))}
+                      onChange={(e) => updatePnLCustomization({ pnlTextColor: e.target.value })}
                       className="w-8 h-8 bg-zinc-700/50 border border-zinc-700/50 rounded cursor-pointer"
                     />
                   </div>
@@ -327,7 +319,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                 <div className="flex items-center justify-between pt-1">
                   <button
                     onClick={() => {
-                      setPnLCustomization({
+                      updatePnLCustomization({
                         backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
                         backgroundOpacity: 100,
                         backgroundBlur: 0,
