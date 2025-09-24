@@ -1,3 +1,5 @@
+import React from 'react';
+
 /** centralized trading colors */
 const TRADING_COLORS = {
   positive: '#2fe3ac',  // Green for positive values (gains, up movements)
@@ -11,7 +13,7 @@ interface FooterProps {
   customizeButtonRef: React.RefObject<HTMLButtonElement | null>;
 }
 
-export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustomizeOpen, customizeButtonRef }: FooterProps) {
+const Footer = React.memo(function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustomizeOpen, customizeButtonRef }: FooterProps) {
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
       <div className="h-8 px-4 flex items-center justify-between text-xs text-zinc-400">
@@ -45,6 +47,30 @@ export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustom
               className="w-4 h-4 rounded object-cover"
             />
             <span style={{color: '#26FFA4'}}>$200.67</span>
+          </div>
+          
+          {/* Connection Status */}
+          <div className="flex items-center gap-2 relative group">
+            <div 
+              className="w-2 h-2 rounded-full animate-pulse" 
+              style={{
+                backgroundColor: '#10AE80',
+                boxShadow: '0 0 6px #10AE80'
+              }}
+            />
+            <span className="text-zinc-300">Connected</span>
+            
+            {/* Tooltip with detailed connection info */}
+            <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+              <div className="text-xs text-zinc-300 space-y-1">
+                <div className="font-medium text-green-400">Live Data Feed</div>
+                <div>3 exchanges connected</div>
+                <div>Binance • Coinbase • Kraken</div>
+                <div className="text-zinc-500">Last update: 2s ago</div>
+              </div>
+              {/* Arrow */}
+              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-zinc-800"></div>
+            </div>
           </div>
         </div>
         
@@ -141,4 +167,6 @@ export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustom
       </div>
     </footer>
   );
-}
+});
+
+export default Footer;

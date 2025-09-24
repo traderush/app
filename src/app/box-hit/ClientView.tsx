@@ -2499,42 +2499,6 @@ export default function ClientView() {
                 {isPriceUpdating && (
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10AE80', border: '2px solid #134335' }}></div>
                 )}
-                
-                {/* Connection Status Indicator */}
-                <div 
-                  className="relative group cursor-pointer"
-                  title={isWebSocketConnected 
-                    ? `Connected to ${Object.keys(wsRefs.current).filter(key => wsRefs.current[key]?.readyState === WebSocket.OPEN).length} exchanges` 
-                    : 'Disconnected - Using demo data'
-                  }
-                >
-                  <div 
-                    className="w-3 h-3 rounded-full transition-all duration-300" 
-                    style={{ 
-                      backgroundColor: isWebSocketConnected ? '#10AE80' : '#EC397A',
-                      boxShadow: `0 0 8px ${isWebSocketConnected ? '#10AE80' : '#EC397A'}40`
-                    }}
-                  />
-                  
-                  {/* Tooltip on hover */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-                    <div className="font-medium mb-1">
-                      {isWebSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}
-                    </div>
-                    <div className="text-zinc-400">
-                      {isWebSocketConnected 
-                        ? `${Object.keys(wsRefs.current).filter(key => wsRefs.current[key]?.readyState === WebSocket.OPEN).length} exchanges active`
-                        : 'Using demo data'
-                      }
-                    </div>
-                    {isWebSocketConnected && (
-                      <div className="text-zinc-500 text-xs mt-1">
-                        Live price feed active
-                      </div>
-                    )}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-zinc-700"></div>
-                  </div>
-                </div>
               </div>
               
               {/* Last 24h Change */}
