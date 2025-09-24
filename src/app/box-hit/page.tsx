@@ -1,3 +1,3 @@
 // server component (default)
-import ClientViewZustand from './ClientViewZustand';
-export default function Page() { return <ClientViewZustand />; }
+import ClientView from './ClientView';
+export default function Page() { return <ClientView />; }
