@@ -41,6 +41,13 @@ interface GridPosition {
 }
 
 
+/**
+ * Checks if a line segment intersects with a rectangle
+ * @param p1 - Start point of the line segment
+ * @param p2 - End point of the line segment  
+ * @param r - Rectangle to check intersection with
+ * @returns true if the line segment intersects the rectangle
+ */
 function segmentIntersectsRect(p1:{x:number;y:number}, p2:{x:number;y:number}, r:{x:number;y:number;w:number;h:number}) {
   // Liang–Barsky
   let t0 = 0, t1 = 1;
@@ -58,6 +65,25 @@ function segmentIntersectsRect(p1:{x:number;y:number}, p2:{x:number;y:number}, r
   return true;
 }
 
+/**
+ * Main BoxHit canvas component for rendering the trading game interface
+ * Features real-time price charts, grid cells, player interactions, and animations
+ * 
+ * @param rows - Number of rows in the grid (default: 6)
+ * @param cols - Number of columns in the grid (default: 8)
+ * @param tickMs - Animation update interval in milliseconds (default: 2000)
+ * @param leftChartFraction - Fraction of width reserved for past chart (default: 0.25)
+ * @param live - Whether to use live price data (default: false)
+ * @param minMultiplier - Minimum multiplier to display on chart (default: 1.0)
+ * @param onSelectionChange - Callback when grid cell selection changes
+ * @param onPriceUpdate - Callback when price data updates
+ * @param isTradingMode - Whether trading mode is active
+ * @param realBTCPrice - Current BTC price for live updates
+ * @param showProbabilities - Whether to show probability heatmap overlay
+ * @param showOtherPlayers - Whether to show other players' selections
+ * @param signatureColor - Theme color for UI elements
+ * @param zoomLevel - Zoom level for the canvas (1.0 = normal)
+ */
 function BoxHitCanvas({
   rows = 6,
   cols = 8,
@@ -1814,6 +1840,19 @@ function BoxHitCanvas({
   );
   }
 
+/**
+ * Main ClientView component for the BoxHit trading game
+ * 
+ * Features:
+ * - Real-time WebSocket connections to multiple exchanges
+ * - Live price data integration with canvas rendering
+ * - Dynamic connection status with rich tooltips
+ * - Comprehensive error handling and user feedback
+ * - Zustand state management for game settings
+ * - Toast notification system for user interactions
+ * 
+ * @returns JSX element containing the complete trading interface
+ */
 export default function ClientView() {
   // Cleanup sound manager and WebSocket connections on unmount
   useEffect(() => {
@@ -1960,7 +1999,10 @@ export default function ClientView() {
   // Toast notification state - support up to 5 stacked toasts with animation states
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; timestamp: number; isVisible: boolean }>>([]);
   
-  // Toast notification function
+  /**
+   * Displays a toast notification to the user
+   * @param message - The message to display in the toast
+   */
   const showToast = useCallback((message: string) => {
     const newToastId = Date.now();
     const newToast = {
@@ -2024,7 +2066,10 @@ export default function ClientView() {
     'kraken': 0.3      // 30% weight - major global exchange
   }), []);
 
-  // Calculate composite BTC price from multiple exchanges
+  /**
+   * Calculates composite BTC price from multiple exchanges using weighted average
+   * @returns Composite price or null if no valid prices available
+   */
   const calculateCompositePrice = useCallback(() => {
     const prices = Object.values(exchangePricesRef.current);
     if (prices.length === 0) return null;
