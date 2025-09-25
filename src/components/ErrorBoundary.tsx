@@ -71,7 +71,7 @@ class ErrorBoundary extends Component<Props, State> {
             </h2>
             
             <p className="text-zinc-400 mb-4">
-              We're sorry, but something unexpected happened. Please try refreshing the page.
+              We&apos;re sorry, but something unexpected happened. Please try refreshing the page.
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (

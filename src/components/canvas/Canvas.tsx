@@ -33,7 +33,7 @@ export default function Canvas() {
   const priceUpdateIntervalRef = useRef<number | null>(null);
   const handleTradePlaceRef = useRef<typeof handleTradePlace | null>(null);
   const isJoinedRef = useRef(false);
-  const contractsRef = useRef<any[]>([]);
+  const contractsRef = useRef<unknown[]>([]);
 
   const { isConnected, isConnecting, connect, disconnect, send, on, off } =
     useWebSocket({
@@ -67,7 +67,7 @@ export default function Canvas() {
   useEffect(() => {
     if (!isConnected) return;
 
-    const handleContractResolved = (msg: any) => {
+    const handleContractResolved = (msg: unknown) => {
       if (msg.payload && gameRef.current) {
         const { contractId, outcome } = msg.payload;
 
@@ -78,7 +78,7 @@ export default function Canvas() {
       }
     };
 
-    const handleTradeResult = (msg: any) => {
+    const handleTradeResult = (msg: unknown) => {
       if (msg.payload) {
         const { contractId, won, payout, profit, balance } = msg.payload;
         const message = won
@@ -137,7 +137,7 @@ export default function Canvas() {
         },
       });
 
-      const handleGameConfig = (msg: any) => {
+      const handleGameConfig = (msg: unknown) => {
         if (msg.type === 'game_config' && msg.payload) {
           const { config } = msg.payload;
           setPriceStep(config.priceStep);
@@ -166,7 +166,7 @@ export default function Canvas() {
   // Handle price updates
   useEffect(() => {
     if (isConnected) {
-      const handlePriceUpdate = (msg: any) => {
+      const handlePriceUpdate = (msg: unknown) => {
         if (msg.payload && typeof msg.payload.price === 'number') {
           setCurrentPrice(msg.payload.price);
 
@@ -725,7 +725,7 @@ export default function Canvas() {
                     areas
                   </p>
                   <p>
-                    • Camera follows price by default, use "Follow Price" to
+                    • Camera follows price by default, use &quot;Follow Price&quot; to
                     reset
                   </p>
                   <p>• Double-click boxes to place trades</p>

@@ -31,7 +31,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
     const updateMetrics = () => {
       const renderTime = performance.measureRenderTime(() => {});
-      const memoryUsage = (performance as any).getMemoryUsage?.() || 0;
+        const memoryUsage = (performance as { getMemoryUsage?: () => number }).getMemoryUsage?.() || 0;
       
       setMetrics(prev => ({
         ...prev,

@@ -429,13 +429,13 @@ export const useGameStore = create<GameState>()(
     })),
     {
       name: 'game-store',
-      storage: createPersistentStorage('game'),
+      storage: createPersistentStorage('game') as any,
       partialize: (state) => ({
         gameSettings: state.gameSettings,
         gameStats: state.gameStats,
         showGrid: state.showGrid,
         showStats: state.showStats,
-      }),
+      }) as any,
     }
   )
 );
