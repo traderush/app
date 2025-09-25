@@ -32,6 +32,21 @@ export class WebSocketServer {
   private messageRouter: MessageRouter;
   private config: Required<WebSocketServerConfig>;
   private heartbeatInterval: NodeJS.Timer | null = null;
+  
+  // Performance monitoring
+  private performanceMetrics = {
+    totalConnections: 0,
+    activeConnections: 0,
+    messagesProcessed: 0,
+    averageResponseTime: 0,
+    errorCount: 0,
+    startTime: Date.now(),
+    peakConnections: 0
+  };
+  
+  // Connection pooling for better performance
+  private connectionPool = new Map<string, Connection>();
+  private maxPoolSize = 1000;
 
   constructor(
     config: WebSocketServerConfig,
@@ -139,6 +154,14 @@ export class WebSocketServer {
     // Add connection to ConnectionManager
     this.connectionManager.addConnection(connectionId, ws);
 
+    // Update performance metrics
+    this.performanceMetrics.totalConnections++;
+    this.performanceMetrics.activeConnections++;
+    this.performanceMetrics.peakConnections = Math.max(
+      this.performanceMetrics.peakConnections, 
+      this.performanceMetrics.activeConnections
+    );
+
     logger.info('WebSocket connection opened', { connectionId });
 
     // Don't send initial heartbeat immediately - wait for auth
@@ -146,6 +169,7 @@ export class WebSocketServer {
 
   private async handleMessage(ws: any, message: string | Buffer): Promise<void> {
     const { connectionId } = ws.data;
+    const startTime = Date.now();
     
     try {
       // Parse message
@@ -156,6 +180,8 @@ export class WebSocketServer {
       // Log raw message for debugging validation errors
       if (!data || typeof data !== 'object') {
         logger.error('Invalid message format', { connectionId, rawMessage: message });
+        this.updateMetrics(false, Date.now() - startTime, true);
+        return;
       }
 
       // Validate message format
@@ -173,6 +199,9 @@ export class WebSocketServer {
       if (response) {
         this.sendMessage(ws, response);
       }
+
+      // Update performance metrics
+      this.updateMetrics(true, Date.now() - startTime, false);
     } catch (error) {
       handleWebSocketError(ws, error, connectionId);
     }
@@ -191,6 +220,9 @@ export class WebSocketServer {
     // Clean up connection
     if (connectionId) {
       await this.connectionManager.removeConnection(connectionId);
+      
+      // Update performance metrics
+      this.performanceMetrics.activeConnections = Math.max(0, this.performanceMetrics.activeConnections - 1);
     }
 
     // Notify router of disconnection
@@ -284,5 +316,72 @@ export class WebSocketServer {
 
   private generateConnectionId(): string {
     return `conn_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  /**
+   * Get performance metrics
+   */
+  getPerformanceMetrics() {
+    const uptime = Date.now() - this.performanceMetrics.startTime;
+    return {
+      ...this.performanceMetrics,
+      uptime,
+      connectionsPerSecond: this.performanceMetrics.totalConnections / (uptime / 1000),
+      messagesPerSecond: this.performanceMetrics.messagesProcessed / (uptime / 1000),
+      errorRate: this.performanceMetrics.messagesProcessed > 0 
+        ? this.performanceMetrics.errorCount / this.performanceMetrics.messagesProcessed 
+        : 0,
+      memoryUsage: process.memoryUsage(),
+      cpuUsage: process.cpuUsage()
+    };
+  }
+
+  /**
+   * Reset performance metrics
+   */
+  resetPerformanceMetrics(): void {
+    this.performanceMetrics = {
+      totalConnections: 0,
+      activeConnections: 0,
+      messagesProcessed: 0,
+      averageResponseTime: 0,
+      errorCount: 0,
+      startTime: Date.now(),
+      peakConnections: 0
+    };
+  }
+
+  /**
+   * Update performance metrics
+   */
+  private updateMetrics(messageProcessed = false, responseTime = 0, error = false): void {
+    if (messageProcessed) {
+      this.performanceMetrics.messagesProcessed++;
+    }
+    
+    if (responseTime > 0) {
+      const currentAvg = this.performanceMetrics.averageResponseTime;
+      const count = this.performanceMetrics.messagesProcessed;
+      this.performanceMetrics.averageResponseTime = 
+        (currentAvg * (count - 1) + responseTime) / count;
+    }
+    
+    if (error) {
+      this.performanceMetrics.errorCount++;
+    }
+  }
+
+  /**
+   * Get server health status
+   */
+  getHealthStatus() {
+    const metrics = this.getPerformanceMetrics();
+    const isHealthy = metrics.errorRate < 0.1 && metrics.averageResponseTime < 100;
+    
+    return {
+      status: isHealthy ? 'healthy' : 'degraded',
+      metrics,
+      timestamp: Date.now()
+    };
   }
 }
