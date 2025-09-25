@@ -17,7 +17,7 @@ export const useAnimationLoop = (
 ) => {
   const { fps = 60, autoStart = false } = config;
   
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number>(0);
   const frameCountRef = useRef<number>(0);
   const isRunningRef = useRef<boolean>(false);

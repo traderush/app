@@ -25,13 +25,13 @@ export function LazyWrapper({ children, fallback = <DefaultFallback /> }: LazyWr
 }
 
 // Utility function to create lazy-loaded components with error boundaries
-export function createLazyComponent<T extends ComponentType<unknown>>(
+export function createLazyComponent<T extends ComponentType<any>>(
   importFunc: () => Promise<{ default: T }>,
   fallback?: React.ReactNode
 ) {
   const LazyComponent = lazy(importFunc);
   
-  return function LazyComponentWithSuspense(props: React.ComponentProps<T>) {
+  return function LazyComponentWithSuspense(props: any) {
     return (
       <Suspense fallback={fallback || <DefaultFallback />}>
         <LazyComponent {...props} />

@@ -94,7 +94,7 @@ const GameCanvas = React.memo(function GameCanvas({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   // Performance optimization refs
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const collisionCache = useRef<Map<string, { result: number; frame: number }>>(new Map());
   const frameCount = useRef(0);
 

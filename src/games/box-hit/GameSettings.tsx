@@ -36,8 +36,8 @@ const GameSettings = React.memo(function GameSettings({
           Minimum Multiplier: {minMultiplier.toFixed(1)}x
         </label>
         <CustomSlider
-          value={[minMultiplier]}
-          onValueChange={(values) => onMinMultiplierChange(values[0])}
+          value={minMultiplier}
+          onChange={onMinMultiplierChange}
           min={1.0}
           max={5.0}
           step={0.1}
@@ -54,8 +54,8 @@ const GameSettings = React.memo(function GameSettings({
           Zoom Level: {zoomLevel.toFixed(1)}x
         </label>
         <CustomSlider
-          value={[zoomLevel]}
-          onValueChange={(values) => onZoomLevelChange(values[0])}
+          value={zoomLevel}
+          onChange={onZoomLevelChange}
           min={0.5}
           max={2.0}
           step={0.1}

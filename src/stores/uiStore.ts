@@ -286,22 +286,22 @@ export const useUIStore = create<UIState>()(
 
       getUnreadNotifications: () => {
         const state = get();
-        return state.notifications.filter((n) => !n.read);
+        return state.notifications.filter((n) => !n.timestamp || Date.now() - n.timestamp < 5000);
       },
 
       getNotificationCount: () => {
         const state = get();
-        return state.notifications.filter((n) => !n.read).length;
+        return state.notifications.filter((n) => !n.timestamp || Date.now() - n.timestamp < 5000).length;
       },
     }),
     {
       name: 'ui-store',
-      storage: createPersistentStorage('ui'),
+      storage: createPersistentStorage('ui') as any,
       partialize: (state) => ({
         theme: state.theme,
         layout: state.layout,
         settings: state.settings,
-      }),
+      }) as any,
     }
   )
 );

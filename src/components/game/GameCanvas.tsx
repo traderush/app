@@ -135,7 +135,7 @@ export function GameCanvas({
       }
 
       // Highlight hovered cell
-      if (hoveredCell && hoveredCell.x === cell.x && hoveredCell.y === cell.y) {
+      if (hoveredCell && hoveredCell === cell.id) {
         fillColor = `${effectiveSignatureColor}40`;
         borderColor = effectiveSignatureColor;
       }
@@ -205,7 +205,9 @@ export function GameCanvas({
     const cellY = Math.floor(y / cellHeight);
 
     if (cellX >= 0 && cellX < cols && cellY >= 0 && cellY < rows) {
-      setHoveredCell({ x: cellX, y: cellY });
+      // Find the cell ID based on coordinates
+      const cellId = `${cellX}-${cellY}`;
+      setHoveredCell(cellId);
     } else {
       setHoveredCell(null);
     }

@@ -334,8 +334,9 @@ export const usePlayerStore = create<PlayerState>()(
 
         // Apply sorting
         filtered.sort((a, b) => {
-          const aValue = a[state.preferences.sortBy];
-          const bValue = b[state.preferences.sortBy];
+          const sortBy = state.preferences.sortBy === 'streak' ? 'currentStreak' : state.preferences.sortBy;
+          const aValue = a[sortBy as keyof WatchedPlayer];
+          const bValue = b[sortBy as keyof WatchedPlayer];
 
           if (typeof aValue === 'number' && typeof bValue === 'number') {
             return state.preferences.sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
@@ -377,11 +378,11 @@ export const usePlayerStore = create<PlayerState>()(
     }),
     {
       name: 'player-store',
-      storage: createPersistentStorage('player'),
+      storage: createPersistentStorage('player') as any,
       partialize: (state) => ({
         watchedPlayers: state.watchedPlayers,
         preferences: state.preferences,
-      }),
+      }) as any,
     }
   )
 );

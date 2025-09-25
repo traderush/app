@@ -129,7 +129,9 @@ class PerformanceMonitor {
   // Subscribe to performance updates
   subscribe(callback: (metrics: { type: string; data: unknown }) => void) {
     this.observers.add(callback);
-    return () => this.observers.delete(callback);
+    return () => {
+      this.observers.delete(callback);
+    };
   }
 
   private notifyObservers(data: { type: string; data: unknown }) {

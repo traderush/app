@@ -24,13 +24,13 @@ interface GridSystemProps {
   onCellClick?: (row: number, col: number) => void;
 }
 
-export const GridSystem: React.FC<GridSystemProps> = ({
+export const useGridSystem = ({
   rows,
   cols,
   onSelectionChange,
   isTradingMode = false,
   onCellClick
-}) => {
+}: GridSystemProps) => {
   const [gridCells, setGridCells] = useState<GridCell[]>([]);
   const [gridPosition, setGridPosition] = useState<GridPosition>({ offsetX: 0, offsetY: 0 });
 
@@ -96,4 +96,4 @@ export const GridSystem: React.FC<GridSystemProps> = ({
   };
 };
 
-export default GridSystem;
+export default useGridSystem;

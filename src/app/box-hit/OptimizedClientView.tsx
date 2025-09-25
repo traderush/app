@@ -46,7 +46,7 @@ export default function OptimizedClientView() {
   const { 
     priceData,
     isConnected: priceConnected,
-    currentPrices
+    stats: { currentPrice }
   } = usePriceStore();
 
   // Memoized callbacks
@@ -70,7 +70,7 @@ export default function OptimizedClientView() {
 
   const handlePriceUpdate = useCallback((price: number) => {
     setCurrentBTCPrice(price);
-    setCurrentPrices(prev => ({ ...prev, btc: price }));
+    setCurrentPrices(price, price * 0.04, price * 0.001); // BTC, ETH, SOL prices
     setLastUpdateTime(Date.now());
   }, [setCurrentPrices, setLastUpdateTime]);
 
@@ -125,7 +125,12 @@ export default function OptimizedClientView() {
 
           {/* Positions Table */}
           <div className="h-48 border-t border-zinc-800">
-            <PositionsTable />
+            <PositionsTable 
+              selectedCount={gameSettings.selectedCount}
+              selectedMultipliers={gameSettings.selectedMultipliers}
+              betAmount={gameSettings.betAmount}
+              currentBTCPrice={currentPrice}
+            />
           </div>
         </div>
 

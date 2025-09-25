@@ -298,7 +298,7 @@ export const usePriceStore = create<PriceState>()(
           };
 
           ws.onerror = (error) => {
-            console.error(`WebSocket error for ${exchange}:`, error.message || 'Unknown error');
+            console.error(`WebSocket error for ${exchange}:`, error);
             get().setError(`Connection error for ${exchange}`);
           };
 

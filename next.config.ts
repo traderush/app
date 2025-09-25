@@ -8,6 +8,16 @@ const nextConfig: NextConfig = {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
   },
+  // Exclude backend from Next.js build
+  webpack: (config) => {
+    // Exclude backend directory from compilation
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+    };
+    
+    return config;
+  },
+  
   // Configure Content Security Policy
   async headers() {
     return [

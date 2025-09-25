@@ -103,7 +103,7 @@ const PriceFeedManager = React.memo(function PriceFeedManager({
       };
 
       ws.onerror = (error) => {
-        console.error(`${exchange} WebSocket error:`, error.message || 'Unknown error');
+        console.error(`${exchange} WebSocket error:`, error);
       };
     } catch (error) {
       console.error(`Failed to connect to ${exchange}:`, error);

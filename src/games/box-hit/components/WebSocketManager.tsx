@@ -32,7 +32,7 @@ const WebSocketManager = React.memo<WebSocketManagerProps>(({
       ws.onopen = () => {
         logger.info(`Connected to ${exchange}`, undefined, 'WEBSOCKET');
         setWebSocketConnected(true);
-        setConnectedExchanges(prev => ({ ...prev, [exchange]: true }));
+        setConnectedExchanges([exchange]);
         onConnectionStatusChange(true);
       };
 
@@ -41,7 +41,7 @@ const WebSocketManager = React.memo<WebSocketManagerProps>(({
           const data = JSON.parse(event.data);
           if (data.price) {
             onPriceUpdate(data.price);
-            setCurrentPrices(prev => ({ ...prev, [exchange]: data.price }));
+            setCurrentPrices(data.price, data.price * 0.04, data.price * 0.001);
             setLastUpdateTime(Date.now());
           }
         } catch (error) {
@@ -56,7 +56,7 @@ const WebSocketManager = React.memo<WebSocketManagerProps>(({
 
       ws.onclose = () => {
         logger.info(`${exchange} WebSocket closed`, undefined, 'WEBSOCKET');
-        setConnectedExchanges(prev => ({ ...prev, [exchange]: false }));
+        setConnectedExchanges([]);
         
         // Attempt reconnection
         const timeout = setTimeout(() => {

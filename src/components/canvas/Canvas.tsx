@@ -33,7 +33,7 @@ export default function Canvas() {
   const priceUpdateIntervalRef = useRef<number | null>(null);
   const handleTradePlaceRef = useRef<typeof handleTradePlace | null>(null);
   const isJoinedRef = useRef(false);
-  const contractsRef = useRef<unknown[]>([]);
+  const contractsRef = useRef<Array<{ contractId: string; [key: string]: unknown }>>([]);
 
   const { isConnected, isConnecting, connect, disconnect, send, on, off } =
     useWebSocket({
@@ -68,8 +68,9 @@ export default function Canvas() {
     if (!isConnected) return;
 
     const handleContractResolved = (msg: unknown) => {
-      if (msg.payload && gameRef.current) {
-        const { contractId, outcome } = msg.payload;
+      if (typeof msg === 'object' && msg !== null && 'payload' in msg && gameRef.current) {
+        const payload = (msg as { payload: { contractId: string; outcome: string } }).payload;
+        const { contractId, outcome } = payload;
 
         if (outcome === 'hit') {
           gameRef.current.markContractAsHit(contractId);
@@ -79,8 +80,9 @@ export default function Canvas() {
     };
 
     const handleTradeResult = (msg: unknown) => {
-      if (msg.payload) {
-        const { contractId, won, payout, profit, balance } = msg.payload;
+      if (typeof msg === 'object' && msg !== null && 'payload' in msg) {
+        const payload = (msg as { payload: { contractId: string; won: boolean; payout: number; profit: number; balance: number } }).payload;
+        const { contractId, won, payout, profit, balance } = payload;
         const message = won
           ? `Won! +$${profit.toFixed(2)} (Payout: $${payout.toFixed(2)})`
           : `Lost $${Math.abs(profit).toFixed(2)}`;
@@ -131,15 +133,16 @@ export default function Canvas() {
     if (isConnected && !configLoaded) {
       send({
         type: 'get_game_config',
-        payload: {
+        data: {
           gameMode: 'box_hit',
           timeframe: selectedTimeframe,
         },
       });
 
       const handleGameConfig = (msg: unknown) => {
-        if (msg.type === 'game_config' && msg.payload) {
-          const { config } = msg.payload;
+        if (typeof msg === 'object' && msg !== null && 'type' in msg && msg.type === 'game_config' && 'payload' in msg) {
+          const payload = (msg as { payload: { config: any } }).payload;
+          const { config } = payload;
           setPriceStep(config.priceStep);
           setTimeStep(config.timeStep);
           setBasePrice(config.basePrice);
@@ -167,20 +170,23 @@ export default function Canvas() {
   useEffect(() => {
     if (isConnected) {
       const handlePriceUpdate = (msg: unknown) => {
-        if (msg.payload && typeof msg.payload.price === 'number') {
-          setCurrentPrice(msg.payload.price);
+        if (typeof msg === 'object' && msg !== null && 'payload' in msg) {
+          const payload = (msg as { payload: { price: number } }).payload;
+          if (typeof payload.price === 'number') {
+            setCurrentPrice(payload.price);
 
           // Update canvas game with new price
           if (gameRef.current) {
             gameRef.current.addPriceData({
-              price: msg.payload.price,
+              price: payload.price,
               timestamp: Date.now(),
             });
             // Increment data point count to stay in sync with GridGame
             setDataPointCount((prev) => prev + 1);
           }
         }
-      };
+      }
+    };
 
       on('price_update', handlePriceUpdate);
 
@@ -433,7 +439,7 @@ export default function Canvas() {
         const contract = contractsRef.current.find(
           (c) => c.contractId === squareId
         );
-        if (contract) {
+        if (contract && typeof contract.startTime === 'number' && typeof contract.endTime === 'number') {
           const currentTimeMs = Date.now();
           const timeUntilStart = contract.startTime - currentTimeMs;
           const col = Math.floor(timeUntilStart / timeStep);

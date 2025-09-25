@@ -88,24 +88,44 @@ export const storeUtils = {
    * Import store data from JSON
    */
   importStores: (data: unknown) => {
-    if (data.game) {
-      useGameStore.getState().updateGameSettings(data.game.gameSettings || {});
-      useGameStore.getState().updateGameStats(data.game.gameStats || {});
+    if (typeof data === 'object' && data !== null && 'game' in data) {
+      const gameData = (data as { game: { gameSettings?: any; gameStats?: any } }).game;
+      if (gameData.gameSettings) {
+        useGameStore.getState().updateGameSettings(gameData.gameSettings);
+      }
+      if (gameData.gameStats) {
+        useGameStore.getState().updateGameStats(gameData.gameStats);
+      }
     }
 
-    if (data.player) {
-      usePlayerStore.getState().setWatchedPlayers(data.player.watchedPlayers || []);
-      usePlayerStore.getState().updatePreferences(data.player.preferences || {});
+    if (typeof data === 'object' && data !== null && 'player' in data) {
+      const playerData = (data as { player: { watchedPlayers?: any; preferences?: any } }).player;
+      if (playerData.watchedPlayers) {
+        usePlayerStore.getState().setWatchedPlayers(playerData.watchedPlayers);
+      }
+      if (playerData.preferences) {
+        usePlayerStore.getState().updatePreferences(playerData.preferences);
+      }
     }
 
-    if (data.ui) {
-      useUIStore.getState().updateTheme(data.ui.theme || {});
-      useUIStore.getState().updateLayout(data.ui.layout || {});
-      useUIStore.getState().updateSettings(data.ui.settings || {});
+    if (typeof data === 'object' && data !== null && 'ui' in data) {
+      const uiData = (data as { ui: { theme?: any; layout?: any; settings?: any } }).ui;
+      if (uiData.theme) {
+        useUIStore.getState().updateTheme(uiData.theme);
+      }
+      if (uiData.layout) {
+        useUIStore.getState().updateLayout(uiData.layout);
+      }
+      if (uiData.settings) {
+        useUIStore.getState().updateSettings(uiData.settings);
+      }
     }
 
-    if (data.price) {
-      usePriceStore.getState().updateConfig(data.price.config || {});
+    if (typeof data === 'object' && data !== null && 'price' in data) {
+      const priceData = (data as { price: { config?: any } }).price;
+      if (priceData.config) {
+        usePriceStore.getState().updateConfig(priceData.config);
+      }
     }
   },
 
@@ -126,7 +146,7 @@ export const storeDebug = {
   /**
    * Subscribe to all store changes for debugging
    */
-  subscribeToAll: (callback: (state: unknown, prevState: unknown, action: string) => void) => {
+  subscribeToAll: (callback: (state: unknown, prevState: unknown) => void) => {
     const unsubscribeFunctions = [
       useGameStore.subscribe(callback),
       usePlayerStore.subscribe(callback),
@@ -156,9 +176,8 @@ export const storeDebug = {
    */
   enableLogging: () => {
     if (process.env.NODE_ENV === 'development') {
-      return storeDebug.subscribeToAll((state, prevState, action) => {
+      return storeDebug.subscribeToAll((state, prevState) => {
         console.log('Store Update:', {
-          action,
           state,
           prevState,
           timestamp: new Date().toISOString(),
