@@ -548,13 +548,13 @@ export class GridGame extends BaseGame {
     // Draw X-axis
     this.renderXAxis();
 
-    // Draw selectability boundary for sketch game
-    if (
-      this.config.gameType === GameType.SKETCH ||
-      this.config.gameType === GameType.COBRA
-    ) {
-      this.renderSelectabilityBoundary();
-    }
+    // Selectability boundary (dashed vertical line) disabled for cleaner look
+    // if (
+    //   this.config.gameType === GameType.SKETCH ||
+    //   this.config.gameType === GameType.COBRA
+    // ) {
+    //   this.renderSelectabilityBoundary();
+    // }
   }
 
   private renderPriceLine(data: PriceData[]): void {
@@ -862,8 +862,7 @@ export class GridGame extends BaseGame {
   private renderYAxis(): void {
     const data = this.priceData;
     // Always render Y-axis even without data (will use camera.y as center)
-    // if (data.length === 0) return;
-
+    
     const axisX = 70; // Y-axis on LEFT side
     const verticalMargin = this.height * this.config.verticalMarginRatio;
     const viewportTop = verticalMargin;
@@ -880,8 +879,9 @@ export class GridGame extends BaseGame {
 
     this.ctx.save();
 
-    // No background panel - let the canvas background show through
-    // This way price labels are always visible
+    // Draw semi-transparent background for Y-axis area to ensure labels are readable
+    this.ctx.fillStyle = 'rgba(14, 14, 14, 0.85)';
+    this.ctx.fillRect(0, 0, axisX + 5, this.height);
     
     // Draw axis line - full height
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
@@ -895,33 +895,43 @@ export class GridGame extends BaseGame {
     const priceStep = this.calculatePriceStep(extendedPriceRange);
     const startPrice = Math.ceil(minPrice / priceStep) * priceStep;
 
-    // Draw price markings
-    this.ctx.font = 'bold 12px Arial';
-    this.ctx.textAlign = 'left'; // Left-align text starting from left edge
+    // Draw price markings with higher visibility
+    this.ctx.font = 'bold 11px Arial';
+    this.ctx.textAlign = 'left';
 
+    let labelCount = 0;
     for (let price = startPrice; price <= maxPrice; price += priceStep) {
       // Use the same world-to-screen transformation as boxes
       const screenPos = this.world.worldToScreen(0, price);
       const y = screenPos.y;
 
       // Only skip markings outside canvas bounds
-      if (y < 10 || y > canvasHeight - 10) continue;
+      if (y < 15 || y > canvasHeight - 15) continue;
 
       // Draw tick mark extending left from axis
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(axisX - 8, y);
       this.ctx.lineTo(axisX, y);
       this.ctx.stroke();
 
-      // Draw price label on left side - start from left edge
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
-      this.ctx.fillText(`$${price.toFixed(2)}`, 5, y + 4);
+      // Draw price label - white text on dark background
+      this.ctx.fillStyle = '#FFFFFF';
+      this.ctx.fillText(`$${price.toFixed(2)}`, 8, y + 4);
+      labelCount++;
     }
 
-    // Current price ticker is now drawn at the NOW line (in renderPriceLine)
-    // No ticker on Y-axis to avoid duplication
+    // Debug: If no labels rendered, show why
+    if (labelCount === 0) {
+      console.log('[GridGame Y-Axis] No labels rendered', {
+        minPrice,
+        maxPrice,
+        priceStep,
+        centerPrice: this.camera.y,
+        canvasHeight: this.height
+      });
+    }
 
     this.ctx.restore();
   }
