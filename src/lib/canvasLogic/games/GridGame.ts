@@ -860,7 +860,7 @@ export class GridGame extends BaseGame {
   }
 
   private renderYAxis(): void {
-    // Render price labels for every horizontal grid line
+    // Render price labels in $0.10 increments
     // No vertical axis line, no background panel, just clean price labels
     
     const verticalMargin = this.height * this.config.verticalMarginRatio;
@@ -880,32 +880,29 @@ export class GridGame extends BaseGame {
 
     // No background panel or vertical line - clean labels only
     
-    // Get the grid horizontal line spacing
-    const squareSize = Math.min(this.width, this.height) / 9;
-    const squareWorldSize = this.world.getSquareWorldSize(squareSize);
-    const worldBounds = this.world.getVisibleWorldBounds(0);
+    // Price increment of 0.10
+    const priceIncrement = 0.10;
     
-    // Calculate starting grid Y position
-    const startGridY = Math.floor(worldBounds.bottom / squareWorldSize.y);
-    const endGridY = Math.ceil(worldBounds.top / squareWorldSize.y);
+    // Start at the first price that ends with .00, .10, .20, etc.
+    const startPrice = Math.floor(minPrice / priceIncrement) * priceIncrement;
 
-    // Draw price label for EVERY horizontal grid line
+    // Draw price label every $0.10
     this.ctx.font = 'bold 11px Arial';
     this.ctx.textAlign = 'left';
     this.ctx.fillStyle = '#FFFFFF';
 
-    for (let gridY = startGridY; gridY <= endGridY; gridY++) {
-      const worldY = gridY * squareWorldSize.y;
-      const screenPos = this.world.worldToScreen(0, worldY);
+    for (let price = startPrice; price <= maxPrice; price += priceIncrement) {
+      // Round to avoid floating point errors
+      price = Math.round(price * 100) / 100;
+      
+      // Use world-to-screen transformation to find Y position
+      const screenPos = this.world.worldToScreen(0, price);
       const y = screenPos.y;
 
       // Only render if on screen
       if (y < 10 || y > canvasHeight - 10) continue;
       
-      // Calculate the price at this horizontal line
-      const price = worldY;
-      
-      // Draw price label at left edge
+      // Draw price label at left edge (ending with .X0)
       this.ctx.fillText(`$${price.toFixed(2)}`, 5, y + 4);
     }
 
