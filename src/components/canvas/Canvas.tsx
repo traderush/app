@@ -8,6 +8,7 @@ import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useUIStore } from '@/stores/uiStore';
+import { useUserStore } from '@/stores/userStore';
 
 interface CanvasProps {
   externalControl?: boolean;
@@ -62,6 +63,9 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   
   // Get signature color from UI store
   const signatureColor = useUIStore((state) => state.signatureColor);
+  
+  // Get balance update function from user store
+  const updateBalance = useUserStore((state) => state.updateBalance);
 
   const { isConnected, isConnecting, connect, disconnect, send, on, off } =
     useWebSocket({
@@ -75,6 +79,13 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
       ws: isConnected ? { send, on, off } : null,
       enabled: isConnected,
     });
+
+  // Sync userBalance from game session to Zustand store
+  useEffect(() => {
+    if (userBalance !== undefined && userBalance !== null) {
+      updateBalance(userBalance);
+    }
+  }, [userBalance, updateBalance]);
 
   // Debug contracts
   useEffect(() => {
@@ -150,7 +161,11 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
           );
         }, 3000);
 
-        // Update balance if needed
+        // Update balance in Zustand store for global sync
+        if (balance !== undefined && balance !== null) {
+          updateBalance(balance);
+        }
+        
         console.log('Trade result:', {
           contractId,
           won,

@@ -10,6 +10,7 @@ import ScrollableGameTabs, { type GameTab } from './ScrollableGameTabs';
 const NotificationsPopup = React.lazy(() => import('./NotificationsModal'));
 const DepositPopup = React.lazy(() => import('./DepositPopup'));
 import { useUIStore } from '@/stores';
+import { useUserStore } from '@/stores/userStore';
 
 const gameTabs: GameTab[] = [
   { href: '/box-hit', label: 'Box Hit' },
@@ -41,6 +42,7 @@ interface NavbarProps {
 const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, notificationsButtonRef, onSettingsOpen, settingsButtonRef, onProfileOpen }: NavbarProps) {
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
+  const balance = useUserStore((state) => state.balance);
 
   return (
     <>
@@ -137,7 +139,9 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
             {/* Portfolio */}
             <a href="/portfolio" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
               <div className="text-xs text-zinc-400" style={{fontWeight: 500}}>Portfolio</div>
-              <div className="text-zinc-100 text-sm" style={{fontWeight: 600}}>$1,216</div>
+              <div className="text-zinc-100 text-sm" style={{fontWeight: 600}}>
+                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
             </a>
             
             {/* Profile image */}
