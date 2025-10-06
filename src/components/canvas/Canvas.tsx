@@ -12,10 +12,21 @@ interface CanvasProps {
   externalControl?: boolean;
   externalIsStarted?: boolean;
   onExternalStartChange?: (isStarted: boolean) => void;
+  externalTimeframe?: number; // Timeframe in ms (e.g., 500, 1000, 2000, 4000, 10000)
 }
 
-export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange }: CanvasProps = {}) {
-  console.log('[Canvas] Component rendered with props:', { externalControl, externalIsStarted });
+export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe }: CanvasProps = {}) {
+  // Convert external timeframe (ms) to TimeFrame enum
+  const getTimeFrameFromMs = (ms?: number): TimeFrame => {
+    switch (ms) {
+      case 500: return TimeFrame.HALF_SECOND;
+      case 1000: return TimeFrame.SECOND;
+      case 2000: return TimeFrame.TWO_SECONDS;
+      case 4000: return TimeFrame.FOUR_SECONDS;
+      case 10000: return TimeFrame.TEN_SECONDS;
+      default: return TimeFrame.TWO_SECONDS;
+    }
+  };
   
   const [configLoaded, setConfigLoaded] = useState(false);
   const [numYsquares, setNumYsquares] = useState(20);
@@ -23,14 +34,15 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   const [basePrice, setBasePrice] = useState(100);
   const [priceStep, setPriceStep] = useState(0.1);
   const [timeStep, setTimeStep] = useState(2000);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrame>(
-    TimeFrame.TWO_SECONDS
-  );
+  const [internalSelectedTimeframe, setInternalSelectedTimeframe] = useState<TimeFrame>(TimeFrame.TWO_SECONDS);
+  const selectedTimeframe = externalControl && externalTimeframe 
+    ? getTimeFrameFromMs(externalTimeframe) 
+    : internalSelectedTimeframe;
+  const setSelectedTimeframe = externalControl ? () => {} : setInternalSelectedTimeframe;
   const [internalIsStarted, setInternalIsStarted] = useState(false);
   const isStarted = externalControl ? externalIsStarted : internalIsStarted;
   const setIsStarted = externalControl && onExternalStartChange ? onExternalStartChange : setInternalIsStarted;
   
-  console.log('[Canvas] isStarted calculated:', { isStarted, externalControl, externalIsStarted, internalIsStarted });
   const [currentPrice, setCurrentPrice] = useState(
     basePrice + priceStep * numYsquares * 0.5
   );
@@ -566,11 +578,9 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     
     if (externalIsStarted && !isConnected && !isConnecting) {
       // Start requested from external control
-      console.log('[Canvas External Control] Starting canvas...', { externalIsStarted, isConnected, isConnecting });
       handleStart();
     } else if (!externalIsStarted && isConnected) {
       // Stop requested from external control
-      console.log('[Canvas External Control] Stopping canvas...', { externalIsStarted, isConnected });
       handleStop();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -596,7 +606,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   };
 
   return (
-    <div className="flex h-full w-full bg-black border-gray-600 border">
+    <div className="flex h-full w-full border-gray-600 border" style={{ backgroundColor: '#0E0E0E' }}>
       <div className="flex h-full w-full flex-col">
         {/* Header - hidden when externally controlled */}
         {!externalControl && (
@@ -726,20 +736,49 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
             !configLoaded ? (
               <div className="flex h-full items-center justify-center">
                 <div className="text-center">
-                  <h2 className="mb-4 text-xl font-semibold text-gray-300">
-                    Loading Configuration...
-                  </h2>
-                  <p className="text-gray-400">
-                    Fetching game settings from server
-                  </p>
+                  <div className="text-zinc-400 text-sm">Loading game configuration...</div>
                 </div>
               </div>
             ) : (
-              <div
-                ref={canvasContainerRef}
-                className="h-full w-full"
-                style={{ backgroundColor: '#000' }}
-              />
+              <div className="relative h-full w-full">
+                <div
+                  ref={canvasContainerRef}
+                  className="h-full w-full"
+                  style={{ backgroundColor: '#0E0E0E' }}
+                />
+                
+                {/* Live/Manual Status Indicator with Recenter Button - Top Right (matching BoxHitCanvas) */}
+                <div className="absolute top-3 right-3 flex items-center gap-2">
+                  {/* Recenter Button - Only show when in manual mode */}
+                  {!isFollowingPrice && (
+                    <button
+                      onClick={handleResetCamera}
+                      className="px-2 py-1 rounded text-xs font-medium flex items-center transition-colors cursor-pointer"
+                      style={{
+                        backgroundColor: '#1E3A8A',
+                        color: '#60A5FA',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        height: '24px'
+                      }}
+                      title="Manual view - click to center on current time"
+                    >
+                      Recenter
+                    </button>
+                  )}
+
+                  {/* Status Indicator */}
+                  <div className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1" style={{ 
+                    backgroundColor: isFollowingPrice ? '#0E2923' : '#2A1A0E', 
+                    color: isFollowingPrice ? '#10AE80' : '#F7931A' 
+                  }}>
+                    <div className="w-3 h-3 rounded-full" style={{ 
+                      backgroundColor: isFollowingPrice ? '#10AE80' : '#F7931A', 
+                      border: `2px solid ${isFollowingPrice ? '#134335' : '#4A2F1A'}` 
+                    }}></div>
+                    {isFollowingPrice ? "Live" : "Manual"}
+                  </div>
+                </div>
+              </div>
             )
           ) : (
             <div className="flex h-full items-center justify-center">

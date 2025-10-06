@@ -2220,16 +2220,10 @@ export default function ClientView() {
   
   // Reset canvas started state when switching away from Mock Backend tab
   useEffect(() => {
-    console.log('[ClientView] Active tab changed:', activeTab);
     if (activeTab !== 'copy') {
       setIsCanvasStarted(false);
     }
   }, [activeTab]);
-  
-  // Debug: Log canvas started state changes
-  useEffect(() => {
-    console.log('[ClientView] Canvas started state changed:', isCanvasStarted);
-  }, [isCanvasStarted]);
   
   // Multi-exchange BTC price index system
   const wsRefs = useRef<{ [key: string]: WebSocket | null }>({});
@@ -2513,10 +2507,8 @@ export default function ClientView() {
   }, []);
 
   const handleTradingModeChange = useCallback((tradingMode: boolean) => {
-    console.log('[ClientView] Trading mode change:', { tradingMode, activeTab });
     if (activeTab === 'copy') {
       // In Mock Backend mode, control canvas start/stop
-      console.log('[ClientView] Setting canvas started to:', tradingMode);
       setIsCanvasStarted(tradingMode);
     } else {
       // In Place Trade mode, control normal trading mode
@@ -2930,33 +2922,6 @@ export default function ClientView() {
                   </span>
                 </div>
 
-                {/* Zoom Controls */}
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
-                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
-                    title="Zoom Out"
-                  >
-                    <svg className="w-3 h-3 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                    </svg>
-                  </button>
-                  <div className="w-8 h-6 rounded flex items-center justify-center">
-                    <span className="text-zinc-400 text-xs">
-                      {Math.round(zoomLevel * 100)}%
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.25))}
-                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
-                    title="Zoom In"
-                  >
-                    <svg className="w-3 h-3 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                </div>
-
                 {/* Timeframe Selector */}
                 <div className="flex items-center gap-1">
                   {[
@@ -3001,11 +2966,11 @@ export default function ClientView() {
               {activeTab === 'copy' ? (
                 // Mock Backend Mode - Show Canvas component controlled by Start Trading button
                 <div className="w-full h-[520px]">
-                  {console.log('[ClientView] Rendering Canvas with props:', { externalControl: true, externalIsStarted: isCanvasStarted })}
                   <Canvas 
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}
                     onExternalStartChange={setIsCanvasStarted}
+                    externalTimeframe={timeframe}
                   />
                 </div>
               ) : (
