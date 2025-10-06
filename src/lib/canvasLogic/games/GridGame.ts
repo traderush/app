@@ -137,7 +137,7 @@ export class GridGame extends BaseGame {
       smoothingFactorX: 0.95,
       smoothingFactorY: 0.92,
       lineEndSmoothing: 0.88,
-      animationDuration: 300,
+      animationDuration: 800,
       maxDataPoints: 500,
       showMultiplierOverlay: true,
       externalDataSource: false,

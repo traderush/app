@@ -65,90 +65,125 @@ export class SquareRenderer {
     // Apply global opacity for fade effect
     this.ctx.globalAlpha = opacity;
 
-    // Draw background fill if specified
-    if (squareConfig.fillColor) {
-      this.ctx.fillStyle = squareConfig.fillColor;
-      if (squareConfig.cornerRadius) {
-        this.drawRoundedRect(
-          x,
-          y,
-          actualWidth,
-          actualHeight,
-          squareConfig.cornerRadius,
-          true
-        );
-      } else {
-        this.ctx.fillRect(x, y, actualWidth, actualHeight);
-      }
+    // Get signature color from theme (used for selections and hits)
+    const signatureColor = this.theme.colors?.primary || '#3b82f6';
+
+    // Helper to convert hex to rgba
+    const hexToRgba = (hex: string, alpha: number): string => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    // Draw base background fill
+    if (state === 'activated') {
+      // Hit state - higher opacity signature color
+      this.ctx.fillStyle = hexToRgba(signatureColor, 0.28);
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
+    } else if (state === 'selected') {
+      // Selected state - signature color with lower opacity
+      this.ctx.fillStyle = hexToRgba(signatureColor, 0.18);
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
+    } else {
+      // Default state - dark background
+      this.ctx.fillStyle = '#0e0e0e';
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
-    // Draw shadow if specified
-    if (squareConfig.shadow?.enabled) {
-      this.ctx.shadowColor = squareConfig.shadow.color;
-      this.ctx.shadowBlur = squareConfig.shadow.blur;
-      this.ctx.shadowOffsetX = squareConfig.shadow.offsetX;
-      this.ctx.shadowOffsetY = squareConfig.shadow.offsetY;
+    // Add hover overlay
+    if (state === 'hovered') {
+      this.ctx.fillStyle = state === 'selected' 
+        ? hexToRgba(signatureColor, 0.1)
+        : 'rgba(255, 255, 255, 0.08)';
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
-    // Draw border
-    if (animation?.type === 'select' && animation.progress < 1) {
-      this.drawAnimatedBorder(
-        x,
-        y,
-        actualWidth,
-        actualHeight,
-        squareConfig.borderColor,
-        animation.progress
+    // Selection animation - growing outline from center
+    if (state === 'selected' && animation?.type === 'select' && animation.progress < 1) {
+      // Easing function for smooth animation (cubic ease-out)
+      const easeOut = 1 - Math.pow(1 - animation.progress, 3);
+      
+      // Start from 30% size instead of 0% for more natural appearance
+      const minSize = 0.3;
+      const sizeRange = 1 - minSize;
+      const currentSize = minSize + (sizeRange * easeOut);
+      
+      const currentWidth = actualWidth * currentSize;
+      const currentHeight = actualHeight * currentSize;
+      const offsetX = (actualWidth - currentWidth) / 2;
+      const offsetY = (actualHeight - currentHeight) / 2;
+      
+      // Fade in effect
+      const fadeProgress = Math.min(animation.progress * 2, 1);
+      const outlineOpacity = 0.8 * fadeProgress;
+      const fillOpacity = 0.18 * fadeProgress;
+      
+      // Draw growing fill
+      this.ctx.fillStyle = hexToRgba(signatureColor, fillOpacity);
+      this.ctx.fillRect(
+        x + offsetX + 0.5,
+        y + offsetY + 0.5,
+        currentWidth - 1,
+        currentHeight - 1
+      );
+      
+      // Draw growing outline
+      this.ctx.strokeStyle = hexToRgba(signatureColor, outlineOpacity);
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([]);
+      this.ctx.strokeRect(
+        x + offsetX + 0.5,
+        y + offsetY + 0.5,
+        currentWidth - 1,
+        currentHeight - 1
       );
     } else {
-      this.ctx.strokeStyle = squareConfig.borderColor;
-      this.ctx.lineWidth = squareConfig.borderWidth;
-
-      if (squareConfig.cornerRadius) {
-        this.drawRoundedRect(
-          x,
-          y,
-          actualWidth,
-          actualHeight,
-          squareConfig.cornerRadius,
-          false
-        );
-      } else {
-        this.ctx.strokeRect(x, y, actualWidth, actualHeight);
+      // Draw border for non-animating states
+      let borderColor = '#2b2b2b';
+      let borderWidth = 0.6;
+      
+      if (state === 'activated' || state === 'selected') {
+        borderColor = signatureColor;
+        borderWidth = state === 'hovered' ? 1.5 : 1;
+      } else if (state === 'hovered') {
+        borderColor = 'rgba(255, 255, 255, 0.4)';
+        borderWidth = 1.2;
       }
+      
+      this.ctx.strokeStyle = borderColor;
+      this.ctx.lineWidth = borderWidth;
+      this.ctx.setLineDash([]);
+      this.ctx.strokeRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
     // Draw red border for lost contracts
     if (isLost) {
       this.ctx.strokeStyle = '#ff0000';
       this.ctx.lineWidth = 3;
-
-      if (squareConfig.cornerRadius) {
-        this.drawRoundedRect(
-          x,
-          y,
-          actualWidth,
-          actualHeight,
-          squareConfig.cornerRadius,
-          false
-        );
-      } else {
-        this.ctx.strokeRect(x, y, actualWidth, actualHeight);
-      }
-
-      this.ctx.setLineDash([]); // Reset line dash
+      this.ctx.strokeRect(x, y, actualWidth, actualHeight);
+      this.ctx.setLineDash([]);
     }
 
     // Draw text
     if (text) {
-      this.ctx.fillStyle = squareConfig.textColor;
-      this.ctx.font = `${squareConfig.fontSize}px ${squareConfig.font}`;
+      // Adjust text color based on state
+      let textColor = 'rgba(255, 255, 255, 0.12)'; // Default faint text
+      
+      if (state === 'selected' || state === 'activated') {
+        textColor = 'rgba(255, 255, 255, 1.0)'; // Bright text for selected/hit
+      } else if (state === 'hovered') {
+        textColor = 'rgba(255, 255, 255, 0.25)'; // Brighter on hover
+      }
+      
+      this.ctx.fillStyle = textColor;
+      this.ctx.font = '20px sans-serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
 
       const centerX = x + actualWidth / 2;
       const centerY = y + actualHeight / 2;
-      this.ctx.fillText(text, centerX, centerY);
+      this.ctx.fillText(text, centerX, centerY + 4);
     }
 
     // Draw price range in bottom left corner

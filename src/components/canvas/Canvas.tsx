@@ -7,6 +7,7 @@ import { GridGame } from '../../lib/canvasLogic/games/GridGame';
 import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useUIStore } from '@/stores/uiStore';
 
 interface CanvasProps {
   externalControl?: boolean;
@@ -58,6 +59,9 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   const handleTradePlaceRef = useRef<typeof handleTradePlace | null>(null);
   const isJoinedRef = useRef(false);
   const contractsRef = useRef<any[]>([]);
+  
+  // Get signature color from UI store
+  const signatureColor = useUIStore((state) => state.signatureColor);
 
   const { isConnected, isConnecting, connect, disconnect, send, on, off } =
     useWebSocket({
@@ -423,8 +427,102 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
 
     // Only create new game if one doesn't exist
     if (!gameRef.current) {
+      // Create custom theme with user's signature color
+      const customTheme = {
+        name: 'custom',
+        colors: {
+          primary: signatureColor,
+          secondary: '#ffffff',
+          background: '#000000',
+          text: '#ffffff',
+          border: '#333333',
+          success: '#00ff00',
+          warning: '#ffaa00',
+          error: '#ff0000',
+          hover: '#cccccc'
+        },
+        animations: {
+          squareSelect: {
+            duration: 800,
+            easing: 'ease-out' as const
+          },
+          lineSmoothing: {
+            duration: 88,
+            easing: 'linear' as const
+          },
+          cameraMovement: {
+            duration: 200,
+            easing: 'ease-out' as const
+          }
+        },
+        line: {
+          color: '#00ff00',
+          width: 3,
+          cap: 'round' as CanvasLineCap,
+          join: 'round' as CanvasLineJoin,
+          glow: {
+            enabled: false,
+            color: '#00ff00',
+            blur: 10
+          }
+        },
+        square: {
+          default: {
+            borderColor: 'rgba(180, 180, 180, 0.3)',
+            borderWidth: 1,
+            textColor: 'rgba(180, 180, 180, 0.4)',
+            font: 'Monaco, "Courier New", monospace',
+            fontSize: 12,
+            padding: 0
+          },
+          hovered: {
+            borderColor: 'rgba(255, 255, 255, 0.7)',
+            borderWidth: 1,
+            fillColor: 'rgba(255, 255, 255, 0.05)',
+            textColor: 'rgba(255, 255, 255, 0.8)',
+            font: 'Monaco, "Courier New", monospace',
+            fontSize: 12,
+            padding: 0
+          },
+          highlighted: {
+            borderColor: 'rgba(255, 170, 0, 0.9)',
+            borderWidth: 2,
+            fillColor: 'rgba(255, 170, 0, 0.1)',
+            textColor: 'rgba(255, 170, 0, 0.9)',
+            font: 'Monaco, "Courier New", monospace',
+            fontSize: 14,
+            padding: 0
+          },
+          selected: {
+            borderColor: signatureColor,
+            borderWidth: 2,
+            textColor: signatureColor,
+            font: 'Monaco, "Courier New", monospace',
+            fontSize: 12,
+            padding: 0
+          },
+          activated: {
+            borderColor: signatureColor,
+            borderWidth: 1,
+            fillColor: `${signatureColor}cc`,
+            textColor: '#000000',
+            font: 'Monaco, "Courier New", monospace',
+            fontSize: 12,
+            padding: 0
+          }
+        },
+        axis: {
+          color: 'rgba(255, 255, 255, 0.3)',
+          width: 1,
+          font: '12px Arial',
+          fontSize: 12,
+          tickSize: 10
+        }
+      };
+      
       // Create new game instance
       const game = new GridGame(canvasContainerRef.current, {
+        theme: customTheme,
         gameType: GameType.GRID,
         externalDataSource: true, // We'll provide price data from WebSocket
         multipliers: [],
@@ -438,7 +536,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         smoothingFactorX: 0.95,
         smoothingFactorY: 0.92,
         lineEndSmoothing: 0.88,
-        animationDuration: 300,
+        animationDuration: 800,
         maxDataPoints: 500,
       });
 
