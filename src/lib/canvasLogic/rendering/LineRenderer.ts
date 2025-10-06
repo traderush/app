@@ -168,10 +168,10 @@ export class LineRenderer {
     this.ctx.restore()
   }
 
-  public renderDot(x: number, y: number, radius: number = 5): void {
+  public renderDot(x: number, y: number, radius: number = 5, color?: string): void {
     this.ctx.save()
     
-    this.ctx.fillStyle = this.theme.line.color
+    this.ctx.fillStyle = color || this.theme.line.color
     this.ctx.beginPath()
     this.ctx.arc(x, y, radius, 0, Math.PI * 2)
     this.ctx.fill()

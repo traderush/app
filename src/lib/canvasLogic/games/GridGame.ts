@@ -678,7 +678,9 @@ export class GridGame extends BaseGame {
       
       // Render the price dot if it's within screen bounds
       if (dotX >= 0 && dotX <= this.width && dotY >= 0 && dotY <= this.height) {
-        this.lineRenderer.renderDot(dotX, dotY);
+        // Use signature color for the dot
+        const dotColor = this.theme.colors?.primary || '#3b82f6';
+        this.lineRenderer.renderDot(dotX, dotY, 5, dotColor);
         
         // Draw current price ticker at the dot position (to the left of the vertical NOW line)
         const latestPrice = data[data.length - 1].price;
@@ -688,10 +690,12 @@ export class GridGame extends BaseGame {
         const tickerX = dotX - 45; // 45px to the left of NOW line
         const tickerY = dotY;
         
-        // Draw background box using signature color (theme.colors.primary)
+        // Draw rounded background box using signature color (theme.colors.primary)
         const tickerColor = this.theme.colors?.primary || '#3b82f6';
         this.ctx.fillStyle = tickerColor;
-        this.ctx.fillRect(tickerX - 35, tickerY - 10, 70, 20);
+        this.ctx.beginPath();
+        this.ctx.roundRect(tickerX - 35, tickerY - 10, 70, 20, 4);
+        this.ctx.fill();
         
         // Draw price text
         this.ctx.fillStyle = '#000';

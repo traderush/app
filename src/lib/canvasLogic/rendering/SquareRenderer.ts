@@ -192,6 +192,15 @@ export class SquareRenderer {
       const centerY = y + actualHeight / 2;
       this.ctx.fillText(text, centerX, centerY + 4);
     }
+    
+    // Draw "HIT" badge for activated (hit) state
+    if (state === 'activated') {
+      this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)'; // Light gray
+      this.ctx.font = '11px sans-serif';
+      this.ctx.textAlign = 'right';
+      this.ctx.textBaseline = 'alphabetic';
+      this.ctx.fillText('HIT', x + actualWidth - 8, y + actualHeight - 8);
+    }
 
     // Draw price range in bottom left corner
     if (priceRange) {
