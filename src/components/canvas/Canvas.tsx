@@ -430,7 +430,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         multipliers: [],
         showMultiplierOverlay: true,
         showDashedGrid: false,
-        debugMode: true, // Enable debug mode to see what's happening
+        debugMode: false, // Disable debug mode - only show multipliers, no price ranges
         pricePerPixel: 0.8, // Use default from GridGame - this affects Y axis range
         pixelsPerPoint: 5,
         verticalMarginRatio: 0.1,

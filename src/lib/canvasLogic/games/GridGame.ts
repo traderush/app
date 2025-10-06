@@ -665,6 +665,30 @@ export class GridGame extends BaseGame {
       // Only render the dot if it's within screen bounds
       if (dotX >= 0 && dotX <= this.width && dotY >= 0 && dotY <= this.height) {
         this.lineRenderer.renderDot(dotX, dotY);
+        
+        // Draw current price ticker at the dot position (before the dot, inside the dashed NOW line)
+        const latestPrice = data[data.length - 1].price;
+        this.ctx.save();
+        
+        // Position ticker to the left of the dot
+        const tickerX = dotX - 45; // 45px to the left of dot
+        const tickerY = dotY;
+        
+        // Draw background box
+        this.ctx.fillStyle = '#00ff00';
+        this.ctx.fillRect(tickerX - 35, tickerY - 10, 70, 20);
+        
+        // Draw price text
+        this.ctx.fillStyle = '#000';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(
+          `$${latestPrice.toFixed(2)}`,
+          tickerX,
+          tickerY + 4
+        );
+        
+        this.ctx.restore();
       }
     }
   }
@@ -806,9 +830,10 @@ export class GridGame extends BaseGame {
         text: isHighlighted ? '?' : text,
         state: state || 'default',
         animation,
-        timestampRange: this.config.debugMode ? box.timestampRange : undefined,
-        priceRange: this.config.debugMode ? box.priceRange : undefined,
-        contractId: this.config.debugMode && !box.isEmpty ? squareId : undefined,
+        // Never show price ranges or timestamp ranges - only show multipliers
+        timestampRange: undefined,
+        priceRange: undefined,
+        contractId: undefined,
       });
 
     });

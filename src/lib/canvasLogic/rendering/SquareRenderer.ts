@@ -147,17 +147,16 @@ export class SquareRenderer {
     }
 
     // Draw price range in bottom left corner
-    // Price range display removed as per user request
-    // if (priceRange) {
-    //   this.ctx.font = '8px monospace';
-    //   this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    //   this.ctx.textAlign = 'left';
-    //   this.ctx.textBaseline = 'bottom';
+    if (priceRange) {
+      this.ctx.font = '8px monospace';
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'bottom';
 
-    //   // Format price range - show with 2 decimal places
-    //   const priceText = `$${priceRange.min.toFixed(2)}-$${priceRange.max.toFixed(2)}`;
-    //   this.ctx.fillText(priceText, x + 2, y + actualHeight - 2);
-    // }
+      // Format price range - show with 2 decimal places
+      const priceText = `$${priceRange.min.toFixed(2)}-$${priceRange.max.toFixed(2)}`;
+      this.ctx.fillText(priceText, x + 2, y + actualHeight - 2);
+    }
 
     // Draw contract ID in top left corner
     if (contractId) {
