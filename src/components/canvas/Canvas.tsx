@@ -533,7 +533,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         pixelsPerPoint: 5,
         verticalMarginRatio: 0.1,
         cameraOffsetRatio: 0.2,
-        smoothingFactorX: 0.0, // Disable X smoothing to prevent shaking - snap directly to target
+        smoothingFactorX: 0.3, // Light smoothing for fluid movement without excessive lag
         smoothingFactorY: 0.92,
         lineEndSmoothing: 0.88,
         animationDuration: 800,

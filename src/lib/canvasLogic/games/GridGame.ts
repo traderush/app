@@ -134,7 +134,7 @@ export class GridGame extends BaseGame {
       pricePerPixel: 0.8,
       verticalMarginRatio: 0.1,
       cameraOffsetRatio: 0.2,
-      smoothingFactorX: 0.0, // Disable X smoothing to prevent shaking - snap directly to target
+      smoothingFactorX: 0.3, // Light smoothing for fluid movement without excessive lag
       smoothingFactorY: 0.92,
       lineEndSmoothing: 0.88,
       animationDuration: 800,
@@ -490,7 +490,8 @@ export class GridGame extends BaseGame {
         this.camera.y = Math.max(this.visiblePriceRange / 2, this.camera.smoothY);
       }
 
-      this.camera.x = this.camera.smoothX;
+      // Round camera X to whole pixels to prevent sub-pixel jitter
+      this.camera.x = Math.round(this.camera.smoothX);
     }
 
     // Update square animations
