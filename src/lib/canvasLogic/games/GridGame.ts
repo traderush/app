@@ -819,6 +819,25 @@ export class GridGame extends BaseGame {
         state = 'hovered';
       }
 
+      // Calculate fade effect for boxes that have been passed by the NOW line
+      let opacity = 1.0;
+      if (this.smoothLineEndX > 0) {
+        // Box center X position
+        const boxCenterX = topLeft.x + Math.abs(screenWidth) / 2;
+        
+        // If box is to the left of the NOW line, fade it out
+        if (boxCenterX < this.smoothLineEndX) {
+          // Calculate distance from NOW line (in pixels)
+          const distanceFromNow = this.smoothLineEndX - boxCenterX;
+          
+          // Fade out over 200 pixels
+          const fadeDistance = 200;
+          const fadeAmount = Math.min(distanceFromNow / fadeDistance, 1.0);
+          
+          // Opacity ranges from 1.0 (at NOW line) to 0.3 (far past)
+          opacity = 1.0 - (fadeAmount * 0.7);
+        }
+      }
 
       // Use actual screen size from backend coordinates
       this.squareRenderer.render({
@@ -829,6 +848,7 @@ export class GridGame extends BaseGame {
         text: isHighlighted ? '?' : text,
         state: state || 'default',
         animation,
+        opacity,
         // Never show price ranges or timestamp ranges - only show multipliers
         timestampRange: undefined,
         priceRange: undefined,

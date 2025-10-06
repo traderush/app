@@ -22,6 +22,7 @@ export interface SquareRenderOptions {
   };
   isLost?: boolean; // Indicates if this contract was lost (passed without being hit)
   contractId?: string; // Contract ID to display in top left corner
+  opacity?: number; // Overall opacity for fade effect (0-1)
 }
 
 export class SquareRenderer {
@@ -51,6 +52,7 @@ export class SquareRenderer {
       priceRange,
       isLost,
       contractId,
+      opacity = 1.0,
     } = options;
     const squareConfig = this.theme.square[state];
 
@@ -59,6 +61,9 @@ export class SquareRenderer {
     const actualHeight = height ?? size ?? 50;
 
     this.ctx.save();
+    
+    // Apply global opacity for fade effect
+    this.ctx.globalAlpha = opacity;
 
     // Draw background fill if specified
     if (squareConfig.fillColor) {
