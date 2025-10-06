@@ -12,7 +12,7 @@ const TRADING_COLORS = {
 } as const;
 
 interface RightPanelProps {
-  isTradingMode: boolean; // Now represents Mock Backend mode
+  isTradingMode: boolean;
   onTradingModeChange: (tradingMode: boolean) => void;
   selectedCount: number;
   bestMultiplier: number;
@@ -23,11 +23,22 @@ interface RightPanelProps {
   onBetAmountChange: (amount: number) => void; // Callback when bet amount changes
   dailyHigh: number; // 24h high price
   dailyLow: number; // 24h low price
+  activeTab?: 'place' | 'copy';
+  onActiveTabChange?: (tab: 'place' | 'copy') => void;
 }
 
-function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange, dailyHigh, dailyLow }: RightPanelProps) {
+function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange, dailyHigh, dailyLow, activeTab: externalActiveTab, onActiveTabChange }: RightPanelProps) {
 
-  const [activeTab, setActiveTab] = useState<'place' | 'copy'>('place');
+  const [internalActiveTab, setInternalActiveTab] = useState<'place' | 'copy'>('place');
+  const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+  const setActiveTab = (tab: 'place' | 'copy') => {
+    if (onActiveTabChange) {
+      onActiveTabChange(tab);
+    } else {
+      setInternalActiveTab(tab);
+    }
+  };
+  
   const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Ensure bet amount is never 0 by default
@@ -144,7 +155,7 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              Test Mode
+              Mock Backend
             </button>
           </div>
 
@@ -288,7 +299,7 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
             }}
             disabled={betAmount === 0 && !isTradingMode}
           >
-            {isTradingMode ? 'Exit Mock Backend' : 'Mock Backend'}
+            {isTradingMode ? 'Exit Trading' : 'Start Trading'}
           </button>
           
           {/* Fee and Liquidity Row */}

@@ -8,7 +8,13 @@ import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
 import { useWebSocket } from './hooks/useWebSocket';
 
-export default function Canvas() {
+interface CanvasProps {
+  externalControl?: boolean;
+  externalIsStarted?: boolean;
+  onExternalStartChange?: (isStarted: boolean) => void;
+}
+
+export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange }: CanvasProps = {}) {
   const [configLoaded, setConfigLoaded] = useState(false);
   const [numYsquares, setNumYsquares] = useState(20);
   const [numXsquares, setNumXsquares] = useState(25);
@@ -18,7 +24,9 @@ export default function Canvas() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrame>(
     TimeFrame.TWO_SECONDS
   );
-  const [isStarted, setIsStarted] = useState(false);
+  const [internalIsStarted, setInternalIsStarted] = useState(false);
+  const isStarted = externalControl ? externalIsStarted : internalIsStarted;
+  const setIsStarted = externalControl && onExternalStartChange ? onExternalStartChange : setInternalIsStarted;
   const [currentPrice, setCurrentPrice] = useState(
     basePrice + priceStep * numYsquares * 0.5
   );
@@ -521,7 +529,9 @@ export default function Canvas() {
   const handleStart = async () => {
     try {
       await connect();
-      setIsStarted(true);
+      if (!externalControl) {
+        setIsStarted(true);
+      }
     } catch (error) {
       console.error('Failed to connect to server:', error);
       alert(
@@ -531,7 +541,9 @@ export default function Canvas() {
   };
 
   const handleStop = () => {
-    setIsStarted(false);
+    if (!externalControl) {
+      setIsStarted(false);
+    }
     setConfigLoaded(false);
     setDataPointCount(0);
     setIsFollowingPrice(true); // Reset to following when stopping
@@ -543,6 +555,19 @@ export default function Canvas() {
       gameRef.current = null;
     }
   };
+  
+  // Handle external control - start/stop based on external state
+  useEffect(() => {
+    if (!externalControl) return;
+    
+    if (externalIsStarted && !isConnected && !isConnecting) {
+      // Start requested from external control
+      handleStart();
+    } else if (!externalIsStarted && isConnected) {
+      // Stop requested from external control
+      handleStop();
+    }
+  }, [externalControl, externalIsStarted, isConnected, isConnecting]);
 
   const handleResetCamera = () => {
     if (gameRef.current) {
@@ -566,8 +591,9 @@ export default function Canvas() {
   return (
     <div className="flex h-full w-full bg-black border-gray-600 border">
       <div className="flex h-full w-full flex-col">
-        {/* Header */}
-        <div className="flex h-16 w-full flex-shrink-0 items-center justify-between border-b border-gray-600 px-4">
+        {/* Header - hidden when externally controlled */}
+        {!externalControl && (
+          <div className="flex h-16 w-full flex-shrink-0 items-center justify-between border-b border-gray-600 px-4">
           <div className="flex items-center space-x-8">
             <div className="text-sm text-gray-400">
               <span className="text-gray-500">Price:</span>
@@ -668,6 +694,7 @@ export default function Canvas() {
             />
           </div>
         </div>
+        )}
 
         {/* Canvas Container */}
         <div className="relative flex-1">

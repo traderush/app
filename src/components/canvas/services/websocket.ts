@@ -2,7 +2,7 @@
 
 export interface WebSocketMessage {
   type: string;
-  data?: unknown;
+  payload?: unknown;
   timestamp?: number;
 }
 

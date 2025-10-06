@@ -14,7 +14,7 @@ interface UseWebSocketReturn {
   sessionId: string | null;
   connect: (username?: string) => Promise<void>;
   disconnect: () => void;
-  send: (message: { type: string; data?: unknown }) => void;
+  send: (message: { type: string; payload?: unknown }) => void;
   on: (event: string, handler: (data: unknown) => void) => void;
   off: (event: string, handler: (data: unknown) => void) => void;
   ws: WebSocketService;

@@ -8,7 +8,7 @@ import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sou
 import { useGameStore, usePriceStore, useConnectionStore, useUIStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { logger } from '@/utils/logger';
-import MockBackendCanvas from '@/components/canvas/MockBackendCanvas';
+import Canvas from '@/components/canvas/Canvas';
 
 // Sound management is now handled by SoundManager.ts
 
@@ -2215,6 +2215,15 @@ export default function ClientView() {
   
   // Bet amount state - synced with right panel
   const [betAmount, setBetAmount] = useState(200);
+  const [activeTab, setActiveTab] = useState<'place' | 'copy'>('place');
+  const [isCanvasStarted, setIsCanvasStarted] = useState(false); // Controls mock backend canvas
+  
+  // Reset canvas started state when switching away from Mock Backend tab
+  useEffect(() => {
+    if (activeTab !== 'copy') {
+      setIsCanvasStarted(false);
+    }
+  }, [activeTab]);
   
   // Multi-exchange BTC price index system
   const wsRefs = useRef<{ [key: string]: WebSocket | null }>({});
@@ -2498,8 +2507,14 @@ export default function ClientView() {
   }, []);
 
   const handleTradingModeChange = useCallback((tradingMode: boolean) => {
-    setIsTradingMode(tradingMode);
-  }, []);
+    if (activeTab === 'copy') {
+      // In Mock Backend mode, control canvas start/stop
+      setIsCanvasStarted(tradingMode);
+    } else {
+      // In Place Trade mode, control normal trading mode
+      setIsTradingMode(tradingMode);
+    }
+  }, [activeTab]);
 
   // Initialize multi-exchange WebSocket connections on mount
   useEffect(() => {
@@ -2975,11 +2990,17 @@ export default function ClientView() {
                 showToast('⚠️ Game canvas error occurred. Please refresh if issues persist.');
               }}
             >
-              {isTradingMode ? (
-                // Mock Backend Mode - Show Canvas with WebSocket backend integration
-                <MockBackendCanvas timeframe={timeframe} />
+              {activeTab === 'copy' ? (
+                // Mock Backend Mode - Show Canvas component controlled by Start Trading button
+                <div className="w-full h-[520px]">
+                  <Canvas 
+                    externalControl={true}
+                    externalIsStarted={isCanvasStarted}
+                    onExternalStartChange={setIsCanvasStarted}
+                  />
+                </div>
               ) : (
-                // Normal Mode - Show BoxHitCanvas with live Binance data
+                // Place Trade Mode - Show normal BoxHitCanvas
                 <BoxHitCanvas 
                   live={true} 
                   tickMs={timeframe}
@@ -3016,7 +3037,7 @@ export default function ClientView() {
         
         {/* Right: betting panel only */}
         <RightPanel 
-          isTradingMode={isTradingMode}
+          isTradingMode={activeTab === 'copy' ? isCanvasStarted : isTradingMode}
           onTradingModeChange={handleTradingModeChange}
           selectedCount={selectedCount}
           bestMultiplier={bestMultiplier}
@@ -3027,6 +3048,8 @@ export default function ClientView() {
           onBetAmountChange={setBetAmount}
           dailyHigh={btc24hHigh}
           dailyLow={btc24hLow}
+          activeTab={activeTab}
+          onActiveTabChange={setActiveTab}
         />
       </div>
       

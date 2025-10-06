@@ -4,10 +4,10 @@
   "description": "Mock backend for TradeRush multiplayer trading games",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "bun --watch src/index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/index.js",
+    "start": "bun src/index.ts",
     "test": "tsx test-client.ts",
     "clearinghouse:demo": "tsx src/clearingHouse/tests/demo.ts",
     "clearinghouse:iron-condor": "tsx src/clearingHouse/tests/demo-iron-condor.ts",
