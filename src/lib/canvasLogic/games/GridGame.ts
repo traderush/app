@@ -134,7 +134,7 @@ export class GridGame extends BaseGame {
       pricePerPixel: 0.8,
       verticalMarginRatio: 0.1,
       cameraOffsetRatio: 0.2,
-      smoothingFactorX: 0.95,
+      smoothingFactorX: 0.0, // Disable X smoothing to prevent shaking - snap directly to target
       smoothingFactorY: 0.92,
       lineEndSmoothing: 0.88,
       animationDuration: 800,
