@@ -519,9 +519,10 @@ export class GridGame extends BaseGame {
     }
 
     if (data.length < 2) {
-      // Still render Y-axis and X-axis even without price data
+      // Still render Y-axis even without price data
       this.renderYAxis();
-      this.renderXAxis();
+      // X-axis removed as per user request
+      // this.renderXAxis();
 
       // Draw a message when waiting for data
       this.ctx.save();
@@ -545,8 +546,8 @@ export class GridGame extends BaseGame {
     // Draw Y-axis last (on top as overlay)
     this.renderYAxis();
 
-    // Draw X-axis for debugging
-    this.renderXAxis();
+    // X-axis removed as per user request
+    // this.renderXAxis();
 
     // Draw selectability boundary for sketch game
     if (
@@ -954,7 +955,7 @@ export class GridGame extends BaseGame {
     const data = this.priceData;
     if (data.length === 0) return;
 
-    const axisX = this.width - 70;
+    const axisX = 70; // Y-axis on LEFT side (was: this.width - 70)
     const verticalMargin = this.height * this.config.verticalMarginRatio;
     const viewportTop = verticalMargin;
     const viewportBottom = this.height - verticalMargin;
@@ -970,9 +971,9 @@ export class GridGame extends BaseGame {
 
     this.ctx.save();
 
-    // Draw black background on right side to cover squares
-    this.ctx.fillStyle = '#000000';
-    this.ctx.fillRect(axisX - 5, 0, this.width - (axisX - 5), this.height);
+    // Draw black background on left side to cover squares
+    this.ctx.fillStyle = '#0E0E0E';
+    this.ctx.fillRect(0, 0, axisX + 5, this.height);
 
     // Draw axis line - full height
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -987,8 +988,8 @@ export class GridGame extends BaseGame {
     const startPrice = Math.ceil(minPrice / priceStep) * priceStep;
 
     // Draw price markings
-    this.ctx.font = '12px Arial';
-    this.ctx.textAlign = 'left';
+    this.ctx.font = '11px monospace';
+    this.ctx.textAlign = 'right'; // Right-align text so it ends at the axis
 
     for (let price = startPrice; price <= maxPrice; price += priceStep) {
       // Use the same world-to-screen transformation as boxes
@@ -1005,9 +1006,9 @@ export class GridGame extends BaseGame {
       this.ctx.lineTo(axisX + 5, y);
       this.ctx.stroke();
 
-      // Draw price label
+      // Draw price label on left side
       this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      this.ctx.fillText(`$${price.toFixed(2)}`, axisX + 10, y + 4);
+      this.ctx.fillText(`$${price.toFixed(2)}`, axisX - 10, y + 4);
     }
 
     // Highlight current price - use smoothed position when available
@@ -1030,9 +1031,9 @@ export class GridGame extends BaseGame {
       const isInViewport = currentPriceY >= -20 && currentPriceY <= this.height + 20;
       
       if (isInViewport) {
-        // Draw current price background
+        // Draw current price background (on left side now)
         this.ctx.fillStyle = '#00ff00';
-        this.ctx.fillRect(axisX + 8, currentPriceY - 10, 60, 20);
+        this.ctx.fillRect(axisX - 68, currentPriceY - 10, 60, 20);
 
         // Draw current price text
         this.ctx.fillStyle = '#000';
@@ -1040,7 +1041,7 @@ export class GridGame extends BaseGame {
         this.ctx.textAlign = 'center';
         this.ctx.fillText(
           `$${latestPrice.toFixed(2)}`,
-          axisX + 38,
+          axisX - 38,
           currentPriceY + 4
         );
 
@@ -1052,13 +1053,13 @@ export class GridGame extends BaseGame {
         this.ctx.lineTo(axisX + 8, currentPriceY);
         this.ctx.stroke();
       } else {
-        // Price is outside viewport - show indicator at edge
+        // Price is outside viewport - show indicator at edge (on left side)
         const edgeY = currentPriceY < 0 ? 20 : this.height - 20;
         const arrow = currentPriceY < 0 ? '▲' : '▼';
         
         // Draw edge indicator
         this.ctx.fillStyle = '#00ff00';
-        this.ctx.fillRect(axisX + 8, edgeY - 10, 60, 20);
+        this.ctx.fillRect(axisX - 68, edgeY - 10, 60, 20);
         
         // Draw price with arrow
         this.ctx.fillStyle = '#000';
@@ -1066,7 +1067,7 @@ export class GridGame extends BaseGame {
         this.ctx.textAlign = 'center';
         this.ctx.fillText(
           `${arrow} $${latestPrice.toFixed(2)}`,
-          axisX + 38,
+          axisX - 38,
           edgeY + 4
         );
       }
