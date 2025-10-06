@@ -860,10 +860,9 @@ export class GridGame extends BaseGame {
   }
 
   private renderYAxis(): void {
-    const data = this.priceData;
-    // Always render Y-axis even without data (will use camera.y as center)
+    // Render price labels for every horizontal grid line
+    // No vertical axis line, no background panel, just clean price labels
     
-    const axisX = 70; // Y-axis on LEFT side
     const verticalMargin = this.height * this.config.verticalMarginRatio;
     const viewportTop = verticalMargin;
     const viewportBottom = this.height - verticalMargin;
@@ -879,58 +878,35 @@ export class GridGame extends BaseGame {
 
     this.ctx.save();
 
-    // Draw semi-transparent background for Y-axis area to ensure labels are readable
-    this.ctx.fillStyle = 'rgba(14, 14, 14, 0.85)';
-    this.ctx.fillRect(0, 0, axisX + 5, this.height);
+    // No background panel or vertical line - clean labels only
     
-    // Draw axis line - full height
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(axisX, 0);
-    this.ctx.lineTo(axisX, this.height);
-    this.ctx.stroke();
+    // Get the grid horizontal line spacing
+    const squareSize = Math.min(this.width, this.height) / 9;
+    const squareWorldSize = this.world.getSquareWorldSize(squareSize);
+    const worldBounds = this.world.getVisibleWorldBounds(0);
+    
+    // Calculate starting grid Y position
+    const startGridY = Math.floor(worldBounds.bottom / squareWorldSize.y);
+    const endGridY = Math.ceil(worldBounds.top / squareWorldSize.y);
 
-    // Calculate price steps for markings
-    const priceStep = this.calculatePriceStep(extendedPriceRange);
-    const startPrice = Math.ceil(minPrice / priceStep) * priceStep;
-
-    // Draw price markings with higher visibility
+    // Draw price label for EVERY horizontal grid line
     this.ctx.font = 'bold 11px Arial';
     this.ctx.textAlign = 'left';
+    this.ctx.fillStyle = '#FFFFFF';
 
-    let labelCount = 0;
-    for (let price = startPrice; price <= maxPrice; price += priceStep) {
-      // Use the same world-to-screen transformation as boxes
-      const screenPos = this.world.worldToScreen(0, price);
+    for (let gridY = startGridY; gridY <= endGridY; gridY++) {
+      const worldY = gridY * squareWorldSize.y;
+      const screenPos = this.world.worldToScreen(0, worldY);
       const y = screenPos.y;
 
-      // Only skip markings outside canvas bounds
-      if (y < 15 || y > canvasHeight - 15) continue;
-
-      // Draw tick mark extending left from axis
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-      this.ctx.lineWidth = 1;
-      this.ctx.beginPath();
-      this.ctx.moveTo(axisX - 8, y);
-      this.ctx.lineTo(axisX, y);
-      this.ctx.stroke();
-
-      // Draw price label - white text on dark background
-      this.ctx.fillStyle = '#FFFFFF';
-      this.ctx.fillText(`$${price.toFixed(2)}`, 8, y + 4);
-      labelCount++;
-    }
-
-    // Debug: If no labels rendered, show why
-    if (labelCount === 0) {
-      console.log('[GridGame Y-Axis] No labels rendered', {
-        minPrice,
-        maxPrice,
-        priceStep,
-        centerPrice: this.camera.y,
-        canvasHeight: this.height
-      });
+      // Only render if on screen
+      if (y < 10 || y > canvasHeight - 10) continue;
+      
+      // Calculate the price at this horizontal line
+      const price = worldY;
+      
+      // Draw price label at left edge
+      this.ctx.fillText(`$${price.toFixed(2)}`, 5, y + 4);
     }
 
     this.ctx.restore();
