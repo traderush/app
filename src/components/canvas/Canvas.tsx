@@ -15,9 +15,10 @@ interface CanvasProps {
   externalIsStarted?: boolean;
   onExternalStartChange?: (isStarted: boolean) => void;
   externalTimeframe?: number; // Timeframe in ms (e.g., 500, 1000, 2000, 4000, 10000)
+  onPositionsChange?: (positions: Map<string, any>, contracts: any[]) => void;
 }
 
-export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe }: CanvasProps = {}) {
+export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange }: CanvasProps = {}) {
   // Convert external timeframe (ms) to TimeFrame enum
   const getTimeFrameFromMs = (ms?: number): TimeFrame => {
     switch (ms) {
@@ -86,6 +87,13 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
       updateBalance(userBalance);
     }
   }, [userBalance, updateBalance]);
+
+  // Sync positions and contracts to parent component (for right panel integration)
+  useEffect(() => {
+    if (onPositionsChange && positions) {
+      onPositionsChange(positions, contracts);
+    }
+  }, [positions, contracts, onPositionsChange]);
 
   // Debug contracts
   useEffect(() => {

@@ -2217,6 +2217,50 @@ export default function ClientView() {
   const [betAmount, setBetAmount] = useState(200);
   const [activeTab, setActiveTab] = useState<'place' | 'copy'>('place');
   const [isCanvasStarted, setIsCanvasStarted] = useState(false); // Controls mock backend canvas
+  const [mockBackendPositions, setMockBackendPositions] = useState<Map<string, any>>(new Map());
+  const [mockBackendContracts, setMockBackendContracts] = useState<any[]>([]);
+  
+  // Handle mock backend positions and contracts update
+  const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[]) => {
+    setMockBackendPositions(positions);
+    setMockBackendContracts(contracts);
+  }, []);
+  
+  // Derive position stats from mock backend positions
+  const mockBackendPositionCount = mockBackendPositions.size;
+  const mockBackendMultipliers = useMemo(() => {
+    const mults: number[] = [];
+    const prices: number[] = [];
+    
+    mockBackendPositions.forEach((position) => {
+      // Find the contract for this position
+      const contract = mockBackendContracts.find(c => c.contractId === position.contractId);
+      if (contract) {
+        mults.push(contract.value || 0);
+        // Calculate average price from contract price range
+        if (contract.priceRange) {
+          const avgPrice = (contract.priceRange.min + contract.priceRange.max) / 2;
+          prices.push(avgPrice);
+        }
+      }
+    });
+    
+    return mults;
+  }, [mockBackendPositions, mockBackendContracts]);
+  
+  const mockBackendAveragePrice = useMemo(() => {
+    const prices: number[] = [];
+    
+    mockBackendPositions.forEach((position) => {
+      const contract = mockBackendContracts.find(c => c.contractId === position.contractId);
+      if (contract && contract.priceRange) {
+        const avgPrice = (contract.priceRange.min + contract.priceRange.max) / 2;
+        prices.push(avgPrice);
+      }
+    });
+    
+    return prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+  }, [mockBackendPositions, mockBackendContracts]);
   
   // Reset canvas started state when switching away from Mock Backend tab
   useEffect(() => {
@@ -2697,33 +2741,35 @@ export default function ClientView() {
               {/* Asset Icon */}
               <div className="rounded-lg overflow-hidden" style={{ width: '28px', height: '28px' }}>
                 <img 
-                  src={assetData[selectedAsset].icon} 
-                  alt={assetData[selectedAsset].name} 
+                  src={activeTab === 'copy' ? assetData.BTC.icon : assetData[selectedAsset].icon} 
+                  alt={activeTab === 'copy' ? 'Bitcoin' : assetData[selectedAsset].name} 
                   className="w-full h-full object-cover"
                 />
               </div>
               
-              {/* Asset Selector Dropdown */}
+              {/* Asset Selector Dropdown - Hide in mock backend mode */}
               <div className="relative asset-dropdown">
                 <div 
-                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
+                  className={`flex items-center gap-2 ${activeTab === 'copy' ? '' : 'cursor-pointer hover:opacity-80 transition-opacity'}`}
+                  onClick={() => activeTab !== 'copy' && setAssetDropdownOpen(!isAssetDropdownOpen)}
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
-                    {assetData[selectedAsset].symbol}
+                    {activeTab === 'copy' ? 'BTC' : assetData[selectedAsset].symbol}
                   </div>
-                  <svg 
-                    className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  {activeTab !== 'copy' && (
+                    <svg 
+                      className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
                 </div>
                 
-                {/* Dropdown Menu */}
-                {isAssetDropdownOpen && (
+                {/* Dropdown Menu - Only show in normal mode */}
+                {isAssetDropdownOpen && activeTab !== 'copy' && (
                   <div 
                     className="absolute top-full left-0 mt-2 border border-zinc-700/50 rounded-lg shadow-2xl z-50" 
                     style={{ 
@@ -2814,12 +2860,15 @@ export default function ClientView() {
               {/* Current Value */}
               <div className="flex items-center gap-2">
                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                  {assetData[selectedAsset].price 
-                    ? assetData[selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                    : <span className="text-zinc-500" style={{ fontSize: '16px' }}>Loading...</span>
-                  }
+                  {activeTab === 'copy' ? (
+                    '100.00'
+                  ) : (
+                    assetData[selectedAsset].price 
+                      ? assetData[selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      : <span className="text-zinc-500" style={{ fontSize: '16px' }}>Loading...</span>
+                  )}
                 </div>
-                {isPriceUpdating && (
+                {isPriceUpdating && activeTab !== 'copy' && (
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10AE80', border: '2px solid #134335' }}></div>
                 )}
               </div>
@@ -2829,16 +2878,18 @@ export default function ClientView() {
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
                 <div className="font-medium leading-none" style={{ 
                   fontSize: '18px',
-                  color: assetData[selectedAsset].change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                  color: activeTab === 'copy' ? TRADING_COLORS.positive : (assetData[selectedAsset].change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative)
                 }}>
-                  {assetData[selectedAsset].change24h >= 0 ? '+' : ''}{assetData[selectedAsset].change24h.toFixed(2)}%
+                  {activeTab === 'copy' ? '+2.50%' : `${assetData[selectedAsset].change24h >= 0 ? '+' : ''}${assetData[selectedAsset].change24h.toFixed(2)}%`}
                 </div>
               </div>
               
               {/* 24h Volume */}
               <div className="leading-none">
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
-                <div className="text-white leading-none" style={{ fontSize: '18px' }}>{assetData[selectedAsset].volume24h}</div>
+                <div className="text-white leading-none" style={{ fontSize: '18px' }}>
+                  {activeTab === 'copy' ? '45.20B' : assetData[selectedAsset].volume24h}
+                </div>
               </div>
             </div>
             
@@ -2971,6 +3022,7 @@ export default function ClientView() {
                     externalIsStarted={isCanvasStarted}
                     onExternalStartChange={setIsCanvasStarted}
                     externalTimeframe={timeframe}
+                    onPositionsChange={handleMockBackendPositionsChange}
                   />
                 </div>
               ) : (
@@ -2992,10 +3044,10 @@ export default function ClientView() {
           </div>
           
           <PositionsTable 
-            selectedCount={selectedCount}
-            selectedMultipliers={selectedMultipliers}
+            selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
+            selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
             betAmount={betAmount}
-            currentBTCPrice={assetData[selectedAsset].price || 0}
+            currentBTCPrice={activeTab === 'copy' ? 100 : (assetData[selectedAsset].price || 0)}
             onPositionHit={(positionId) => {
               // Handle position hit - this will be called when a box is hit
               logger.info('Position hit', { positionId }, 'GAME');
@@ -3013,15 +3065,15 @@ export default function ClientView() {
         <RightPanel 
           isTradingMode={activeTab === 'copy' ? isCanvasStarted : isTradingMode}
           onTradingModeChange={handleTradingModeChange}
-          selectedCount={selectedCount}
-          bestMultiplier={bestMultiplier}
-          selectedMultipliers={selectedMultipliers}
-          currentBTCPrice={assetData[selectedAsset].price || 0}
-          averagePositionPrice={averagePositionPrice}
+          selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
+          bestMultiplier={activeTab === 'copy' ? (mockBackendMultipliers.length > 0 ? Math.max(...mockBackendMultipliers) : 0) : bestMultiplier}
+          selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
+          currentBTCPrice={activeTab === 'copy' ? 100 : (assetData[selectedAsset].price || 0)}
+          averagePositionPrice={activeTab === 'copy' ? mockBackendAveragePrice : averagePositionPrice}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
-          dailyHigh={btc24hHigh}
-          dailyLow={btc24hLow}
+          dailyHigh={activeTab === 'copy' ? 102 : btc24hHigh}
+          dailyLow={activeTab === 'copy' ? 98 : btc24hLow}
           activeTab={activeTab}
           onActiveTabChange={setActiveTab}
         />
