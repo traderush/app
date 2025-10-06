@@ -96,14 +96,22 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     if (!isConnected) return;
 
     const handleContractResolved = (msg: any) => {
+      console.log('🔔 Contract resolved event:', msg);
       if (msg.payload && gameRef.current) {
         const { contractId, outcome } = msg.payload;
+        console.log('📋 Contract ID:', contractId, 'Outcome:', outcome);
 
         if (outcome === 'hit') {
+          console.log('➡️ Calling markContractAsHit');
           gameRef.current.markContractAsHit(contractId);
         } else if (outcome === 'miss') {
+          console.log('➡️ Calling markContractAsMissed');
           gameRef.current.markContractAsMissed(contractId);
+        } else {
+          console.log('⚠️ Unknown outcome:', outcome);
         }
+      } else {
+        console.log('⚠️ Missing payload or gameRef:', { hasPayload: !!msg.payload, hasGameRef: !!gameRef.current });
       }
     };
 

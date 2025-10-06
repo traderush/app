@@ -199,17 +199,23 @@ export class SquareRenderer {
 
     // Draw "HIT" or "MISS" badge for outcome states
     if (state === 'activated') {
+      console.log('🏷️ Drawing HIT badge');
+      this.ctx.save();
       this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)'; // Light grey for HIT
       this.ctx.font = '11px sans-serif';
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'bottom';
       this.ctx.fillText('HIT', x + actualWidth - 8, y + actualHeight - 8);
+      this.ctx.restore();
     } else if (state === 'missed') {
+      console.log('🏷️ Drawing MISS badge');
+      this.ctx.save();
       this.ctx.fillStyle = 'rgba(156, 163, 175, 1.0)'; // Slightly darker grey for MISS
       this.ctx.font = '11px sans-serif';
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'bottom';
       this.ctx.fillText('MISS', x + actualWidth - 8, y + actualHeight - 8);
+      this.ctx.restore();
     }
 
     // Draw price range in bottom left corner
