@@ -880,12 +880,11 @@ export class GridGame extends BaseGame {
 
     this.ctx.save();
 
-    // Draw black background on left side to cover squares
-    this.ctx.fillStyle = '#0E0E0E';
-    this.ctx.fillRect(0, 0, axisX + 5, this.height);
-
+    // No background panel - let the canvas background show through
+    // This way price labels are always visible
+    
     // Draw axis line - full height
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.moveTo(axisX, 0);
@@ -897,8 +896,8 @@ export class GridGame extends BaseGame {
     const startPrice = Math.ceil(minPrice / priceStep) * priceStep;
 
     // Draw price markings
-    this.ctx.font = 'bold 11px Arial';
-    this.ctx.textAlign = 'right'; // Right-align text so it ends at the axis
+    this.ctx.font = 'bold 12px Arial';
+    this.ctx.textAlign = 'left'; // Left-align text starting from left edge
 
     for (let price = startPrice; price <= maxPrice; price += priceStep) {
       // Use the same world-to-screen transformation as boxes
@@ -908,17 +907,17 @@ export class GridGame extends BaseGame {
       // Only skip markings outside canvas bounds
       if (y < 10 || y > canvasHeight - 10) continue;
 
-      // Draw tick mark
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      // Draw tick mark extending left from axis
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
-      this.ctx.moveTo(axisX - 5, y);
-      this.ctx.lineTo(axisX + 5, y);
+      this.ctx.moveTo(axisX - 8, y);
+      this.ctx.lineTo(axisX, y);
       this.ctx.stroke();
 
-      // Draw price label on left side - brighter and bolder
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      this.ctx.fillText(`$${price.toFixed(2)}`, axisX - 10, y + 4);
+      // Draw price label on left side - start from left edge
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+      this.ctx.fillText(`$${price.toFixed(2)}`, 5, y + 4);
     }
 
     // Current price ticker is now drawn at the NOW line (in renderPriceLine)
