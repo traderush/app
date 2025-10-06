@@ -2220,10 +2220,16 @@ export default function ClientView() {
   
   // Reset canvas started state when switching away from Mock Backend tab
   useEffect(() => {
+    console.log('[ClientView] Active tab changed:', activeTab);
     if (activeTab !== 'copy') {
       setIsCanvasStarted(false);
     }
   }, [activeTab]);
+  
+  // Debug: Log canvas started state changes
+  useEffect(() => {
+    console.log('[ClientView] Canvas started state changed:', isCanvasStarted);
+  }, [isCanvasStarted]);
   
   // Multi-exchange BTC price index system
   const wsRefs = useRef<{ [key: string]: WebSocket | null }>({});
@@ -2507,8 +2513,10 @@ export default function ClientView() {
   }, []);
 
   const handleTradingModeChange = useCallback((tradingMode: boolean) => {
+    console.log('[ClientView] Trading mode change:', { tradingMode, activeTab });
     if (activeTab === 'copy') {
       // In Mock Backend mode, control canvas start/stop
+      console.log('[ClientView] Setting canvas started to:', tradingMode);
       setIsCanvasStarted(tradingMode);
     } else {
       // In Place Trade mode, control normal trading mode
@@ -2993,6 +3001,7 @@ export default function ClientView() {
               {activeTab === 'copy' ? (
                 // Mock Backend Mode - Show Canvas component controlled by Start Trading button
                 <div className="w-full h-[520px]">
+                  {console.log('[ClientView] Rendering Canvas with props:', { externalControl: true, externalIsStarted: isCanvasStarted })}
                   <Canvas 
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}

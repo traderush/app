@@ -15,6 +15,8 @@ interface CanvasProps {
 }
 
 export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange }: CanvasProps = {}) {
+  console.log('[Canvas] Component rendered with props:', { externalControl, externalIsStarted });
+  
   const [configLoaded, setConfigLoaded] = useState(false);
   const [numYsquares, setNumYsquares] = useState(20);
   const [numXsquares, setNumXsquares] = useState(25);
@@ -27,6 +29,8 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   const [internalIsStarted, setInternalIsStarted] = useState(false);
   const isStarted = externalControl ? externalIsStarted : internalIsStarted;
   const setIsStarted = externalControl && onExternalStartChange ? onExternalStartChange : setInternalIsStarted;
+  
+  console.log('[Canvas] isStarted calculated:', { isStarted, externalControl, externalIsStarted, internalIsStarted });
   const [currentPrice, setCurrentPrice] = useState(
     basePrice + priceStep * numYsquares * 0.5
   );
@@ -562,11 +566,14 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     
     if (externalIsStarted && !isConnected && !isConnecting) {
       // Start requested from external control
+      console.log('[Canvas External Control] Starting canvas...', { externalIsStarted, isConnected, isConnecting });
       handleStart();
     } else if (!externalIsStarted && isConnected) {
       // Stop requested from external control
+      console.log('[Canvas External Control] Stopping canvas...', { externalIsStarted, isConnected });
       handleStop();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalControl, externalIsStarted, isConnected, isConnecting]);
 
   const handleResetCamera = () => {
