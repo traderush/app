@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import { useUIStore } from '@/stores';
 
 /** centralized trading colors */
 const TRADING_COLORS = {
@@ -21,7 +21,7 @@ interface PositionsTableProps {
 
 export default function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [] }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Ensure stable default values to prevent dependency array size changes
   const stableSelectedCount = selectedCount || 0;

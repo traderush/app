@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Filter, ChevronRight, Edit3, ExternalLink } from 'lucide-react';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import { useUIStore } from '@/stores';
 
 const ORANGE = '#FA5616';
 
@@ -17,16 +17,18 @@ interface RightPanelProps {
   selectedCount: number;
   bestMultiplier: number;
   selectedMultipliers: number[]; // Array of multipliers for selected boxes
-  currentBTCPrice: number; // Current live BTC price
+  currentBTCPrice: number | null; // Current live BTC price (null until loaded)
   averagePositionPrice: number | null; // Average BTC price of selected boxes
   betAmount: number; // Current bet amount
   onBetAmountChange: (amount: number) => void; // Callback when bet amount changes
+  dailyHigh: number; // 24h high price
+  dailyLow: number; // 24h low price
 }
 
-export default function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange }: RightPanelProps) {
+function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange, dailyHigh, dailyLow }: RightPanelProps) {
 
   const [activeTab, setActiveTab] = useState<'place' | 'copy'>('place');
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Ensure bet amount is never 0 by default
   useEffect(() => {
@@ -100,7 +102,7 @@ export default function RightPanel({ isTradingMode, onTradingModeChange, selecte
             <div className="flex-1" style={{ background: `linear-gradient(to right, transparent 0%, ${TRADING_COLORS.positive}20 50%, transparent 100%)` }}>
               <div className="text-xs text-zinc-400 px-3">Daily High</div>
               <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: TRADING_COLORS.positive }}>
-                $112,450.00
+                ${dailyHigh > 0 ? dailyHigh.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Loading...'}
               </div>
             </div>
             
@@ -111,7 +113,7 @@ export default function RightPanel({ isTradingMode, onTradingModeChange, selecte
             <div className="flex-1" style={{ background: `linear-gradient(to left, transparent 0%, ${TRADING_COLORS.negative}20 50%, transparent 100%)` }}>
               <div className="text-xs text-zinc-400 px-3">Daily Low</div>
               <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: TRADING_COLORS.negative }}>
-                $111,200.00
+                ${dailyLow > 0 ? dailyLow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Loading...'}
               </div>
             </div>
           </div>
@@ -375,7 +377,9 @@ export default function RightPanel({ isTradingMode, onTradingModeChange, selecte
                           <div className="text-xs text-zinc-400">Avg Position Price</div>
                           <div className="font-medium text-zinc-100" style={{ fontSize: '18px' }}>
                             {selectedCount > 0 ? (
-                              averagePositionPrice ? `~$${Math.round(averagePositionPrice).toLocaleString()}` : 'Calculating...'
+                              typeof averagePositionPrice === 'number' && averagePositionPrice > 0
+                                ? `~$${averagePositionPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                : `$${currentBTCPrice ? currentBTCPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Loading...'}`
                             ) : (
                               `$${currentBTCPrice ? currentBTCPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 'Loading...'}`
                             )}
@@ -438,3 +442,5 @@ export default function RightPanel({ isTradingMode, onTradingModeChange, selecte
     </aside>
   );
 }
+
+export default RightPanel;

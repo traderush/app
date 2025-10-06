@@ -1,9 +1,9 @@
 'use client';
+import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { useState } from 'react';
 
-export default function BetPanel({ game }: { game: string }) {
+const BetPanel = React.memo(function BetPanel({ game }: { game: string }) {
   const [bet, setBet] = useState(200);
   return (
     <Card className="bg-zinc-900/60 border-zinc-800">
@@ -15,6 +15,8 @@ export default function BetPanel({ game }: { game: string }) {
       </CardContent>
     </Card>
   );
-}
+});
+
+export default BetPanel;
 
 

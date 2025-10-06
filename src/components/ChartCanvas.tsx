@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { IChartApi, ISeriesApi } from 'lightweight-charts';
 import type { PriceSeries } from '@/games/shared/usePriceFeed';
 
-export default function ChartCanvas({ data }: { data: PriceSeries }) {
+const ChartCanvas = React.memo(function ChartCanvas({ data }: { data: PriceSeries }) {
   const el = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const lineRef = useRef<ISeriesApi<'Line'> | null>(null);
@@ -41,4 +41,6 @@ export default function ChartCanvas({ data }: { data: PriceSeries }) {
   }, [data]);
 
   return <div ref={el} className="w-full h-full min-h-[300px]" />;
-}
+});
+
+export default ChartCanvas;

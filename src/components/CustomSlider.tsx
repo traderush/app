@@ -12,7 +12,7 @@ interface CustomSliderProps {
   signatureColor?: string;
 }
 
-export default function CustomSlider({
+const CustomSlider = React.memo(function CustomSlider({
   min,
   max,
   step,
@@ -102,4 +102,6 @@ export default function CustomSlider({
       </div>
     </div>
   );
-}
+});
+
+export default CustomSlider;

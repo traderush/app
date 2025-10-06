@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import { useUIStore } from '@/stores';
 
 interface NewsUpdatesPopupProps {
   isOpen: boolean;
@@ -14,7 +14,7 @@ export default function NewsUpdatesPopup({ isOpen, onClose, triggerRef }: NewsUp
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const popupRef = useRef<HTMLDivElement>(null);
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
 
   const slides = [
     {

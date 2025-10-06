@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useUIStore } from '@/stores';
 
 /** centralized trading colors */
 const TRADING_COLORS = {
@@ -12,16 +12,16 @@ interface PositionsTableProps {
   selectedCount: number;
   selectedMultipliers: number[];
   betAmount: number;
-  currentBTCPrice: number;
+  currentBTCPrice: number | null; // Current live BTC price (null until loaded)
   onPositionHit?: (positionId: string) => void;
   onPositionMiss?: (positionId: string) => void;
   hitBoxes?: string[]; // Array of box IDs that were successfully hit
   missedBoxes?: string[]; // Array of box IDs that were missed
 }
 
-export default function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [] }: PositionsTableProps) {
+const PositionsTable = React.memo(function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [] }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Ensure stable default values to prevent dependency array size changes
   const stableSelectedCount = selectedCount || 0;
@@ -293,8 +293,11 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
           <div className="overflow-x-auto pb-3" style={{ height: '256px' }}>
             <div className="h-full overflow-y-auto overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-zinc-400 sticky top-0 border-t border-b border-zinc-800" style={{ backgroundColor: '#09090B' }}>
-                  <tr className="[&>th]:py-1 [&>th]:px-3 text-left">
+                <thead className="text-zinc-400 sticky top-0 z-10" style={{ 
+                  backgroundColor: '#09090B',
+                  boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
+                }}>
+                  <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
@@ -347,8 +350,11 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
         <div className="overflow-x-auto pb-3" style={{ height: '256px' }}>
           <div className="h-full overflow-y-auto overflow-x-auto">
             <table className="w-full text-sm">
-                              <thead className="text-zinc-400 sticky top-0 border-t border-b border-zinc-800" style={{ backgroundColor: '#09090B' }}>
-                  <tr className="[&>th]:py-1 [&>th]:px-3 text-left">
+                              <thead className="text-zinc-400 sticky top-0 z-10" style={{ 
+                  backgroundColor: '#09090B',
+                  boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
+                }}>
+                  <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
@@ -409,4 +415,6 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
         )}
     </div>
   );
-}
+});
+
+export default PositionsTable;

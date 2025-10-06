@@ -14,9 +14,9 @@ interface UseWebSocketReturn {
   sessionId: string | null;
   connect: (username?: string) => Promise<void>;
   disconnect: () => void;
-  send: (message: any) => void;
-  on: (event: string, handler: (data: any) => void) => void;
-  off: (event: string, handler: (data: any) => void) => void;
+  send: (message: { type: string; data?: unknown }) => void;
+  on: (event: string, handler: (data: unknown) => void) => void;
+  off: (event: string, handler: (data: unknown) => void) => void;
   ws: WebSocketService;
 }
 
@@ -97,9 +97,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, []);
 
   // Stable references for ws methods
-  const send = useCallback((message: any) => ws.send(message), [ws]);
-  const on = useCallback((event: string, handler: (data: any) => void) => ws.on(event, handler), [ws]);
-  const off = useCallback((event: string, handler: (data: any) => void) => ws.off(event, handler), [ws]);
+  const send = useCallback((message: { type: string; data?: unknown }) => ws.send(message), [ws]);
+  const on = useCallback((event: string, handler: (data: unknown) => void) => ws.on(event, handler), [ws]);
+  const off = useCallback((event: string, handler: (data: unknown) => void) => ws.off(event, handler), [ws]);
 
   return {
     isConnected,

@@ -1,3 +1,6 @@
+import React from 'react';
+import { useConnectionStore } from '@/stores';
+
 /** centralized trading colors */
 const TRADING_COLORS = {
   positive: '#2fe3ac',  // Green for positive values (gains, up movements)
@@ -9,9 +12,77 @@ interface FooterProps {
   pnLTrackerButtonRef: React.RefObject<HTMLButtonElement | null>;
   onCustomizeOpen: () => void;
   customizeButtonRef: React.RefObject<HTMLButtonElement | null>;
+  // Connection status props
+  isWebSocketConnected?: boolean;
+  connectedExchanges?: string[];
+  currentBTCPrice?: number;
+  currentETHPrice?: number;
+  currentSOLPrice?: number;
+  isBackendConnected?: boolean; // Backend API status
 }
 
-export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustomizeOpen, customizeButtonRef }: FooterProps) {
+const Footer = React.memo(function Footer({ 
+  onPnLTrackerOpen, 
+  pnLTrackerButtonRef, 
+  onCustomizeOpen, 
+  customizeButtonRef,
+  isWebSocketConnected = false,
+  connectedExchanges = [],
+  currentBTCPrice,
+  currentETHPrice,
+  currentSOLPrice,
+  isBackendConnected = false
+}: FooterProps) {
+  // Get lastUpdateTime from store but use ref to prevent re-renders
+  const lastUpdateTimeRef = React.useRef<number | null>(null);
+  const [latency, setLatency] = React.useState(0);
+  const [fps, setFps] = React.useState(60);
+  
+  // Subscribe to lastUpdateTime but update via ref (only once on mount)
+  React.useEffect(() => {
+    const unsubscribe = useConnectionStore.subscribe(
+      (state) => state.lastUpdateTime,
+      (newTime) => {
+        lastUpdateTimeRef.current = newTime;
+      }
+    );
+    
+    return () => unsubscribe();
+  }, []);
+  
+  // FPS measurement
+  React.useEffect(() => {
+    let frameCount = 0;
+    let lastTime = performance.now();
+    let animationId: number;
+    
+    const measureFps = () => {
+      frameCount++;
+      const currentTime = performance.now();
+      
+      if (currentTime >= lastTime + 1000) {
+        setFps(Math.round((frameCount * 1000) / (currentTime - lastTime)));
+        frameCount = 0;
+        lastTime = currentTime;
+      }
+      
+      animationId = requestAnimationFrame(measureFps);
+    };
+    
+    animationId = requestAnimationFrame(measureFps);
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+  
+  // Update latency every 2 seconds instead of on every update
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastUpdateTimeRef.current) {
+        setLatency(Math.floor((Date.now() - lastUpdateTimeRef.current) / 1000));
+      }
+    }, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
       <div className="h-8 px-4 flex items-center justify-between text-xs text-zinc-400">
@@ -28,7 +99,9 @@ export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustom
               alt="Bitcoin" 
               className="w-4 h-4 rounded object-cover"
             />
-            <span style={{color: '#FFA21C'}}>$108.2K</span>
+            <span style={{color: '#FFA21C'}}>
+              {currentBTCPrice ? `$${(currentBTCPrice / 1000).toFixed(1)}K` : '--'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <img 
@@ -36,7 +109,9 @@ export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustom
               alt="Ethereum" 
               className="w-4 h-4 rounded object-cover"
             />
-            <span style={{color: '#5080A0'}}>$4385</span>
+            <span style={{color: '#5080A0'}}>
+              {currentETHPrice ? `$${currentETHPrice.toLocaleString()}` : '--'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <img 
@@ -44,7 +119,107 @@ export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustom
               alt="Solana" 
               className="w-4 h-4 rounded object-cover"
             />
-            <span style={{color: '#26FFA4'}}>$200.67</span>
+            <span style={{color: '#26FFA4'}}>
+              {currentSOLPrice ? `$${currentSOLPrice.toFixed(2)}` : '--'}
+            </span>
+          </div>
+          
+          {/* Connection Status - Dynamic styling based on connection */}
+          <div className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 relative group" style={{ 
+            backgroundColor: isWebSocketConnected ? '#0E2923' : '#2A1A0E', 
+            color: isWebSocketConnected ? '#10AE80' : '#EC397A' 
+          }}>
+            <div className="w-3 h-3 rounded-full" style={{ 
+              backgroundColor: isWebSocketConnected ? '#10AE80' : '#EC397A', 
+              border: `2px solid ${isWebSocketConnected ? '#134335' : '#4A2F1A'}` 
+            }}></div>
+            {isWebSocketConnected ? 'Connected' : 'Disconnected'}
+            
+            {/* Tooltip with detailed connection info and performance metrics */}
+            <div 
+              className="absolute bottom-full right-0 mb-2 px-3 py-2.5 border border-zinc-700/50 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 min-w-[260px]"
+              style={{ 
+                backgroundColor: 'rgba(14, 14, 14, 0.7)', 
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)'
+              }}
+            >
+              <div className="text-xs text-zinc-300 space-y-2">
+                {/* Status Header with inline status */}
+                <div className="flex items-center justify-between">
+                  <span className={`font-medium text-xs`} style={{ color: isWebSocketConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                    {isWebSocketConnected ? 'Live Data Feed' : 'Connection Failed'}
+                  </span>
+                  <span className={`text-xs`} style={{ color: isWebSocketConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                    {isWebSocketConnected ? 'Connected' : 'Disconnected'}
+                  </span>
+                </div>
+                
+                {isWebSocketConnected ? (
+                  <>
+                    {/* Exchange Status */}
+                    <div className="space-y-1 pt-1 border-t border-zinc-700/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-400">Exchanges:</span>
+                        <span className="text-zinc-300">{connectedExchanges.length}/3</span>
+                      </div>
+                      <div className="text-xs text-zinc-500">{connectedExchanges.join(' • ')}</div>
+                    </div>
+                    
+                    {/* Performance Metrics */}
+                    <div className="space-y-1 pt-1 border-t border-zinc-700/50">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">FPS:</span>
+                        <span style={{ color: fps >= 55 ? TRADING_COLORS.positive : fps >= 30 ? '#facc15' : TRADING_COLORS.negative }}>
+                          {fps}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Latency:</span>
+                        <span style={{ color: latency <= 1 ? TRADING_COLORS.positive : latency <= 3 ? '#facc15' : TRADING_COLORS.negative }}>
+                          {latency}s
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Memory:</span>
+                        <span className="text-zinc-300">
+                          {typeof performance !== 'undefined' && (performance as any).memory 
+                            ? `${Math.round((performance as any).memory.usedJSHeapSize / 1048576)}MB`
+                            : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Backend Status */}
+                    <div className="pt-1 border-t border-zinc-700/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-400">Backend API:</span>
+                        <div className="flex items-center gap-1.5">
+                          <div 
+                            className="w-1.5 h-1.5 rounded-full" 
+                            style={{ backgroundColor: isBackendConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}
+                          />
+                          <span style={{ color: isBackendConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                            {isBackendConnected ? 'Connected' : 'Disconnected'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="pt-1">No active connections</div>
+                    <div className="text-zinc-500">Check your internet connection</div>
+                    <div className="text-zinc-500">Retrying automatically...</div>
+                  </>
+                )}
+              </div>
+              {/* Arrow */}
+              <div 
+                className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" 
+                style={{ borderTopColor: 'rgba(14, 14, 14, 0.7)' }}
+              />
+            </div>
           </div>
         </div>
         
@@ -141,4 +316,24 @@ export default function Footer({ onPnLTrackerOpen, pnLTrackerButtonRef, onCustom
       </div>
     </footer>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo to prevent unnecessary re-renders
+  // Return true if props are equal (component should NOT re-render)
+  const exchangesEqual = (
+    prevProps.connectedExchanges?.length === nextProps.connectedExchanges?.length &&
+    prevProps.connectedExchanges?.every((val, idx) => val === nextProps.connectedExchanges?.[idx])
+  ) ?? true;
+  
+  return (
+    prevProps.isWebSocketConnected === nextProps.isWebSocketConnected &&
+    prevProps.isBackendConnected === nextProps.isBackendConnected &&
+    prevProps.currentBTCPrice === nextProps.currentBTCPrice &&
+    prevProps.currentETHPrice === nextProps.currentETHPrice &&
+    prevProps.currentSOLPrice === nextProps.currentSOLPrice &&
+    prevProps.onPnLTrackerOpen === nextProps.onPnLTrackerOpen &&
+    prevProps.onCustomizeOpen === nextProps.onCustomizeOpen &&
+    exchangesEqual
+  );
+});
+
+export default Footer;

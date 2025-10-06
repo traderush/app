@@ -4,7 +4,7 @@ import { GridBox, Tower } from './game';
 import { GameType } from './gameType';
 
 // Base message structure
-export interface WSMessage<T = any> {
+export interface WSMessage<T = unknown> {
   type: string;
   payload: T;
   timestamp: number;
@@ -29,7 +29,7 @@ export interface GameJoinedMessage extends WSMessage<{
   type: 'game_joined';
 }
 
-export interface GameLeftMessage extends WSMessage<{}> {
+export interface GameLeftMessage extends WSMessage<Record<string, never>> {
   type: 'game_left';
 }
 

@@ -3,89 +3,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import RightPanel from '@/games/box-hit/RightPanel';
 import PositionsTable from '@/games/box-hit/PositionsTable';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
 import CustomSlider from '@/components/CustomSlider';
+import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sound/SoundManager';
+import { useGameStore, usePriceStore, useConnectionStore, useUIStore } from '@/stores';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { logger } from '@/utils/logger';
 
-// Global audio context management
-let globalAudioContext: AudioContext | null = null;
-
-const getAudioContext = async (): Promise<AudioContext | null> => {
-  try {
-    if (!globalAudioContext) {
-      globalAudioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    }
-    
-    // Resume audio context if it's suspended (common after user interaction timeout)
-    if (globalAudioContext.state === 'suspended') {
-      await globalAudioContext.resume();
-    }
-    
-    return globalAudioContext;
-  } catch (error) {
-    console.warn('Audio context not available:', error);
-    return null;
-  }
-};
-
-// Sound effects utility
-const createSound = async (frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.1) => {
-  const audioContext = await getAudioContext();
-  if (!audioContext) return;
-  
-  try {
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-    oscillator.type = type;
-    
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + duration);
-  } catch (error) {
-    console.warn('Error creating sound:', error);
-  }
-};
-
-// Global sound state
-let soundEnabled = true;
-
-// Sound effect functions
-const playSelectionSound = async () => {
-  if (!soundEnabled) return; // Don't play sound if disabled
-  // Short, pleasant click sound for selection
-  await createSound(800, 0.1, 'sine', 0.15);
-};
-
-const playHitSound = async () => {
-  if (!soundEnabled) return; // Don't play sound if disabled
-  // Success sound with two tones for hit
-  await createSound(600, 0.15, 'sine', 0.2);
-  setTimeout(async () => await createSound(800, 0.2, 'sine', 0.15), 50);
-};
-
-// Sound toggle function
-const toggleSound = () => {
-  soundEnabled = !soundEnabled;
-  console.log('Sound toggled:', soundEnabled ? 'ON' : 'OFF');
-};
-
-// Get sound enabled state
-const getSoundEnabled = () => {
-  return soundEnabled;
-};
-
-// Make functions available globally
-if (typeof window !== 'undefined') {
-  (window as unknown as { toggleSound: typeof toggleSound; getSoundEnabled: typeof getSoundEnabled }).toggleSound = toggleSound;
-  (window as unknown as { toggleSound: typeof toggleSound; getSoundEnabled: typeof getSoundEnabled }).getSoundEnabled = getSoundEnabled;
-}
+// Sound management is now handled by SoundManager.ts
 
 /** brand */
 // Signature color is now managed by context
@@ -115,6 +39,13 @@ interface GridPosition {
 }
 
 
+/**
+ * Checks if a line segment intersects with a rectangle
+ * @param p1 - Start point of the line segment
+ * @param p2 - End point of the line segment  
+ * @param r - Rectangle to check intersection with
+ * @returns true if the line segment intersects the rectangle
+ */
 function segmentIntersectsRect(p1:{x:number;y:number}, p2:{x:number;y:number}, r:{x:number;y:number;w:number;h:number}) {
   // Liang–Barsky
   let t0 = 0, t1 = 1;
@@ -132,6 +63,25 @@ function segmentIntersectsRect(p1:{x:number;y:number}, p2:{x:number;y:number}, r
   return true;
 }
 
+/**
+ * Main BoxHit canvas component for rendering the trading game interface
+ * Features real-time price charts, grid cells, player interactions, and animations
+ * 
+ * @param rows - Number of rows in the grid (default: 6)
+ * @param cols - Number of columns in the grid (default: 8)
+ * @param tickMs - Animation update interval in milliseconds (default: 2000)
+ * @param leftChartFraction - Fraction of width reserved for past chart (default: 0.25)
+ * @param live - Whether to use live price data (default: false)
+ * @param minMultiplier - Minimum multiplier to display on chart (default: 1.0)
+ * @param onSelectionChange - Callback when grid cell selection changes
+ * @param onPriceUpdate - Callback when price data updates
+ * @param isTradingMode - Whether trading mode is active
+ * @param realBTCPrice - Current BTC price for live updates
+ * @param showProbabilities - Whether to show probability heatmap overlay
+ * @param showOtherPlayers - Whether to show other players' selections
+ * @param signatureColor - Theme color for UI elements
+ * @param zoomLevel - Zoom level for the canvas (1.0 = normal)
+ */
 function BoxHitCanvas({
   rows = 6,
   cols = 8,
@@ -192,6 +142,10 @@ function BoxHitCanvas({
   const [centerPrice, setCenterPrice] = useState(117_500); // current view center (smoothed)
   const [targetCenterPrice, setTargetCenterPrice] = useState(117_500); // where we want to be (raw price in follow)
   
+  // Smooth price interpolation for fluid movement
+  const currentPriceRef = useRef(117_500); // Current interpolated price (smoothed)
+  const targetPriceRef = useRef(117_500); // Target price (from realBTCPrice)
+  
   // Grid system - pre-generated multipliers for all possible positions
   const [gridCells, setGridCells] = useState<GridCell[]>([]);
   const [gridPosition, setGridPosition] = useState<GridPosition>({ offsetX: 0, offsetY: 0 });
@@ -203,7 +157,7 @@ function BoxHitCanvas({
   const [randomPlayerCounts, setRandomPlayerCounts] = useState<{[key: string]: number}>({});
   const [trackedPlayerSelections, setTrackedPlayerSelections] = useState<{[key: string]: Array<{id: string, name: string, avatar: string, type: string}>}>({});
   const [loadedImages, setLoadedImages] = useState<{[key: string]: HTMLImageElement}>({});
-  const selectionRef = useRef({ count: 0, best: 0 });
+  const selectionRef = useRef({ count: 0, best: 0, averagePrice: null as number | null });
   const lastGenerationTimeRef = useRef<number>(0);
   
   // Fixed pool of other player selections that get recycled
@@ -302,10 +256,10 @@ function BoxHitCanvas({
 
   // Generate random player counts and tracked player selections
   useEffect(() => {
-    console.log('Other players useEffect triggered:', { showOtherPlayers, gridCellsLength: gridCells.length });
+    logger.debug('Other players useEffect triggered', { showOtherPlayers, gridCellsLength: gridCells.length }, 'CANVAS');
     
     if (!showOtherPlayers) {
-      console.log('showOtherPlayers is false, clearing data');
+      logger.debug('showOtherPlayers is false, clearing data', undefined, 'CANVAS');
       setRandomPlayerCounts({});
       setTrackedPlayerSelections({});
       return;
@@ -322,7 +276,7 @@ function BoxHitCanvas({
       { id: 'watchlist1', name: 'MoonTrader', avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg', type: 'watchlist' },
       { id: 'watchlist2', name: 'DiamondHands', avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png', type: 'watchlist' },
       { id: 'watchlist3', name: 'BullRun', avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg', type: 'watchlist' },
-      { id: 'watchlist4', name: 'HODLer', avatar: 'https://pbs.twimg.com/profile_images/1962797155623608320/hOVUVd1G_400x400.jpg', type: 'watchlist' },
+      { id: 'watchlist4', name: 'HODLer', avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg', type: 'watchlist' },
       { id: 'watchlist5', name: 'CryptoKing', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'watchlist' }
     ];
 
@@ -336,7 +290,7 @@ function BoxHitCanvas({
         pool.push(Math.floor(Math.random() * 8) + 1); // 1-8 players
       }
       setAvailablePlayerCounts(pool);
-      console.log(`Initialized player count pool with ${poolSize} selections`);
+      logger.debug(`Initialized player count pool with ${poolSize} selections`, undefined, 'CANVAS');
     };
 
     // Fluid player count assignment - appears gradually as boxes approach NOW line
@@ -420,7 +374,7 @@ function BoxHitCanvas({
       }
       
       setAvailableTrackedSelections(pool);
-      console.log(`Initialized tracked player pool with ${poolSize} selections`);
+      logger.debug(`Initialized tracked player pool with ${poolSize} selections`, undefined, 'CANVAS');
     };
 
     // Fluid tracked player assignment - appears gradually as boxes approach NOW line
@@ -486,21 +440,21 @@ function BoxHitCanvas({
 
     // Preload images for tracked players
     const preloadImages = () => {
-      console.log('Preloading images for tracked players:', trackedPlayers);
+      logger.debug('Preloading images for tracked players', trackedPlayers, 'CANVAS');
       trackedPlayers.forEach(player => {
         if (!loadedImages[player.id]) {
-          console.log(`Loading image for ${player.name}: ${player.avatar}`);
+          logger.debug(`Loading image for ${player.name}`, { avatar: player.avatar }, 'CANVAS');
           const img = new Image();
           img.crossOrigin = 'anonymous';
           img.onload = () => {
-            console.log(`Successfully loaded image for ${player.name}`);
+            logger.debug(`Successfully loaded image for ${player.name}`, undefined, 'CANVAS');
             setLoadedImages(prev => ({
               ...prev,
               [player.id]: img
             }));
           };
           img.onerror = () => {
-            console.log(`Failed to load image for ${player.name}: ${player.avatar}`);
+            logger.warn(`Failed to load image for ${player.name}`, { avatar: player.avatar }, 'CANVAS');
           };
           img.src = player.avatar;
         }
@@ -524,7 +478,7 @@ function BoxHitCanvas({
         lastGenerationTimeRef.current = now;
       }
     } else {
-      console.log('No grid cells available yet, skipping generation');
+      logger.debug('No grid cells available yet, skipping generation', undefined, 'CANVAS');
     }
   }, [showOtherPlayers, gridCells]);
 
@@ -555,9 +509,9 @@ function BoxHitCanvas({
           }
         }
         setGridCells(fresh);
-        console.log('Grid cells generated:', fresh.length, 'cells');
+        logger.debug('Grid cells generated', { count: fresh.length }, 'CANVAS');
       } else {
-        console.log('Invalid size dimensions:', size);
+        logger.warn('Invalid size dimensions', size, 'CANVAS');
       }
     }, 100); // 100ms delay to prevent rapid regeneration
 
@@ -568,6 +522,10 @@ function BoxHitCanvas({
   // Initialize chart with real BTC price (no fake historical data)
   useEffect(() => {
     if (realBTCPrice > 0 && series.length === 0) {
+      // Initialize smooth price interpolation
+      currentPriceRef.current = realBTCPrice;
+      targetPriceRef.current = realBTCPrice;
+      
       // Start fresh with real BTC price - no historical buffer
       const now = Date.now();
       setSeries([{ t: now, p: realBTCPrice }]); // Single point with real price
@@ -587,19 +545,24 @@ function BoxHitCanvas({
     const multipliers = activeSel.map(cell => cell.mult);
     
     // Calculate average BTC price based on selected boxes' Y-axis positions
-    let averagePrice = null;
-    if (count > 0) {
+    let averagePrice: number | null = null;
+    if (count > 0 && activeSel.length > 0 && priceGridLines.length > 0) {
       const totalPrice = activeSel.reduce((sum, cell) => {
         // Each row corresponds to a price level in priceGridLines
         const priceLevel = priceGridLines[cell.row];
-        return sum + priceLevel;
+        if (priceLevel && !isNaN(priceLevel)) {
+          return sum + priceLevel;
+        }
+        return sum;
       }, 0);
       averagePrice = totalPrice / count;
     }
     
-    // Only trigger callback if there's an actual change
-    if (count !== selectionRef.current.count || best !== selectionRef.current.best) {
-      selectionRef.current = { count, best };
+    // Only trigger callback if there's an actual change to prevent infinite loops
+    if (count !== selectionRef.current.count || 
+        best !== selectionRef.current.best || 
+        averagePrice !== selectionRef.current.averagePrice) {
+      selectionRef.current = { count, best, averagePrice };
       onSelectionChange?.(count, best, multipliers, averagePrice);
     }
   }, [gridCells, onSelectionChange, priceGridLines]);
@@ -704,20 +667,29 @@ function BoxHitCanvas({
       // Lower multipliers = higher probability (green)
       const probability = Math.max(0, Math.min(1, (15 - cell.mult) / 14));
       
-      // Create heatmap colors - increased opacity for better visibility
+      // Create heatmap colors using TRADING_COLORS with shade variation based on multiplier
+      // TRADING_COLORS.positive = #2fe3ac = rgb(47, 227, 172)
+      // Proper trading red = #ef4444 = rgb(239, 68, 68) - NOT the pink #ec397a
+      // Yellow = #facc15 = rgb(250, 204, 21)
       let heatmapColor;
       if (probability > 0.7) {
-        // High probability - green
-        const intensity = Math.floor(100 + (probability - 0.7) * 155);
-        heatmapColor = `rgba(0, ${intensity}, 0, 0.25)`; // Increased from 0.15 to 0.25
+        // High probability - green (#2fe3ac)
+        // Vary opacity more granularly: mult 1.0 = lighter, mult 5.0 = darker green
+        const normalizedProb = (probability - 0.7) / 0.3; // 0 to 1 within green range
+        const opacity = 0.04 + normalizedProb * 0.08; // 0.04 to 0.12 opacity (very subtle)
+        heatmapColor = `rgba(47, 227, 172, ${opacity})`;
       } else if (probability > 0.4) {
-        // Medium probability - yellow
-        const intensity = Math.floor(100 + (probability - 0.4) * 200);
-        heatmapColor = `rgba(${intensity}, ${intensity}, 0, 0.25)`; // Increased from 0.15 to 0.25
+        // Medium probability - yellow (#facc15)
+        // Vary opacity: mult ~5.0-8.0 with gradual intensity
+        const normalizedProb = (probability - 0.4) / 0.3; // 0 to 1 within yellow range
+        const opacity = 0.05 + normalizedProb * 0.09; // 0.05 to 0.14 opacity (very subtle)
+        heatmapColor = `rgba(250, 204, 21, ${opacity})`;
       } else {
-        // Low probability - red
-        const intensity = Math.floor(100 + (1 - probability) * 155);
-        heatmapColor = `rgba(${intensity}, 0, 0, 0.25)`; // Increased from 0.15 to 0.25
+        // Low probability - proper red (#ef4444)
+        // Vary opacity: mult 8.0+ = darker red, up to mult 15.0
+        const normalizedProb = (0.4 - probability) / 0.4; // 0 to 1 within red range
+        const opacity = 0.06 + normalizedProb * 0.12; // 0.06 to 0.18 opacity (very subtle)
+        heatmapColor = `rgba(239, 68, 68, ${opacity})`;
       }
       
       // Draw heatmap overlay only on unselected boxes
@@ -743,38 +715,51 @@ function BoxHitCanvas({
     // Transform functions (same as ticker)
     const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
     
-    // Create smooth path with interpolation for extended historical movements
-    let path = '';
-    for (let i = 0; i < pts.length; i++) {
-      const pt = pts[i];
-      // Chart positioned more to the left to show more future boxes ahead
-      // Move chart left by 30% of screen width to see further ahead
-      const chartOffset = size.w * 0.3; // 30% of screen width to the left
-      const chartStartX = NOW_X - chartOffset; // Start chart more to the left
-      const chartWidth = chartStartX + size.w; // Extend from left position
-      const x = chartStartX - (pts.length - 1 - i) * (chartWidth / pts.length);
-      
-      // Use stable transform instead of basePrice calculation
-      // Apply same pixel snapping as grid lines for consistent alignment
-      const y = Math.round(priceToY(pt.p) - gridPosition.offsetY) + 0.5;
-      
-      if (i === 0) {
-        path += `M ${x} ${y}`;
-      } else {
-        // Add intermediate points for smooth curves
-        const prevPt = pts[i - 1];
-        const prevX = chartStartX - (pts.length - 1 - (i - 1)) * (chartWidth / pts.length);
-        
-        // Previous point also uses stable transform
-        // Apply same pixel snapping as grid lines for consistent alignment
-        const prevY = Math.round(priceToY(prevPt.p) - gridPosition.offsetY) + 0.5;
-        
-        // Use quadratic curves for smooth interpolation
-        const midX = (prevX + x) / 2;
-        const midY = (prevY + y) / 2;
-        path += ` Q ${midX} ${midY} ${x} ${y}`;
+    // Create ultra-smooth path with Catmull-Rom spline interpolation
+    if (pts.length < 2) {
+      // Not enough points for interpolation
+      if (pts.length === 1) {
+        const pt = pts[0];
+        const chartOffset = size.w * 0.3;
+        const chartStartX = NOW_X - chartOffset;
+        const x = chartStartX;
+        const y = Math.round(priceToY(pt.p) - gridPosition.offsetY) + 0.5;
+        return `M ${x} ${y}`;
       }
+      return '';
     }
+    
+    let path = '';
+    const chartOffset = size.w * 0.3;
+    const chartStartX = NOW_X - chartOffset;
+    const chartWidth = chartStartX + size.w;
+    
+    // Generate X and Y coordinates for all points
+    const points = pts.map((pt, i) => ({
+      x: chartStartX - (pts.length - 1 - i) * (chartWidth / pts.length),
+      y: Math.round(priceToY(pt.p) - gridPosition.offsetY) + 0.5
+    }));
+    
+    // Start path at first point
+    path = `M ${points[0].x} ${points[0].y}`;
+    
+    // Use cubic Bezier curves for ultra-smooth interpolation
+    for (let i = 1; i < points.length; i++) {
+      const p0 = points[Math.max(0, i - 1)];
+      const p1 = points[i];
+      const p2 = points[Math.min(points.length - 1, i + 1)];
+      
+      // Calculate control points for smooth Catmull-Rom spline
+      const tension = 0.3; // Lower = smoother curves (0.0 to 1.0)
+      const cp1x = p0.x + (p1.x - p0.x) * (1 - tension);
+      const cp1y = p0.y + (p1.y - p0.y) * (1 - tension);
+      const cp2x = p1.x - (p2.x - p1.x) * tension;
+      const cp2y = p1.y - (p2.y - p1.y) * tension;
+      
+      // Use cubic Bezier curve for smooth transition
+      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y}`;
+    }
+    
     return path;
   }, [series, size.w, size.h, NOW_X, center, gridPosition.offsetY, cellH]);
 
@@ -797,8 +782,8 @@ function BoxHitCanvas({
         
         // Play sound effect when selecting a box
         if (newState === 'selected') {
-          playSelectionSound();
-        }
+      playSelectionSound();
+    }
         
         return { 
           ...cell, 
@@ -807,22 +792,9 @@ function BoxHitCanvas({
         };
       });
       
-      // Update selection count and best multiplier (only active selections)
-      const activeSelectedCells = updated.filter(cell => 
-        cell.state === 'selected' && !cell.crossedTime
-      );
-      const count = activeSelectedCells.length;
-      const best = activeSelectedCells.length > 0 ? Math.max(...activeSelectedCells.map(cell => cell.mult)) : 0;
-      const multipliers = activeSelectedCells.map(cell => cell.mult);
-      
-      // Update parent component
-      onSelectionChange?.(count, best, multipliers, undefined);
-      
       return updated;
     });
   };
-
-
 
   // Unified animation loop for maximum fluidity - after all calculations
   useEffect(() => {
@@ -843,15 +815,23 @@ function BoxHitCanvas({
     const lastBoxGeneration = 0; // Time-based box generation control
     
     // Pre-calculate constants for stable movement - balanced scrolling speed
-    const pixelsPerSecond = size.w / 0.8; // Move across screen in 0.8 seconds (balanced speed)
+    // Keep constant speed regardless of timeframe selection
+    const pixelsPerSecond = size.w / 12.0; // Move across screen in 12 seconds
     const baseSpeed = pixelsPerSecond / 60; // Convert to pixels per frame at 60 FPS
     
     const animate = (currentTime: number) => {
+      // Initialize lastTime on first frame
+      if (lastTime === 0) {
+        lastTime = currentTime;
+        animationId = requestAnimationFrame(animate);
+        return;
+      }
+      
       const timeDelta = currentTime - lastTime;
       
-      // Use a fixed time step for consistent movement speed regardless of trading mode
-      const fixedTimeStep = 16; // Always 60 FPS for consistent movement speed
-      if (timeDelta < fixedTimeStep) {
+      // Throttle to ~60 FPS for smooth rendering (don't render more than necessary)
+      const minFrameTime = 16; // ~60 FPS (16.67ms per frame)
+      if (timeDelta < minFrameTime) {
         animationId = requestAnimationFrame(animate);
         return;
       }
@@ -868,32 +848,35 @@ function BoxHitCanvas({
         }
       }
       
-                          // Calculate movement using fixed time step for consistency
-                    const dx = baseSpeed * (fixedTimeStep / 1000);
-                    const now = Date.now();
-                    
-                    // Update price series with real BTC price data - optimized for short-term trading
-                    if (live && realBTCPrice > 0) {
-                      // Use real BTC price for chart updates - ultra-frequent for short-term trading
-                      if (now - lastChartUpdate > 100) { // Update every 100ms for short-term responsiveness
-                        const newPrice = realBTCPrice;
-                        
-                        setSeries(s => {
-                          const next = [...s, { t: now, p: newPrice }];
-                          // Keep more points for smoother short-term movement
-                          const maxPts = Math.max(120, Math.round(NOW_X / 2));
-                          return next.slice(-maxPts);
-                        });
-                        
-                        // More responsive center transition for short-term movements
-                        setCenter(prev => {
-                          const diff = newPrice - prev;
-                          return prev + diff * 0.2; // More responsive for short-term trading
-                        });
-                        
-                        lastChartUpdate = now;
-                      }
-                    }
+      // Calculate movement using fixed time step for consistent speed
+      const dx = baseSpeed; // Use constant movement per frame (baseSpeed is already per-frame)
+      const now = Date.now();
+      
+      // Smooth price interpolation for fluid movement
+      if (live && realBTCPrice > 0) {
+        // Update target price from real BTC price
+        targetPriceRef.current = realBTCPrice;
+        
+        // Interpolate current price towards target price every frame for smooth movement
+        // Use exponential smoothing for natural-looking transitions
+        const smoothingFactor = 0.1; // Lower = smoother (0.05-0.2 recommended)
+        const priceDiff = targetPriceRef.current - currentPriceRef.current;
+        currentPriceRef.current += priceDiff * smoothingFactor;
+        
+        // Add interpolated price point to series every frame for ultra-smooth line
+        setSeries(s => {
+          const next = [...s, { t: now, p: currentPriceRef.current }];
+          // Keep enough points for smooth rendering
+          const maxPts = Math.max(120, Math.round(NOW_X / 2));
+          return next.slice(-maxPts);
+        });
+        
+        // Smoothly update center price to follow interpolated price
+        setCenter(prev => {
+          const diff = currentPriceRef.current - prev;
+          return prev + diff * 0.15; // Gentle center tracking
+        });
+      }
       
            // Update grid position to maintain chart tick in center
            setGridPosition(prev => {
@@ -1028,19 +1011,17 @@ function BoxHitCanvas({
                  return cell; // Return original cell if no changes
                });
                
-               // Only update state if there are actual changes
-               if (hasChanges) {
-                 return updatedCells;
-               }
-               
-               return prevCells; // Return original cells if no changes
-             });
-             
-             return { offsetX: newOffsetX, offsetY: newOffsetY };
-                       }
-            
+              // Only update state if there are actual changes
+              if (hasChanges) {
+                return updatedCells;
+              }
+              
+              return prevCells; // Return original cells if no changes
+            });
+            }
+           
             return { offsetX: newOffsetX, offsetY: newOffsetY };
-         });
+          });
          
          // Generate new grid cells and clean up old ones - optimized to prevent excessive updates
          setGridCells(prevCells => {
@@ -1157,6 +1138,10 @@ function BoxHitCanvas({
              // Render everything in the same frame
        // Clear canvas
        ctx.clearRect(0, 0, size.w, size.h);
+       
+       // Enable global anti-aliasing and smoothing for polished rendering
+       ctx.imageSmoothingEnabled = true;
+       ctx.imageSmoothingQuality = 'high';
 
        // Draw probabilities heatmap overlay if enabled
        if (showProbabilities) {
@@ -1587,18 +1572,34 @@ function BoxHitCanvas({
 
       // Draw price path - part of the grid element, moves with grid
       if (pathD) {
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.setLineDash([]); // Solid line for chart
-        
         // Apply grid scroll offset to chart path
         ctx.save();
         ctx.translate(-gridScrollOffset, 0);
         
-        // Ensure chart is drawn across full width without clipping
+        // Enable anti-aliasing and smoothing for silky-smooth line
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
         const path = new Path2D(pathD);
+        
+        // Layer 1: Subtle glow/halo for depth (drawn first, appears behind)
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.setLineDash([]);
+        ctx.stroke(path);
+        
+        // Layer 2: Main bright line (crisp and clean)
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.stroke(path);
         
         ctx.restore();
@@ -1888,51 +1889,109 @@ function BoxHitCanvas({
   );
   }
 
+/**
+ * Main ClientView component for the BoxHit trading game
+ * 
+ * Features:
+ * - Real-time WebSocket connections to multiple exchanges
+ * - Live price data integration with canvas rendering
+ * - Dynamic connection status with rich tooltips
+ * - Comprehensive error handling and user feedback
+ * - Zustand state management for game settings
+ * - Toast notification system for user interactions
+ * 
+ * @returns JSX element containing the complete trading interface
+ */
 export default function ClientView() {
-  const { signatureColor } = useSignatureColor();
+  // Cleanup sound manager and WebSocket connections on unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup sound manager
+      cleanupSoundManager();
+      
+      // Cleanup WebSocket connections
+      Object.values(wsRefs.current).forEach(ws => {
+        if (ws) {
+          ws.close();
+        }
+      });
+      
+      // Cleanup timers
+      Object.values(reconnectTimeoutRefs.current).forEach(timeout => {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+      });
+      
+      // Cleanup composite price timer
+      if (compositeTimerRef.current) {
+        clearInterval(compositeTimerRef.current);
+      }
+      
+      // Cleanup selection update timeout
+      if (selectionUpdateTimeoutRef.current) {
+        clearTimeout(selectionUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  // Get signature color from UI store
+  const signatureColor = useUIStore((state) => state.signatureColor);
+  
+  // Connection store actions for managing WebSocket connections
+  const setWebSocketConnected = useConnectionStore((state) => state.setWebSocketConnected);
+  const setConnectedExchanges = useConnectionStore((state) => state.setConnectedExchanges);
+  const setLastUpdateTime = useConnectionStore((state) => state.setLastUpdateTime);
+  const setCurrentPrices = useConnectionStore((state) => state.setCurrentPrices);
+  
+  // Zustand stores - get only the actions we need
+  const updateGameSettings = useGameStore((state) => state.updateGameSettings);
+  const updateGameStats = useGameStore((state) => state.updateGameStats);
+  
+  // Zustand setter functions
+  const setIsTradingMode = (mode: boolean) => updateGameSettings({ isTradingMode: mode });
+  const setSelectedAsset = (asset: 'BTC' | 'ETH' | 'SOL') => updateGameSettings({ selectedAsset: asset });
+  const setShowProbabilities = (show: boolean) => updateGameSettings({ showProbabilities: show });
+  const setShowOtherPlayers = (show: boolean) => updateGameSettings({ showOtherPlayers: show });
+  const setMinMultiplier = (mult: number) => updateGameSettings({ minMultiplier: mult });
+  const setZoomLevel = (level: number) => updateGameSettings({ zoomLevel: level });
+  const setTimeframe = (ms: number) => updateGameSettings({ timeframe: ms });
+  
+  const addPricePoint = usePriceStore((state) => state.addPricePoint);
+  
+  // Local state for UI-specific data (not part of game logic)
   const [selectedCount, setSelectedCount] = useState(0);
   const [bestMultiplier, setBestMultiplier] = useState(0);
   const [selectedMultipliers, setSelectedMultipliers] = useState<number[]>([]);
   const [averagePositionPrice, setAveragePositionPrice] = useState<number | null>(null);
   const [currentBTCPrice, setCurrentBTCPrice] = useState<number | null>(null); // Current BTC price for display - null until we get real data
+  const [currentETHPrice, setCurrentETHPrice] = useState<number | null>(null); // Current ETH price - null until real data
+  const [currentSOLPrice, setCurrentSOLPrice] = useState<number | null>(null); // Current SOL price - null until real data
   const [btc24hChange, setBtc24hChange] = useState(0); // 24h price change percentage
+  const [btc24hVolume, setBtc24hVolume] = useState(0); // 24h volume in USD
+  const [btc24hHigh, setBtc24hHigh] = useState(0); // 24h high price
+  const [btc24hLow, setBtc24hLow] = useState(0); // 24h low price
+  const [eth24hChange, setEth24hChange] = useState(0); // ETH 24h price change percentage
+  const [eth24hVolume, setEth24hVolume] = useState(0); // ETH 24h volume in USD
+  const [sol24hChange, setSol24hChange] = useState(0); // SOL 24h price change percentage
+  const [sol24hVolume, setSol24hVolume] = useState(0); // SOL 24h volume in USD
   const [isPriceUpdating, setIsPriceUpdating] = useState(false); // Loading state for price updates
-  const [minMultiplier, setMinMultiplier] = useState(1.0); // Minimum multiplier filter
-  const [showOtherPlayers, setShowOtherPlayers] = useState(true); // Toggle for showing other players
-  const [isTradingMode, setIsTradingMode] = useState(false); // Trading mode state
-  const [zoomLevel, setZoomLevel] = useState(1.0); // 1.0 = normal, 0.5 = zoomed out, 2.0 = zoomed in
+  
+  // Use Zustand store for game settings - subscribe to individual values
+  const minMultiplier = useGameStore((state) => state.gameSettings.minMultiplier);
+  const showOtherPlayers = useGameStore((state) => state.gameSettings.showOtherPlayers);
+  const isTradingMode = useGameStore((state) => state.gameSettings.isTradingMode);
+  const zoomLevel = useGameStore((state) => state.gameSettings.zoomLevel);
+  const showProbabilities = useGameStore((state) => state.gameSettings.showProbabilities);
+  const selectedAsset = useGameStore((state) => state.gameSettings.selectedAsset);
+  const gameBetAmount = useGameStore((state) => state.gameSettings.betAmount);
+  const timeframe = useGameStore((state) => state.gameSettings.timeframe);
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false); // WebSocket connection status
-  const [showProbabilities, setShowProbabilities] = useState(false); // Probabilities heatmap overlay
   const [wsConnectionFailures, setWsConnectionFailures] = useState<Record<string, number>>({}); // Track connection failures
+  const wsConnectionStatusRef = useRef(false); // Track WebSocket connection status to prevent unnecessary store updates
+  const lastUpdateTimeStoreRef = useRef(0); // Track last time we updated the store to throttle updates
   
-  // Initialize audio context on first user interaction
-  useEffect(() => {
-    const initializeAudio = async () => {
-      await getAudioContext();
-    };
-    
-    // Initialize audio on any user interaction
-    const handleUserInteraction = () => {
-      initializeAudio();
-      // Remove listeners after first interaction
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-    };
-    
-    document.addEventListener('click', handleUserInteraction);
-    document.addEventListener('keydown', handleUserInteraction);
-    document.addEventListener('touchstart', handleUserInteraction);
-    
-    return () => {
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-    };
-  }, []);
-  
-  // Asset selection state
-  const [selectedAsset, setSelectedAsset] = useState<'BTC' | 'ETH' | 'SOL'>('BTC');
+  // Audio context initialization is now handled by SoundManager
   const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
   const [favoriteAssets, setFavoriteAssets] = useState<Set<'BTC' | 'ETH' | 'SOL'>>(new Set(['BTC'])); // BTC is favorited by default
   
@@ -1968,37 +2027,85 @@ export default function ClientView() {
     };
   }, [isAssetDropdownOpen]);
   
-  // Asset data with mock prices and 24h changes
-  const assetData = {
+  // Helper function to format volume in billions
+  const formatVolumeInBillions = (volume: number): string => {
+    const billions = volume / 1_000_000_000;
+    return `${billions.toFixed(2)}B`;
+  };
+
+  // Asset data with live prices and 24h stats from Binance API
+  const assetData: Record<'BTC' | 'ETH' | 'SOL', {
+    name: string;
+    symbol: string;
+    icon: string;
+    price: number | null;
+    change24h: number;
+    volume24h: string;
+  }> = {
     BTC: {
       name: 'Bitcoin',
       symbol: 'BTC',
       icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/fd/f6/d8fdf69a-e716-1018-1740-b344df03476a/AppIcon-0-0-1x_U007epad-0-11-0-sRGB-85-220.png/460x0w.webp',
-      price: currentBTCPrice || 111589,
-      change24h: 0.677,
-      volume24h: '63.12M'
+      price: currentBTCPrice, // null until real data loads
+      change24h: btc24hChange,
+      volume24h: btc24hVolume > 0 ? formatVolumeInBillions(btc24hVolume) : '0.00B'
     },
     ETH: {
       name: 'Ethereum',
       symbol: 'ETH',
       icon: 'https://static1.tokenterminal.com//ethereum/logo.png?logo_hash=fd8f54cab23f8f4980041f4e74607cac0c7ab880',
-      price: 4300.9,
-      change24h: 0.207,
-      volume24h: '45.8M'
+      price: currentETHPrice, // null until real data loads
+      change24h: eth24hChange,
+      volume24h: eth24hVolume > 0 ? formatVolumeInBillions(eth24hVolume) : '0.00B'
     },
     SOL: {
       name: 'Solana',
       symbol: 'SOL',
       icon: 'https://avatarfiles.alphacoders.com/377/377220.png',
-      price: 213.74,
-      change24h: 3.621,
-      volume24h: '12.3M'
+      price: currentSOLPrice, // null until real data loads
+      change24h: sol24hChange,
+      volume24h: sol24hVolume > 0 ? formatVolumeInBillions(sol24hVolume) : '0.00B'
     }
   };
   
   
   // Toast notification state - support up to 5 stacked toasts with animation states
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; timestamp: number; isVisible: boolean }>>([]);
+  
+  /**
+   * Displays a toast notification to the user
+   * @param message - The message to display in the toast
+   */
+  const showToast = useCallback((message: string) => {
+    const newToastId = Date.now();
+    const newToast = {
+      id: newToastId,
+      message,
+      timestamp: Date.now(),
+      isVisible: true
+    };
+    
+    setToasts(prev => {
+      const updated = [...prev, newToast];
+      // Archive oldest toasts if we exceed 5, keeping only the latest 5
+      if (updated.length > 5) {
+        return updated.slice(-5);
+      }
+      return updated;
+    });
+    
+    // Start fade out after 2.5 seconds, then remove after 3 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.map(toast => 
+        toast.id === newToastId ? { ...toast, isVisible: false } : toast
+      ));
+    }, 2500);
+    
+    // Remove toast completely after fade out completes
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== newToastId));
+    }, 3000);
+  }, []);
   
   // Ref to track the previous count to detect actual new selections
   const previousCountRef = useRef<number>(0);
@@ -2032,7 +2139,10 @@ export default function ClientView() {
     'kraken': 0.3      // 30% weight - major global exchange
   }), []);
 
-  // Calculate composite BTC price from multiple exchanges
+  /**
+   * Calculates composite BTC price from multiple exchanges using weighted average
+   * @returns Composite price or null if no valid prices available
+   */
   const calculateCompositePrice = useCallback(() => {
     const prices = Object.values(exchangePricesRef.current);
     if (prices.length === 0) return null;
@@ -2092,11 +2202,11 @@ export default function ClientView() {
       
       // Skip exchanges that have failed too many times
       if (wsConnectionFailures[exchange.name] >= 5) {
-        console.warn(`⚠️ Skipping ${exchange.name} - too many connection failures`);
+        logger.warn(`Skipping ${exchange.name} - too many connection failures`, undefined, 'WS');
         return;
       }
       
-      console.log(`Connecting to ${exchange.name} WebSocket for live BTC prices...`);
+      logger.info(`Connecting to ${exchange.name} WebSocket for live BTC prices`, undefined, 'WS');
       
       try {
         const ws = new WebSocket(exchange.url);
@@ -2104,7 +2214,7 @@ export default function ClientView() {
         // Set connection timeout
         const connectionTimeout = setTimeout(() => {
           if (ws.readyState === WebSocket.CONNECTING) {
-            console.warn(`⏰ ${exchange.name} WebSocket connection timeout`);
+            logger.warn(`${exchange.name} WebSocket connection timeout`, undefined, 'WS');
             ws.close();
           }
         }, 10000); // 10 second timeout
@@ -2118,7 +2228,20 @@ export default function ClientView() {
             [exchange.name]: 0
           }));
           
-          console.log(`✅ ${exchange.name} WebSocket connected successfully`);
+          logger.info(`${exchange.name} WebSocket connected successfully`, undefined, 'WS');
+          
+          // Update connection status (only update store if status changed)
+          setIsWebSocketConnected(true);
+          if (!wsConnectionStatusRef.current) {
+            wsConnectionStatusRef.current = true;
+            setWebSocketConnected(true);
+          }
+          
+          // Update connected exchanges list
+          const connectedExchanges = Object.keys(wsRefs.current).filter(
+            key => wsRefs.current[key]?.readyState === WebSocket.OPEN
+          );
+          setConnectedExchanges(connectedExchanges);
           
           // Subscribe to BTC price feed (different for each exchange)
           if (exchange.name === 'coinbase') {
@@ -2154,16 +2277,41 @@ export default function ClientView() {
             if (price > 0) {
               exchangePricesRef.current[exchange.name] = price;
               setIsWebSocketConnected(true);
+              
+              // Throttle lastUpdateTime updates to once per second to reduce store updates
+              const now = Date.now();
+              if (now - lastUpdateTimeStoreRef.current > 1000) {
+                lastUpdateTimeStoreRef.current = now;
+                setLastUpdateTime(now);
+              }
+              
               setIsPriceUpdating(false);
             }
           } catch (error) {
-            console.error(`${exchange.name} WebSocket parse error:`, error);
+            logger.error(`${exchange.name} WebSocket parse error`, error, 'WS');
           }
         };
         
         ws.onclose = () => {
           clearTimeout(connectionTimeout);
-          console.log(`❌ ${exchange.name} WebSocket disconnected, attempting to reconnect...`);
+          logger.warn(`${exchange.name} WebSocket disconnected, attempting to reconnect`, undefined, 'WS');
+          
+          // Check if any connections are still active
+          const activeConnections = Object.values(wsRefs.current).filter(ws => ws?.readyState === WebSocket.OPEN);
+          const isConnected = activeConnections.length > 0;
+          setIsWebSocketConnected(isConnected);
+          
+          // Only update store if status changed
+          if (wsConnectionStatusRef.current !== isConnected) {
+            wsConnectionStatusRef.current = isConnected;
+            setWebSocketConnected(isConnected);
+          }
+          
+          // Update connected exchanges list
+          const connectedExchanges = Object.keys(wsRefs.current).filter(
+            key => wsRefs.current[key]?.readyState === WebSocket.OPEN
+          );
+          setConnectedExchanges(connectedExchanges);
           
           // Auto-reconnect after 1 second
           reconnectTimeoutRefs.current[exchange.name] = setTimeout(() => {
@@ -2171,28 +2319,45 @@ export default function ClientView() {
           }, 1000);
         };
         
-        ws.onerror = (error) => {
+        ws.onerror = (event) => {
           clearTimeout(connectionTimeout);
+          
+          const failureCount = (wsConnectionFailures[exchange.name] || 0) + 1;
           
           // Track connection failures
           setWsConnectionFailures(prev => ({
             ...prev,
-            [exchange.name]: (prev[exchange.name] || 0) + 1
+            [exchange.name]: failureCount
           }));
           
-          console.error(`${exchange.name} WebSocket connection failed:`, {
+          // Show user-friendly error notification
+          if (failureCount === 1) {
+            showToast(`⚠️ Connection issue with ${exchange.name}. Retrying...`);
+          } else if (failureCount === 3) {
+            showToast(`🔴 ${exchange.name} connection unstable. Switching to demo mode.`);
+          }
+          
+          logger.error(`${exchange.name} WebSocket connection failed`, {
             exchange: exchange.name,
             url: exchange.url,
             readyState: ws.readyState,
-            error: error,
-            failureCount: (wsConnectionFailures[exchange.name] || 0) + 1
-          });
+            eventType: event.type,
+            failureCount
+          }, 'WS');
+          
           // Don't close immediately, let onclose handle reconnection
         };
         
         wsRefs.current[exchange.name] = ws;
       } catch (error) {
-        console.error(`Failed to connect to ${exchange.name}:`, error);
+        logger.error(`Failed to connect to ${exchange.name}`, error, 'WS');
+        showToast(`❌ Failed to connect to ${exchange.name}. Check your internet connection.`);
+        
+        // Track connection failures for this exchange
+        setWsConnectionFailures(prev => ({
+          ...prev,
+          [exchange.name]: (prev[exchange.name] || 0) + 1
+        }));
       }
     });
   }, [exchangeWeights]);
@@ -2202,7 +2367,7 @@ export default function ClientView() {
     setSelectedCount(count);
     setBestMultiplier(best);
     setSelectedMultipliers(multipliers);
-    setAveragePositionPrice(averagePrice || null);
+    setAveragePositionPrice(averagePrice ?? null);
     
     // Only show toast when count actually increases (new box selected by user)
     if (count > previousCountRef.current && count > 0) {
@@ -2256,9 +2421,9 @@ export default function ClientView() {
         }
       });
       Object.entries(wsRefs.current).forEach(([exchange, ws]) => {
-        if (ws) {
+      if (ws) {
           ws.close();
-        }
+      }
       });
     };
   }, [connectWebSockets]);
@@ -2268,10 +2433,10 @@ export default function ClientView() {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         // Tab is hidden - pause expensive operations
-        console.log('Tab hidden, pausing operations');
+        logger.debug('Tab hidden, pausing operations', undefined, 'PERF');
       } else {
         // Tab is visible again - resume operations
-        console.log('Tab visible, resuming operations');
+        logger.debug('Tab visible, resuming operations', undefined, 'PERF');
       }
     };
     
@@ -2301,13 +2466,6 @@ export default function ClientView() {
           if (priceHistoryRef.current.length > 100) {
             priceHistoryRef.current = priceHistoryRef.current.slice(-100);
           }
-          
-          // Calculate 24h change if we have enough data
-          if (priceHistoryRef.current.length > 1) {
-            const oldestPrice = priceHistoryRef.current[0].price;
-            const change = ((compositePrice - oldestPrice) / oldestPrice) * 100;
-            setBtc24hChange(change);
-          }
         }
       }
     }, 500); // Update every 500ms
@@ -2319,6 +2477,80 @@ export default function ClientView() {
     };
   }, [calculateCompositePrice]);
   
+  // Fetch 24h statistics (change % and volume) from Binance API for all assets
+  useEffect(() => {
+    const fetch24hStats = async () => {
+      try {
+        // Fetch data for BTC, ETH, and SOL in parallel
+        const [btcResponse, ethResponse, solResponse] = await Promise.all([
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT')
+        ]);
+        
+        const [btcData, ethData, solData] = await Promise.all([
+          btcResponse.json(),
+          ethResponse.json(),
+          solResponse.json()
+        ]);
+        
+        // Update BTC stats
+        if (btcData.priceChangePercent) {
+          setBtc24hChange(parseFloat(btcData.priceChangePercent));
+        }
+        if (btcData.quoteVolume) {
+          setBtc24hVolume(parseFloat(btcData.quoteVolume));
+        }
+        if (btcData.highPrice) {
+          setBtc24hHigh(parseFloat(btcData.highPrice));
+        }
+        if (btcData.lowPrice) {
+          setBtc24hLow(parseFloat(btcData.lowPrice));
+        }
+        
+        // Update ETH stats
+        if (ethData.lastPrice) {
+          setCurrentETHPrice(parseFloat(ethData.lastPrice));
+        }
+        if (ethData.priceChangePercent) {
+          setEth24hChange(parseFloat(ethData.priceChangePercent));
+        }
+        if (ethData.quoteVolume) {
+          setEth24hVolume(parseFloat(ethData.quoteVolume));
+        }
+        
+        // Update SOL stats
+        if (solData.lastPrice) {
+          setCurrentSOLPrice(parseFloat(solData.lastPrice));
+        }
+        if (solData.priceChangePercent) {
+          setSol24hChange(parseFloat(solData.priceChangePercent));
+        }
+        if (solData.quoteVolume) {
+          setSol24hVolume(parseFloat(solData.quoteVolume));
+        }
+      } catch (error) {
+        logger.error('Failed to fetch 24h statistics', error);
+      }
+    };
+    
+    // Fetch immediately and then every 60 seconds
+    fetch24hStats();
+    const statsInterval = setInterval(fetch24hStats, 60000);
+    
+    return () => clearInterval(statsInterval);
+  }, []);
+  
+  // Update connection context with current prices whenever they change
+  useEffect(() => {
+    if (currentBTCPrice !== null && currentETHPrice !== null && currentSOLPrice !== null) {
+      setCurrentPrices(
+        currentBTCPrice,
+        currentETHPrice,
+        currentSOLPrice
+      );
+    }
+  }, [currentBTCPrice, currentETHPrice, currentSOLPrice, setCurrentPrices]);
 
   // Update slider background when minMultiplier changes
   useEffect(() => {
@@ -2411,12 +2643,20 @@ export default function ClientView() {
                 
                 {/* Dropdown Menu */}
                 {isAssetDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-80 bg-[#171717] border border-zinc-700 rounded-lg shadow-lg z-50">
+                  <div 
+                    className="absolute top-full left-0 mt-2 border border-zinc-700/50 rounded-lg shadow-2xl z-50" 
+                    style={{ 
+                      width: '280px',
+                      backgroundColor: 'rgba(14, 14, 14, 0.7)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)'
+                    }}
+                  >
                     {Object.entries(assetData).map(([key, asset]) => (
                       <div
                         key={key}
-                        className={`flex items-center gap-4 p-4 cursor-pointer hover:bg-zinc-800 transition-colors ${
-                          selectedAsset === key ? 'bg-zinc-800' : ''
+                        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
+                          selectedAsset === key ? 'bg-zinc-800/50' : ''
                         }`}
                         onClick={() => {
                           setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL');
@@ -2426,10 +2666,10 @@ export default function ClientView() {
                         {/* Star icon for favorites - clickable */}
                         <button
                           onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL', e)}
-                          className="flex-shrink-0 p-1 hover:bg-zinc-700 rounded transition-colors"
+                          className="flex-shrink-0 p-0.5 hover:bg-zinc-700/50 rounded transition-colors"
                         >
                           <svg 
-                            className={`w-4 h-4 transition-colors ${
+                            className={`w-3.5 h-3.5 transition-colors ${
                               favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL') 
                                 ? 'text-yellow-400 fill-current' 
                                 : 'text-zinc-500 fill-none'
@@ -2444,7 +2684,7 @@ export default function ClientView() {
                         </button>
                         
                         {/* Asset icon */}
-                        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                        <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
                           <img 
                             src={asset.icon} 
                             alt={asset.name} 
@@ -2454,27 +2694,28 @@ export default function ClientView() {
                         
                         {/* Asset info */}
                         <div className="flex-1 min-w-0">
-                          <div className="text-white text-sm font-medium">{asset.symbol}</div>
-                          <div className="text-zinc-400 text-xs">{asset.name}</div>
+                          <div className="text-white text-xs font-medium">{asset.symbol}</div>
+                          <div className="text-zinc-400" style={{ fontSize: '11px' }}>{asset.name}</div>
                         </div>
                         
                         {/* Price and change */}
                         <div className="text-right flex-shrink-0">
-                          <div className="text-white text-sm font-medium">
-                            {asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          <div className="text-white text-xs font-medium">
+                            {asset.price !== null ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 'Loading...'}
                           </div>
                           <div 
-                            className="text-xs font-medium"
                             style={{ 
-                              color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                              color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative,
+                              fontSize: '11px',
+                              fontWeight: 500
                             }}
                           >
-                            {asset.change24h >= 0 ? '+' : ''}{asset.change24h.toFixed(3)}%
+                            {asset.change24h !== 0 ? `${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%` : '--'}
                           </div>
                         </div>
                         
                         {/* Volume text */}
-                        <div className="text-zinc-400 text-xs flex-shrink-0">
+                        <div className="text-zinc-400 flex-shrink-0" style={{ fontSize: '11px' }}>
                           Vol: {asset.volume24h}
                         </div>
                       </div>
@@ -2486,27 +2727,30 @@ export default function ClientView() {
               {/* Current Value */}
               <div className="flex items-center gap-2">
                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                  {assetData[selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  {assetData[selectedAsset].price !== null 
+                    ? assetData[selectedAsset].price!.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                    : <span className="text-zinc-500" style={{ fontSize: '18px' }}>Loading...</span>
+                  }
                 </div>
-                {isPriceUpdating && (
+                {isPriceUpdating && assetData[selectedAsset].price !== null && (
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10AE80', border: '2px solid #134335' }}></div>
                 )}
               </div>
               
-              {/* Last 24h Change */}
+              {/* 24h Change */}
               <div className="leading-none">
-                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>Last 24h</div>
+                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
                 <div className="font-medium leading-none" style={{ 
                   fontSize: '18px',
                   color: assetData[selectedAsset].change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
                 }}>
-                  {assetData[selectedAsset].change24h >= 0 ? '+' : ''}{assetData[selectedAsset].change24h.toFixed(3)}%
+                  {assetData[selectedAsset].change24h >= 0 ? '+' : ''}{assetData[selectedAsset].change24h.toFixed(2)}%
                 </div>
               </div>
               
-              {/* Volume 24h */}
+              {/* 24h Volume */}
               <div className="leading-none">
-                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>Volume 24h</div>
+                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
                 <div className="text-white leading-none" style={{ fontSize: '18px' }}>{assetData[selectedAsset].volume24h}</div>
               </div>
             </div>
@@ -2594,7 +2838,7 @@ export default function ClientView() {
                 {/* Zoom Controls */}
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
+                    onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
                     className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
                     title="Zoom Out"
                   >
@@ -2608,7 +2852,7 @@ export default function ClientView() {
                     </span>
                   </div>
                   <button
-                    onClick={() => setZoomLevel(prev => Math.min(2.0, prev + 0.25))}
+                    onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.25))}
                     className="w-6 h-6 rounded flex items-center justify-center hover:bg-zinc-700 transition-colors"
                     title="Zoom In"
                   >
@@ -2617,21 +2861,61 @@ export default function ClientView() {
                     </svg>
                   </button>
                 </div>
+
+                {/* Timeframe Selector */}
+                <div className="flex items-center gap-1">
+                  {[
+                    { label: '0.5s', value: 500 },
+                    { label: '1s', value: 1000 },
+                    { label: '2s', value: 2000 },
+                    { label: '4s', value: 4000 },
+                    { label: '10s', value: 10000 }
+                  ].map((tf) => (
+                    <button
+                      key={tf.value}
+                      onClick={() => setTimeframe(tf.value)}
+                      className={`px-2 py-1 rounded text-xs transition-colors ${
+                        timeframe === tf.value
+                          ? 'bg-zinc-700 text-white'
+                          : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                      }`}
+                      title={`${tf.label} timeframe`}
+                    >
+                      {tf.label}
+                    </button>
+                  ))}
+                </div>
             </div>
           </div>
           
           <div className="border-t border-b border-zinc-800">
-                         <BoxHitCanvas 
-               live={true} 
-               minMultiplier={minMultiplier}
-               onSelectionChange={handleSelectionChange}
-               isTradingMode={isTradingMode}
-               realBTCPrice={assetData[selectedAsset].price}
-               showProbabilities={showProbabilities}
-               showOtherPlayers={showOtherPlayers}
-               signatureColor={signatureColor}
-               zoomLevel={zoomLevel}
-             />
+            <ErrorBoundary 
+              fallback={
+                <div className="h-96 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-red-500 text-lg mb-2">⚠️ Canvas Error</div>
+                    <div className="text-zinc-400 text-sm">The game canvas encountered an error. Please refresh the page.</div>
+                  </div>
+                </div>
+              }
+              onError={(error, errorInfo) => {
+                logger.error('Canvas Error', { error, errorInfo }, 'CANVAS');
+                showToast('⚠️ Game canvas error occurred. Please refresh if issues persist.');
+              }}
+            >
+              <BoxHitCanvas 
+                live={true} 
+                tickMs={timeframe}
+                minMultiplier={minMultiplier}
+                onSelectionChange={handleSelectionChange}
+                isTradingMode={isTradingMode}
+                realBTCPrice={assetData[selectedAsset].price || 0}
+                showProbabilities={showProbabilities}
+                showOtherPlayers={showOtherPlayers}
+                signatureColor={signatureColor}
+                zoomLevel={zoomLevel}
+              />
+            </ErrorBoundary>
           </div>
           
           <PositionsTable 
@@ -2641,11 +2925,11 @@ export default function ClientView() {
             currentBTCPrice={assetData[selectedAsset].price}
             onPositionHit={(positionId) => {
               // Handle position hit - this will be called when a box is hit
-              console.log('Position hit:', positionId);
+              logger.info('Position hit', { positionId }, 'GAME');
             }}
             onPositionMiss={(positionId) => {
               // Handle position missed - this will be called when a box is missed
-              console.log('Position missed:', positionId);
+              logger.info('Position missed', { positionId }, 'GAME');
             }}
             hitBoxes={[]} // TODO: Connect to actual hit detection
             missedBoxes={[]} // TODO: Connect to actual hit detection
@@ -2663,6 +2947,8 @@ export default function ClientView() {
           averagePositionPrice={averagePositionPrice}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
+          dailyHigh={btc24hHigh}
+          dailyLow={btc24hLow}
         />
       </div>
       

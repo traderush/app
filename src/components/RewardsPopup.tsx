@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { X, Gift, Trophy, Star, TrendingUp, Users, Target, Zap, Coins } from 'lucide-react';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import { useUIStore } from '@/stores';
 
 interface RewardsPopupProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
     return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   });
   const popupRef = useRef<HTMLDivElement>(null);
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
 
   const rewardPoints = [
     { volume: "50k", reward: "$200", x: 20, y: 90 },

@@ -1,6 +1,12 @@
 // WebSocket Service for TradeRush
 
-export type MessageHandler = (message: any) => void;
+export interface WebSocketMessage {
+  type: string;
+  data?: unknown;
+  timestamp?: number;
+}
+
+export type MessageHandler = (message: WebSocketMessage) => void;
 
 export interface WebSocketConfig {
   url?: string;
@@ -11,7 +17,7 @@ export interface WebSocketConfig {
 class WebSocketService {
   private ws: WebSocket | null = null;
   private messageHandlers = new Map<string, Set<MessageHandler>>();
-  private messageQueue: any[] = [];
+  private messageQueue: WebSocketMessage[] = [];
   private reconnectAttempts = 0;
   private config: Required<WebSocketConfig>;
   

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Copy, Star, Share, Search, Calendar, ExternalLink } from 'lucide-react';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import { useUIStore } from '@/stores';
 
 interface PlayerTrackerPopupProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
   onClose,
   player
 }) => {
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
   const [selectedTimeframe, setSelectedTimeframe] = useState('Max');
   const [activeTab, setActiveTab] = useState('Activity');
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; pnl: string; date: string } | null>(null);

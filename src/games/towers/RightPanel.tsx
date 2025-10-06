@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Filter, ChevronRight, Edit3, ExternalLink } from 'lucide-react';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import { useUIStore } from '@/stores';
 
 const ORANGE = '#FA5616';
 
@@ -26,7 +26,7 @@ interface RightPanelProps {
 export default function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange }: RightPanelProps) {
 
   const [activeTab, setActiveTab] = useState<'place' | 'copy'>('place');
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Ensure bet amount is never 0 by default
   useEffect(() => {

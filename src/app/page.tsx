@@ -1,4 +1,4 @@
-import { topNav } from '@/config/nav';
+// import { topNav } from '@/config/nav'; // Unused
 
 export default function Home() {
   return (

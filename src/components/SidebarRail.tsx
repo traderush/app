@@ -1,17 +1,10 @@
 'use client';
-import { useState } from 'react';
+import React, { useEffect } from 'react';
 import { Play, Globe, Gift, Settings, Volume2, VolumeX, Coins } from 'lucide-react';
 import clsx from 'clsx';
-import { useSignatureColor } from '@/contexts/SignatureColorContext';
+import { useUIStore, usePlayerStore, type WatchedPlayer } from '@/stores';
 
-interface WatchedPlayer {
-  id: string;
-  name: string;
-  address: string;
-  avatar: string;
-  game: string;
-  isOnline: boolean;
-}
+// WatchedPlayer interface is now imported from usePlayerData hook
 
 interface SidebarRailProps {
   isCollapsed?: boolean;
@@ -29,7 +22,7 @@ interface SidebarRailProps {
   onSoundToggle?: () => void;
 }
 
-export default function SidebarRail({ 
+const SidebarRail = React.memo(function SidebarRail({ 
   isCollapsed = false, 
   onSettingsOpen, 
   settingsButtonRef,
@@ -44,8 +37,18 @@ export default function SidebarRail({
   watchedPlayers = [],
   onSoundToggle
 }: SidebarRailProps) {
-  const [isMuted, setIsMuted] = useState(false);
-  const { signatureColor } = useSignatureColor();
+  const signatureColor = useUIStore((state) => state.signatureColor);
+  const settings = useUIStore((state) => state.settings);
+  const storeWatchedPlayers = usePlayerStore((state) => state.watchedPlayers);
+  const [isClient, setIsClient] = React.useState(false);
+
+  // Use store players if not provided via props
+  const displayPlayers = watchedPlayers.length > 0 ? watchedPlayers : storeWatchedPlayers;
+
+  // Ensure consistent rendering between server and client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <aside className={clsx(
@@ -115,7 +118,7 @@ export default function SidebarRail({
                 border: '1px solid #FFD700'
               }}
               title="Top Player 1"
-              loading="eager"
+              loading="lazy"
               onClick={() => onPlayerClick?.({
                 id: 'top1',
                 name: 'Top Player 1',
@@ -148,7 +151,7 @@ export default function SidebarRail({
                 border: '1px solid #C0C0C0'
               }}
               title="Top Player 2"
-              loading="eager"
+              loading="lazy"
               onClick={() => onPlayerClick?.({
                 id: 'top2',
                 name: 'Top Player 2',
@@ -181,7 +184,7 @@ export default function SidebarRail({
                 border: '1px solid #CD7F32'
               }}
               title="Top Player 3"
-              loading="eager"
+              loading="lazy"
               onClick={() => onPlayerClick?.({
                 id: 'top3',
                 name: 'Top Player 3',
@@ -216,8 +219,8 @@ export default function SidebarRail({
           "flex flex-col items-center gap-2 px-2 transition-all duration-300",
           isCollapsed && "opacity-0 scale-95"
         )}>
-          {/* Dynamic watchlist players */}
-          {watchedPlayers.map((player) => (
+          {/* Dynamic watchlist players - only render on client to avoid hydration mismatch */}
+          {isClient && displayPlayers.map((player) => (
             <div key={player.id} className="relative">
               <img 
                 src={player.avatar}
@@ -230,7 +233,7 @@ export default function SidebarRail({
                   border: `1px solid ${player.isOnline ? signatureColor : '#6B7280'}`
                 }}
                 title={player.name}
-                loading="eager"
+                loading="lazy"
                 onClick={() => onPlayerClick?.(player)}
               />
               {/* Game indicator circle - only show if player is online */}
@@ -305,13 +308,13 @@ export default function SidebarRail({
         )}>
           <button
             onClick={() => {
-              setIsMuted(!isMuted);
+              useUIStore.getState().toggleSound();
               onSoundToggle?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
-            title={isMuted ? "Unmute" : "Mute"}
+            title={settings.soundEnabled ? "Mute" : "Unmute"}
           >
-            {isMuted ? <VolumeX size={26} strokeWidth={1.4} /> : <Volume2 size={26} strokeWidth={1.4} />}
+            {settings.soundEnabled ? <Volume2 size={26} strokeWidth={1.4} /> : <VolumeX size={26} strokeWidth={1.4} />}
           </button>
           
           <button
@@ -326,4 +329,6 @@ export default function SidebarRail({
       </div>
     </aside>
   );
-}
+});
+
+export default SidebarRail;
