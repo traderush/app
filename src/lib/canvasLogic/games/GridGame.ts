@@ -657,20 +657,29 @@ export class GridGame extends BaseGame {
           : latestScreenPos.y;
       }
       
-      // Always render the horizontal line, clamped to screen bounds
-      const clampedY = Math.max(0, Math.min(this.height, dotY));
-      this.lineRenderer.renderHorizontalLine(clampedY, this.width - 80);
+      // Draw vertical NOW line instead of horizontal line
+      if (dotX >= 0 && dotX <= this.width) {
+        this.ctx.save();
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]); // Dashed line
+        this.ctx.beginPath();
+        this.ctx.moveTo(dotX, 0);
+        this.ctx.lineTo(dotX, this.height);
+        this.ctx.stroke();
+        this.ctx.restore();
+      }
       
-      // Only render the dot if it's within screen bounds
+      // Render the price dot if it's within screen bounds
       if (dotX >= 0 && dotX <= this.width && dotY >= 0 && dotY <= this.height) {
         this.lineRenderer.renderDot(dotX, dotY);
         
-        // Draw current price ticker at the dot position (before the dot, inside the dashed NOW line)
+        // Draw current price ticker at the dot position (to the left of the vertical NOW line)
         const latestPrice = data[data.length - 1].price;
         this.ctx.save();
         
-        // Position ticker to the left of the dot
-        const tickerX = dotX - 45; // 45px to the left of dot
+        // Position ticker to the left of the vertical line
+        const tickerX = dotX - 45; // 45px to the left of NOW line
         const tickerY = dotY;
         
         // Draw background box
