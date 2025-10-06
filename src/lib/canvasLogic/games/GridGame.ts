@@ -842,19 +842,112 @@ export class GridGame extends BaseGame {
     const ctx = this.ctx;
     ctx.save();
 
-    // X-axis removed - no bottom labels
-    // Just render a thin line at the bottom edge for visual boundary
-    const axisY = this.height - 1;
-    
-    // Draw thin line at bottom
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
+    // Draw black background at bottom to cover boxes behind axis
+    const axisY = this.height - 30;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, axisY - 5, this.width, this.height - (axisY - 5));
+
+    // Set up styling
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    // Draw horizontal line at bottom
     ctx.beginPath();
     ctx.moveTo(0, axisY);
     ctx.lineTo(this.width, axisY);
     ctx.stroke();
 
-    // No time labels or ticks - just the bottom boundary line
+    // Get world bounds
+    const worldBounds = this.world.getVisibleWorldBounds(0);
+
+    // Calculate dynamic tick interval based on zoom level
+    const worldRange = worldBounds.right - worldBounds.left;
+    const minPixelsPerTick = 80; // Minimum pixels between ticks for readability
+    const maxTicks = Math.floor(this.width / minPixelsPerTick);
+
+    // Find a nice round interval in seconds
+    // Convert world range to seconds (50 pixels = 1 second)
+    const timeRangeSeconds = worldRange / 50;
+    const rawIntervalSeconds = timeRangeSeconds / maxTicks;
+
+    // Round to nice time intervals (1s, 2s, 5s, 10s, 20s, 30s, 60s, etc.)
+    let tickIntervalSeconds: number;
+    if (rawIntervalSeconds <= 1) tickIntervalSeconds = 1;
+    else if (rawIntervalSeconds <= 2) tickIntervalSeconds = 2;
+    else if (rawIntervalSeconds <= 5) tickIntervalSeconds = 5;
+    else if (rawIntervalSeconds <= 10) tickIntervalSeconds = 10;
+    else if (rawIntervalSeconds <= 20) tickIntervalSeconds = 20;
+    else if (rawIntervalSeconds <= 30) tickIntervalSeconds = 30;
+    else if (rawIntervalSeconds <= 60) tickIntervalSeconds = 60;
+    else tickIntervalSeconds = Math.ceil(rawIntervalSeconds / 60) * 60;
+
+    // Convert back to world units
+    const tickInterval = tickIntervalSeconds * 50;
+
+    const startTick =
+      Math.floor(worldBounds.left / tickInterval) * tickInterval;
+    const endTick = Math.ceil(worldBounds.right / tickInterval) * tickInterval;
+
+    // Draw major ticks
+    for (let worldX = startTick; worldX <= endTick; worldX += tickInterval) {
+      const screenX = this.world.worldToScreen(worldX, 0).x;
+
+      if (screenX < 0 || screenX > this.width) continue;
+
+      // Draw tick
+      ctx.beginPath();
+      ctx.moveTo(screenX, axisY - 5);
+      ctx.lineTo(screenX, axisY + 5);
+      ctx.stroke();
+
+      // Draw label - convert world units to seconds
+      // Price moves at 5 pixels per 100ms = 50 pixels per second
+      const timeInSeconds = worldX / 50;
+      ctx.fillText(`${timeInSeconds.toFixed(0)}s`, screenX, axisY + 8);
+    }
+
+    // Draw minor ticks (no labels)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    // Minor ticks at 0.2 second intervals if major ticks are >= 1s
+    const minorInterval = tickIntervalSeconds >= 1 ? 10 : tickInterval / 5; // 10 world units = 0.2s
+    for (let worldX = startTick; worldX <= endTick; worldX += minorInterval) {
+      if (worldX % tickInterval === 0) continue; // Skip major ticks
+
+      const screenX = this.world.worldToScreen(worldX, 0).x;
+      if (screenX < 0 || screenX > this.width) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(screenX, axisY - 2);
+      ctx.lineTo(screenX, axisY + 2);
+      ctx.stroke();
+    }
+
+    // Draw current price position if we have data
+    if (this.priceData.length > 0) {
+      const currentWorldX =
+        (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
+      const screenX = this.world.worldToScreen(currentWorldX, 0).x;
+
+      // Highlight current position
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(screenX, axisY - 5);
+      ctx.lineTo(screenX, axisY + 5);
+      ctx.stroke();
+
+      // Label current position
+      ctx.fillStyle = 'rgba(0, 255, 0, 1)';
+      const currentTimeSeconds = currentWorldX / 50;
+      ctx.fillText(
+        `Now (${currentTimeSeconds.toFixed(1)}s)`,
+        screenX,
+        axisY + 15
+      );
+    }
     
     ctx.restore();
   }
@@ -887,9 +980,9 @@ export class GridGame extends BaseGame {
     const startPrice = Math.floor(minPrice / priceIncrement) * priceIncrement;
 
     // Draw price label every $0.10
-    this.ctx.font = 'bold 11px Arial';
+    this.ctx.font = '11px Arial';
     this.ctx.textAlign = 'left';
-    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
 
     for (let price = startPrice; price <= maxPrice; price += priceIncrement) {
       // Round to avoid floating point errors
