@@ -622,7 +622,13 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   };
 
   return (
-    <div className="flex h-full w-full border-gray-600 border" style={{ backgroundColor: '#0E0E0E' }}>
+    <div 
+      className="flex h-full w-full" 
+      style={{ backgroundColor: '#0E0E0E', position: 'relative', overflow: 'hidden' }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseMove={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+    >
       <div className="flex h-full w-full flex-col">
         {/* Header - hidden when externally controlled */}
         {!externalControl && (

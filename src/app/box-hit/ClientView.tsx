@@ -2965,7 +2965,7 @@ export default function ClientView() {
             >
               {activeTab === 'copy' ? (
                 // Mock Backend Mode - Show Canvas component controlled by Start Trading button
-                <div className="w-full h-[520px]">
+                <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
                   <Canvas 
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}
