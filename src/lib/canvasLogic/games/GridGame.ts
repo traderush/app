@@ -495,12 +495,9 @@ export class GridGame extends BaseGame {
     }
 
     // Update square animations
-    this.squareAnimations.forEach((animation, squareId) => {
+    this.squareAnimations.forEach((animation) => {
       const elapsed = performance.now() - animation.startTime;
-      // Use shorter duration for activation animations (400ms vs 800ms for selection)
-      const isActivation = this.hitBoxes.has(squareId);
-      const duration = isActivation ? 400 : this.config.animationDuration;
-      animation.progress = Math.min(elapsed / duration, 1);
+      animation.progress = Math.min(elapsed / this.config.animationDuration, 1);
     });
 
     // Update empty boxes based on viewport changes
@@ -827,13 +824,6 @@ export class GridGame extends BaseGame {
 
       if (hasBeenHit) {
         state = 'activated'; // Box has been hit (from WebSocket event)
-        const animationData = this.squareAnimations.get(squareId);
-        if (animationData && animationData.progress < 1) {
-          animation = {
-            progress: animationData.progress,
-            type: 'activate',
-          };
-        }
       } else if (isSelected) {
         state = 'selected';
         const animationData = this.squareAnimations.get(squareId);
@@ -1340,11 +1330,6 @@ export class GridGame extends BaseGame {
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'hit';
     }
-    // Start activation animation (quick flash/pulse effect - 400ms)
-    this.squareAnimations.set(contractId, {
-      startTime: performance.now(),
-      progress: 0,
-    });
     // Clear from highlighted/selected when hit
     this.highlightedSquareIds.delete(contractId);
     this.selectedSquareIds.delete(contractId);
