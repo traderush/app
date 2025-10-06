@@ -7,7 +7,7 @@ export interface SquareRenderOptions {
   width?: number; // For rectangles
   height?: number; // For rectangles
   text?: string;
-  state: 'default' | 'hovered' | 'highlighted' | 'selected' | 'activated';
+  state: 'default' | 'hovered' | 'highlighted' | 'selected' | 'activated' | 'missed';
   animation?: {
     progress: number;
     type: 'select' | 'activate';
@@ -81,6 +81,10 @@ export class SquareRenderer {
       // Hit state - higher opacity signature color
       this.ctx.fillStyle = hexToRgba(signatureColor, 0.28);
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
+    } else if (state === 'missed') {
+      // Missed state - same as selected but for missed boxes
+      this.ctx.fillStyle = hexToRgba(signatureColor, 0.18);
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'selected') {
       // Selected state - signature color with lower opacity
       this.ctx.fillStyle = hexToRgba(signatureColor, 0.18);
@@ -145,7 +149,7 @@ export class SquareRenderer {
       let borderColor = '#2b2b2b';
       let borderWidth = 0.6;
       
-      if (state === 'activated' || state === 'selected') {
+      if (state === 'activated' || state === 'selected' || state === 'missed') {
         borderColor = signatureColor;
         borderWidth = 1;
       } else if (state === 'highlighted') {
@@ -175,8 +179,8 @@ export class SquareRenderer {
       // Adjust text color based on state
       let textColor = 'rgba(255, 255, 255, 0.12)'; // Default faint text
       
-      if (state === 'selected' || state === 'activated') {
-        textColor = 'rgba(255, 255, 255, 1.0)'; // Bright text for selected/hit
+      if (state === 'selected' || state === 'activated' || state === 'missed') {
+        textColor = 'rgba(255, 255, 255, 1.0)'; // Bright text for selected/hit/missed
       } else if (state === 'highlighted') {
         textColor = 'rgba(255, 170, 0, 0.9)'; // Orange text for pending confirmation
       } else if (state === 'hovered') {
@@ -193,14 +197,19 @@ export class SquareRenderer {
       this.ctx.fillText(text, centerX, centerY + 4);
     }
 
-    // Draw "HIT" badge for activated state
+    // Draw "HIT" or "MISS" badge for outcome states
     if (state === 'activated') {
-      console.log('🏷️ Drawing HIT badge at position:', { x: x + actualWidth - 8, y: y + actualHeight - 8, width: actualWidth, height: actualHeight });
-      this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)';
+      this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)'; // Light grey for HIT
       this.ctx.font = '11px sans-serif';
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'bottom';
       this.ctx.fillText('HIT', x + actualWidth - 8, y + actualHeight - 8);
+    } else if (state === 'missed') {
+      this.ctx.fillStyle = 'rgba(156, 163, 175, 1.0)'; // Slightly darker grey for MISS
+      this.ctx.font = '11px sans-serif';
+      this.ctx.textAlign = 'right';
+      this.ctx.textBaseline = 'bottom';
+      this.ctx.fillText('MISS', x + actualWidth - 8, y + actualHeight - 8);
     }
 
     // Draw price range in bottom left corner

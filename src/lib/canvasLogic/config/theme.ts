@@ -62,6 +62,7 @@ export interface Theme {
     highlighted: SquareConfig
     selected: SquareConfig
     activated: SquareConfig
+    missed: SquareConfig
   }
   axis: {
     color: string
@@ -150,6 +151,15 @@ export const defaultTheme: Theme = {
       borderWidth: 1,
       fillColor: 'rgba(0, 255, 0, 0.8)',
       textColor: '#000000',
+      font: 'Monaco, "Courier New", monospace',
+      fontSize: 12,
+      padding: 0
+    },
+    missed: {
+      borderColor: 'rgba(156, 163, 175, 0.9)',
+      borderWidth: 1,
+      fillColor: 'rgba(156, 163, 175, 0.1)',
+      textColor: 'rgba(156, 163, 175, 0.9)',
       font: 'Monaco, "Courier New", monospace',
       fontSize: 12,
       padding: 0

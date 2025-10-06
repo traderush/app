@@ -101,8 +101,9 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
 
         if (outcome === 'hit') {
           gameRef.current.markContractAsHit(contractId);
+        } else if (outcome === 'miss') {
+          gameRef.current.markContractAsMissed(contractId);
         }
-        // Removed 'miss' handling - no longer dimming or marking lost boxes
       }
     };
 
@@ -506,6 +507,15 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
             borderWidth: 1,
             fillColor: `${signatureColor}cc`,
             textColor: '#000000',
+            font: 'Monaco, "Courier New", monospace',
+            fontSize: 12,
+            padding: 0
+          },
+          missed: {
+            borderColor: 'rgba(156, 163, 175, 0.9)',
+            borderWidth: 1,
+            fillColor: 'rgba(156, 163, 175, 0.1)',
+            textColor: 'rgba(156, 163, 175, 0.9)',
             font: 'Monaco, "Courier New", monospace',
             fontSize: 12,
             padding: 0

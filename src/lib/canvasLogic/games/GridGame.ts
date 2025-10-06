@@ -69,6 +69,7 @@ export class GridGame extends BaseGame {
   protected highlightedSquareIds: Set<string> = new Set();
   protected squareAnimations: Map<string, SquareAnimation> = new Map();
   protected hitBoxes: Set<string> = new Set(); // Boxes that have been hit based on WebSocket events
+  protected missedBoxes: Set<string> = new Set(); // Boxes that were missed (not hit)
   protected mouseX: number = 0;
   protected mouseY: number = 0;
   protected visibleSquares: Set<string> = new Set(); // For boxes mode
@@ -813,20 +814,21 @@ export class GridGame extends BaseGame {
 
       // Use backend status or WebSocket-based hit tracking
       const hasBeenHit = box.status === 'hit' || this.hitBoxes.has(squareId);
+      const hasBeenMissed = this.missedBoxes.has(squareId);
 
       let state:
         | 'default'
         | 'hovered'
         | 'highlighted'
         | 'selected'
-        | 'activated' = 'default';
+        | 'activated'
+        | 'missed' = 'default';
       let animation: SquareRenderOptions['animation'] = undefined;
 
       if (hasBeenHit) {
         state = 'activated'; // Box has been hit (from WebSocket event)
-        if (this.frameCount % 60 === 0) { // Log once per second
-          console.log('🎯 Rendering activated box:', squareId, 'status:', box.status, 'in hitBoxes:', this.hitBoxes.has(squareId));
-        }
+      } else if (hasBeenMissed) {
+        state = 'missed'; // Box was not hit
       } else if (isSelected) {
         state = 'selected';
         const animationData = this.squareAnimations.get(squareId);
@@ -1327,29 +1329,37 @@ export class GridGame extends BaseGame {
   }
 
   public markContractAsHit(contractId: string): void {
-    console.log('📦 Marking contract as hit:', contractId);
-    console.log('📦 Current hitBoxes:', Array.from(this.hitBoxes));
-    console.log('📦 Backend multipliers:', Object.keys(this.backendMultipliers));
     this.hitBoxes.add(contractId);
     // Update backend data status if contract exists
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'hit';
-      console.log('✅ Updated backend multiplier status to hit');
-    } else {
-      console.warn('⚠️ Contract not found in backend multipliers:', contractId);
     }
     // Clear from highlighted/selected when hit
     this.highlightedSquareIds.delete(contractId);
     this.selectedSquareIds.delete(contractId);
-    console.log('📦 After marking - hitBoxes:', Array.from(this.hitBoxes));
+  }
+
+  public markContractAsMissed(contractId: string): void {
+    this.missedBoxes.add(contractId);
+    // Clear from highlighted/selected when missed
+    this.highlightedSquareIds.delete(contractId);
+    this.selectedSquareIds.delete(contractId);
   }
 
   public clearHitContract(contractId: string): void {
     this.hitBoxes.delete(contractId);
   }
 
+  public clearMissedContract(contractId: string): void {
+    this.missedBoxes.delete(contractId);
+  }
+
   public clearAllHitContracts(): void {
     this.hitBoxes.clear();
+  }
+
+  public clearAllMissedContracts(): void {
+    this.missedBoxes.clear();
   }
 
 
