@@ -140,6 +140,26 @@ export class SquareRenderer {
         currentWidth - 1,
         currentHeight - 1
       );
+    } else if (state === 'activated' && animation?.type === 'activate' && animation.progress < 1) {
+      // Hit/Activation animation - quick flash/pulse effect
+      // Inverse progress for flash effect (bright at start, fades out)
+      const flashProgress = 1 - animation.progress;
+      
+      // Quick ease-out for snappy feel
+      const easeOut = 1 - Math.pow(1 - flashProgress, 2);
+      
+      // Flash overlay - very bright at start, fades out
+      const flashOpacity = 0.6 * easeOut;
+      this.ctx.fillStyle = hexToRgba(signatureColor, flashOpacity);
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
+      
+      // Pulsing border - starts thick and bright, shrinks and fades
+      const pulseWidth = 2 + (3 * easeOut); // 2px to 5px
+      const pulseOpacity = 0.9 * easeOut;
+      this.ctx.strokeStyle = hexToRgba(signatureColor, pulseOpacity);
+      this.ctx.lineWidth = pulseWidth;
+      this.ctx.setLineDash([]);
+      this.ctx.strokeRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else {
       // Draw border for non-animating states
       let borderColor = '#2b2b2b';
@@ -191,15 +211,6 @@ export class SquareRenderer {
       const centerX = x + actualWidth / 2;
       const centerY = y + actualHeight / 2;
       this.ctx.fillText(text, centerX, centerY + 4);
-    }
-    
-    // Draw "HIT" badge for activated (hit) state
-    if (state === 'activated') {
-      this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)'; // Light gray
-      this.ctx.font = '11px sans-serif';
-      this.ctx.textAlign = 'right';
-      this.ctx.textBaseline = 'alphabetic';
-      this.ctx.fillText('HIT', x + actualWidth - 8, y + actualHeight - 8);
     }
 
     // Draw price range in bottom left corner
