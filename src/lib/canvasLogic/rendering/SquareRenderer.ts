@@ -85,17 +85,19 @@ export class SquareRenderer {
       // Selected state - signature color with lower opacity
       this.ctx.fillStyle = hexToRgba(signatureColor, 0.18);
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
+    } else if (state === 'highlighted') {
+      // Highlighted state (first click) - orange/yellow for pending confirmation
+      this.ctx.fillStyle = 'rgba(255, 170, 0, 0.18)'; // Orange at 18% opacity
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else {
       // Default state - dark background
       this.ctx.fillStyle = '#0e0e0e';
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
-    // Add hover overlay
+    // Add hover overlay for hovered state
     if (state === 'hovered') {
-      this.ctx.fillStyle = state === 'selected' 
-        ? hexToRgba(signatureColor, 0.1)
-        : 'rgba(255, 255, 255, 0.08)';
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
@@ -145,7 +147,10 @@ export class SquareRenderer {
       
       if (state === 'activated' || state === 'selected') {
         borderColor = signatureColor;
-        borderWidth = state === 'hovered' ? 1.5 : 1;
+        borderWidth = 1;
+      } else if (state === 'highlighted') {
+        borderColor = 'rgba(255, 170, 0, 0.9)'; // Orange border for pending confirmation
+        borderWidth = 1;
       } else if (state === 'hovered') {
         borderColor = 'rgba(255, 255, 255, 0.4)';
         borderWidth = 1.2;
@@ -172,6 +177,8 @@ export class SquareRenderer {
       
       if (state === 'selected' || state === 'activated') {
         textColor = 'rgba(255, 255, 255, 1.0)'; // Bright text for selected/hit
+      } else if (state === 'highlighted') {
+        textColor = 'rgba(255, 170, 0, 0.9)'; // Orange text for pending confirmation
       } else if (state === 'hovered') {
         textColor = 'rgba(255, 255, 255, 0.25)'; // Brighter on hover
       }
