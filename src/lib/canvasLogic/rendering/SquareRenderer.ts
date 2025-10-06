@@ -195,6 +195,7 @@ export class SquareRenderer {
 
     // Draw "HIT" badge for activated state
     if (state === 'activated') {
+      console.log('🏷️ Drawing HIT badge at position:', { x: x + actualWidth - 8, y: y + actualHeight - 8, width: actualWidth, height: actualHeight });
       this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)';
       this.ctx.font = '11px sans-serif';
       this.ctx.textAlign = 'right';

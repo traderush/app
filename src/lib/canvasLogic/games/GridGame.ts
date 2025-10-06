@@ -824,6 +824,9 @@ export class GridGame extends BaseGame {
 
       if (hasBeenHit) {
         state = 'activated'; // Box has been hit (from WebSocket event)
+        if (this.frameCount % 60 === 0) { // Log once per second
+          console.log('🎯 Rendering activated box:', squareId, 'status:', box.status, 'in hitBoxes:', this.hitBoxes.has(squareId));
+        }
       } else if (isSelected) {
         state = 'selected';
         const animationData = this.squareAnimations.get(squareId);
@@ -1325,14 +1328,20 @@ export class GridGame extends BaseGame {
 
   public markContractAsHit(contractId: string): void {
     console.log('📦 Marking contract as hit:', contractId);
+    console.log('📦 Current hitBoxes:', Array.from(this.hitBoxes));
+    console.log('📦 Backend multipliers:', Object.keys(this.backendMultipliers));
     this.hitBoxes.add(contractId);
     // Update backend data status if contract exists
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'hit';
+      console.log('✅ Updated backend multiplier status to hit');
+    } else {
+      console.warn('⚠️ Contract not found in backend multipliers:', contractId);
     }
     // Clear from highlighted/selected when hit
     this.highlightedSquareIds.delete(contractId);
     this.selectedSquareIds.delete(contractId);
+    console.log('📦 After marking - hitBoxes:', Array.from(this.hitBoxes));
   }
 
   public clearHitContract(contractId: string): void {
