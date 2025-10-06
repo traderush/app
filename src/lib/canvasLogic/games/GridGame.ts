@@ -661,7 +661,12 @@ export class GridGame extends BaseGame {
       // Draw vertical NOW line instead of horizontal line
       if (dotX >= 0 && dotX <= this.width) {
         this.ctx.save();
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        // Use signature color from theme with 30% opacity
+        const lineColor = this.theme.line.color;
+        const r = parseInt(lineColor.slice(1, 3), 16);
+        const g = parseInt(lineColor.slice(3, 5), 16);
+        const b = parseInt(lineColor.slice(5, 7), 16);
+        this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([5, 5]); // Dashed line
         this.ctx.beginPath();
@@ -683,8 +688,8 @@ export class GridGame extends BaseGame {
         const tickerX = dotX - 45; // 45px to the left of NOW line
         const tickerY = dotY;
         
-        // Draw background box
-        this.ctx.fillStyle = '#00ff00';
+        // Draw background box using signature color
+        this.ctx.fillStyle = this.theme.line.color;
         this.ctx.fillRect(tickerX - 35, tickerY - 10, 70, 20);
         
         // Draw price text
@@ -961,8 +966,12 @@ export class GridGame extends BaseGame {
         (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
       const screenX = this.world.worldToScreen(currentWorldX, 0).x;
 
-      // Highlight current position
-      ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+      // Highlight current position using signature color
+      const lineColor = this.theme.line.color;
+      const r = parseInt(lineColor.slice(1, 3), 16);
+      const g = parseInt(lineColor.slice(3, 5), 16);
+      const b = parseInt(lineColor.slice(5, 7), 16);
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(screenX, axisY - 5);
@@ -970,7 +979,7 @@ export class GridGame extends BaseGame {
       ctx.stroke();
 
       // Label current position
-      ctx.fillStyle = 'rgba(0, 255, 0, 1)';
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
       const currentTimeSeconds = currentWorldX / 50;
       ctx.fillText(
         `Now (${currentTimeSeconds.toFixed(1)}s)`,
