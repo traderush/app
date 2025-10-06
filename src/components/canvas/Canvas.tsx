@@ -737,6 +737,11 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
               <div className="flex h-full items-center justify-center">
                 <div className="text-center">
                   <div className="text-zinc-400 text-sm">Loading game configuration...</div>
+                  <div className="text-zinc-600 text-xs mt-2">
+                    <div>isConnected: {isConnected ? 'true' : 'false'}</div>
+                    <div>timeframe: {selectedTimeframe}ms</div>
+                    <div>Waiting for game_config message...</div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -748,7 +753,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
                 />
                 
                 {/* Live/Manual Status Indicator with Recenter Button - Top Right (matching BoxHitCanvas) */}
-                <div className="absolute top-3 right-3 flex items-center gap-2">
+                <div className="absolute top-3 right-3 flex items-center gap-2" style={{ zIndex: 50 }}>
                   {/* Recenter Button - Only show when in manual mode */}
                   {!isFollowingPrice && (
                     <button
