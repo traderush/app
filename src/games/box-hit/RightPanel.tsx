@@ -12,7 +12,7 @@ const TRADING_COLORS = {
 } as const;
 
 interface RightPanelProps {
-  isTradingMode: boolean;
+  isTradingMode: boolean; // Now represents Mock Backend mode
   onTradingModeChange: (tradingMode: boolean) => void;
   selectedCount: number;
   bestMultiplier: number;
@@ -288,7 +288,7 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
             }}
             disabled={betAmount === 0 && !isTradingMode}
           >
-            {isTradingMode ? 'Exit Trade Mode' : 'Start Trading'}
+            {isTradingMode ? 'Exit Mock Backend' : 'Mock Backend'}
           </button>
           
           {/* Fee and Liquidity Row */}

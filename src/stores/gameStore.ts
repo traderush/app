@@ -36,7 +36,7 @@ export interface GameSettings {
   autoPlay: boolean;
   minMultiplier: number;
   showOtherPlayers: boolean;
-  isTradingMode: boolean;
+  isTradingMode: boolean; // Mock Backend mode - when true, shows Canvas with WebSocket backend
   zoomLevel: number;
   showProbabilities: boolean;
   selectedAsset: 'BTC' | 'ETH' | 'SOL';

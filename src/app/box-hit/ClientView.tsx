@@ -8,6 +8,7 @@ import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sou
 import { useGameStore, usePriceStore, useConnectionStore, useUIStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { logger } from '@/utils/logger';
+import MockBackendCanvas from '@/components/canvas/MockBackendCanvas';
 
 // Sound management is now handled by SoundManager.ts
 
@@ -2974,18 +2975,24 @@ export default function ClientView() {
                 showToast('⚠️ Game canvas error occurred. Please refresh if issues persist.');
               }}
             >
-              <BoxHitCanvas 
-                live={true} 
-                tickMs={timeframe}
-                minMultiplier={minMultiplier}
-                onSelectionChange={handleSelectionChange}
-                isTradingMode={isTradingMode}
-                realBTCPrice={assetData[selectedAsset].price || 0}
-                showProbabilities={showProbabilities}
-                showOtherPlayers={showOtherPlayers}
-                signatureColor={signatureColor}
-                zoomLevel={zoomLevel}
-              />
+              {isTradingMode ? (
+                // Mock Backend Mode - Show Canvas with WebSocket backend integration
+                <MockBackendCanvas timeframe={timeframe} />
+              ) : (
+                // Normal Mode - Show BoxHitCanvas with live Binance data
+                <BoxHitCanvas 
+                  live={true} 
+                  tickMs={timeframe}
+                  minMultiplier={minMultiplier}
+                  onSelectionChange={handleSelectionChange}
+                  isTradingMode={isTradingMode}
+                  realBTCPrice={assetData[selectedAsset].price || 0}
+                  showProbabilities={showProbabilities}
+                  showOtherPlayers={showOtherPlayers}
+                  signatureColor={signatureColor}
+                  zoomLevel={zoomLevel}
+                />
+              )}
             </ErrorBoundary>
           </div>
           
