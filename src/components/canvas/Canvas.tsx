@@ -119,8 +119,8 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
       if (msg.payload) {
         const { contractId, won, payout, profit, balance } = msg.payload;
         const message = won
-          ? `Won! +$${profit.toFixed(2)} (Payout: $${payout.toFixed(2)})`
-          : `Lost $${Math.abs(profit).toFixed(2)}`;
+          ? `Trade Won  +$${Math.abs(profit).toFixed(2)}`
+          : `Trade Lost -$${Math.abs(profit).toFixed(2)}`;
 
         // Add notification
         const notification = {
