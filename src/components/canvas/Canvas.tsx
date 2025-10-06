@@ -49,7 +49,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   );
   const [currentTime, setCurrentTime] = useState(new Date());
   const [notifications, setNotifications] = useState<
-    Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>
+    Array<{ id: string; message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>
   >([]);
   const [isFollowingPrice, setIsFollowingPrice] = useState(true);
 
@@ -127,16 +127,28 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
           id: `${contractId}_${Date.now()}`,
           message,
           type: won ? 'success' : ('error' as 'success' | 'error'),
+          isVisible: true,
         };
 
-        setNotifications((prev) => [...prev, notification]);
+        setNotifications((prev) => {
+          const updated = [...prev, notification];
+          // Keep only the latest 5 notifications
+          return updated.length > 5 ? updated.slice(-5) : updated;
+        });
 
-        // Remove notification after 5 seconds
+        // Start fade out after 2.5 seconds
+        setTimeout(() => {
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === notification.id ? { ...n, isVisible: false } : n))
+          );
+        }, 2500);
+
+        // Remove notification after fade out completes
         setTimeout(() => {
           setNotifications((prev) =>
             prev.filter((n) => n.id !== notification.id)
           );
-        }, 5000);
+        }, 3000);
 
         // Update balance if needed
         console.log('Trade result:', {
@@ -853,23 +865,6 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
 
         {/* Canvas Container */}
         <div className="relative flex-1">
-          {/* Notifications */}
-          <div className="absolute right-4 top-4 z-10 space-y-2">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`rounded px-4 py-2 shadow-lg transition-all duration-300 ${
-                  notification.type === 'success'
-                    ? 'bg-green-600 text-white'
-                    : notification.type === 'error'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-blue-600 text-white'
-                }`}
-              >
-                {notification.message}
-              </div>
-            ))}
-          </div>
           {isStarted ? (
             !configLoaded ? (
               <div className="flex h-full items-center justify-center">
@@ -950,6 +945,68 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
             </div>
           )}
         </div>
+      </div>
+
+      {/* Toast Notifications - Bottom Right Corner (matching normal boxhit style) */}
+      <div className="fixed bottom-4 right-4 z-50 space-y-3">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className={`bg-[#171717] border border-zinc-700 rounded-lg px-5 py-4 shadow-lg flex items-center gap-4 transition-all duration-300 ease-in-out transform ${
+              notification.isVisible
+                ? 'opacity-100 translate-y-0'
+                : 'opacity-0 translate-y-2'
+            }`}
+            style={{ fontSize: '12px' }}
+          >
+            {/* Icon */}
+            <div
+              className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                notification.type === 'success'
+                  ? 'bg-[#13AD80]'
+                  : notification.type === 'error'
+                    ? 'bg-[#EF4444]'
+                    : 'bg-[#3B82F6]'
+              }`}
+            >
+              {notification.type === 'success' ? (
+                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : notification.type === 'error' ? (
+                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+            </div>
+
+            {/* Message */}
+            <span className="text-white font-normal">{notification.message}</span>
+
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                // Start fade out animation
+                setNotifications((prev) =>
+                  prev.map((n) => (n.id === notification.id ? { ...n, isVisible: false } : n))
+                );
+                // Remove after animation completes
+                setTimeout(() => {
+                  setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+                }, 300);
+              }}
+              className="ml-2 text-zinc-400 hover:text-zinc-300 transition-colors flex-shrink-0"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );
