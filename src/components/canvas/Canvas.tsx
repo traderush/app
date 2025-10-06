@@ -456,13 +456,13 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
           }
         },
         line: {
-          color: signatureColor,
+          color: '#ffffff', // White for price line
           width: 3,
           cap: 'round' as CanvasLineCap,
           join: 'round' as CanvasLineJoin,
           glow: {
             enabled: false,
-            color: signatureColor,
+            color: '#ffffff',
             blur: 10
           }
         },
