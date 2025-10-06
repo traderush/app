@@ -572,6 +572,22 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     }
   };
   
+  // Handle external timeframe changes - reset game when timeframe changes
+  useEffect(() => {
+    if (!externalControl || !externalTimeframe) return;
+    
+    // Reset game state when timeframe changes externally
+    setConfigLoaded(false);
+    setDataPointCount(0);
+    setIsFollowingPrice(true);
+    
+    // Destroy existing game
+    if (gameRef.current) {
+      gameRef.current.destroy();
+      gameRef.current = null;
+    }
+  }, [externalTimeframe, externalControl]);
+  
   // Handle external control - start/stop based on external state
   useEffect(() => {
     if (!externalControl) return;
