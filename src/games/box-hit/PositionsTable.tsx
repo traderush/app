@@ -12,7 +12,7 @@ interface PositionsTableProps {
   selectedCount: number;
   selectedMultipliers: number[];
   betAmount: number;
-  currentBTCPrice: number | null; // Current live BTC price (null until loaded)
+  currentBTCPrice: number;
   onPositionHit?: (positionId: string) => void;
   onPositionMiss?: (positionId: string) => void;
   hitBoxes?: string[]; // Array of box IDs that were successfully hit

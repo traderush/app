@@ -15,9 +15,6 @@ interface FooterProps {
   // Connection status props
   isWebSocketConnected?: boolean;
   connectedExchanges?: string[];
-  currentBTCPrice?: number;
-  currentETHPrice?: number;
-  currentSOLPrice?: number;
   isBackendConnected?: boolean; // Backend API status
 }
 
@@ -28,26 +25,48 @@ const Footer = React.memo(function Footer({
   customizeButtonRef,
   isWebSocketConnected = false,
   connectedExchanges = [],
-  currentBTCPrice,
-  currentETHPrice,
-  currentSOLPrice,
   isBackendConnected = false
 }: FooterProps) {
-  // Get lastUpdateTime from store but use ref to prevent re-renders
+  // Read prices from store using refs + throttled state for display
+  const currentBTCPriceRef = React.useRef(0);
+  const currentETHPriceRef = React.useRef(0);
+  const currentSOLPriceRef = React.useRef(0);
+  const [displayBTCPrice, setDisplayBTCPrice] = React.useState(0);
+  const [displayETHPrice, setDisplayETHPrice] = React.useState(0);
+  const [displaySOLPrice, setDisplaySOLPrice] = React.useState(0);
   const lastUpdateTimeRef = React.useRef<number | null>(null);
   const [latency, setLatency] = React.useState(0);
   const [fps, setFps] = React.useState(60);
   
-  // Subscribe to lastUpdateTime but update via ref (only once on mount)
+  // Subscribe to prices and lastUpdateTime via refs (no re-renders)
   React.useEffect(() => {
     const unsubscribe = useConnectionStore.subscribe(
-      (state) => state.lastUpdateTime,
-      (newTime) => {
-        lastUpdateTimeRef.current = newTime;
+      (state) => ({
+        lastUpdateTime: state.lastUpdateTime,
+        currentBTCPrice: state.currentBTCPrice,
+        currentETHPrice: state.currentETHPrice,
+        currentSOLPrice: state.currentSOLPrice,
+      }),
+      (values) => {
+        lastUpdateTimeRef.current = values.lastUpdateTime;
+        currentBTCPriceRef.current = values.currentBTCPrice;
+        currentETHPriceRef.current = values.currentETHPrice;
+        currentSOLPriceRef.current = values.currentSOLPrice;
       }
     );
     
     return () => unsubscribe();
+  }, []);
+  
+  // Update display prices every 2 seconds (throttled for Footer display only)
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayBTCPrice(currentBTCPriceRef.current);
+      setDisplayETHPrice(currentETHPriceRef.current);
+      setDisplaySOLPrice(currentSOLPriceRef.current);
+    }, 2000);
+    
+    return () => clearInterval(interval);
   }, []);
   
   // FPS measurement
@@ -100,7 +119,7 @@ const Footer = React.memo(function Footer({
               className="w-4 h-4 rounded object-cover"
             />
             <span style={{color: '#FFA21C'}}>
-              {currentBTCPrice ? `$${(currentBTCPrice / 1000).toFixed(1)}K` : '--'}
+              {displayBTCPrice > 0 ? `$${(displayBTCPrice / 1000).toFixed(1)}K` : '...'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -110,7 +129,7 @@ const Footer = React.memo(function Footer({
               className="w-4 h-4 rounded object-cover"
             />
             <span style={{color: '#5080A0'}}>
-              {currentETHPrice ? `$${currentETHPrice.toLocaleString()}` : '--'}
+              {displayETHPrice > 0 ? `$${displayETHPrice.toLocaleString()}` : '...'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -120,7 +139,7 @@ const Footer = React.memo(function Footer({
               className="w-4 h-4 rounded object-cover"
             />
             <span style={{color: '#26FFA4'}}>
-              {currentSOLPrice ? `$${currentSOLPrice.toFixed(2)}` : '--'}
+              {displaySOLPrice > 0 ? `$${displaySOLPrice.toFixed(2)}` : '...'}
             </span>
           </div>
           
@@ -327,9 +346,6 @@ const Footer = React.memo(function Footer({
   return (
     prevProps.isWebSocketConnected === nextProps.isWebSocketConnected &&
     prevProps.isBackendConnected === nextProps.isBackendConnected &&
-    prevProps.currentBTCPrice === nextProps.currentBTCPrice &&
-    prevProps.currentETHPrice === nextProps.currentETHPrice &&
-    prevProps.currentSOLPrice === nextProps.currentSOLPrice &&
     prevProps.onPnLTrackerOpen === nextProps.onPnLTrackerOpen &&
     prevProps.onCustomizeOpen === nextProps.onCustomizeOpen &&
     exchangesEqual

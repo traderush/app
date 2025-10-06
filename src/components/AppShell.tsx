@@ -22,12 +22,10 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
   // Get signature color from UI store
   const signatureColor = useUIStore((state) => state.signatureColor);
   
-  // Get connection status values (only subscribe to what we need, NOT lastUpdateTime - Footer will handle that)
+  // Get connection status values (only subscribe to what we need)
+  // DO NOT subscribe to prices here - they update every 500ms causing app-wide re-renders
   const isWebSocketConnected = useConnectionStore((state) => state.isWebSocketConnected);
   const connectedExchanges = useConnectionStore((state) => state.connectedExchanges);
-  const currentBTCPrice = useConnectionStore((state) => state.currentBTCPrice);
-  const currentETHPrice = useConnectionStore((state) => state.currentETHPrice);
-  const currentSOLPrice = useConnectionStore((state) => state.currentSOLPrice);
   const isBackendConnected = useConnectionStore((state) => state.isBackendConnected);
   
   // UI store - subscribe to specific values only
@@ -167,9 +165,6 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
         customizeButtonRef={customizeButtonRef}
         isWebSocketConnected={isWebSocketConnected}
         connectedExchanges={connectedExchanges}
-        currentBTCPrice={currentBTCPrice}
-        currentETHPrice={currentETHPrice}
-        currentSOLPrice={currentSOLPrice}
         isBackendConnected={isBackendConnected}
       />
       

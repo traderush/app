@@ -17,7 +17,7 @@ interface RightPanelProps {
   selectedCount: number;
   bestMultiplier: number;
   selectedMultipliers: number[]; // Array of multipliers for selected boxes
-  currentBTCPrice: number | null; // Current live BTC price (null until loaded)
+  currentBTCPrice: number; // Current live BTC price
   averagePositionPrice: number | null; // Average BTC price of selected boxes
   betAmount: number; // Current bet amount
   onBetAmountChange: (amount: number) => void; // Callback when bet amount changes
@@ -101,8 +101,8 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
             {/* Left container for Daily High */}
             <div className="flex-1" style={{ background: `linear-gradient(to right, transparent 0%, ${TRADING_COLORS.positive}20 50%, transparent 100%)` }}>
               <div className="text-xs text-zinc-400 px-3">Daily High</div>
-              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: TRADING_COLORS.positive }}>
-                ${dailyHigh > 0 ? dailyHigh.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Loading...'}
+              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyHigh > 0 ? TRADING_COLORS.positive : '#71717a' }}>
+                {dailyHigh > 0 ? `$${dailyHigh.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
               </div>
             </div>
             
@@ -112,8 +112,8 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
             {/* Right container for Daily Low */}
             <div className="flex-1" style={{ background: `linear-gradient(to left, transparent 0%, ${TRADING_COLORS.negative}20 50%, transparent 100%)` }}>
               <div className="text-xs text-zinc-400 px-3">Daily Low</div>
-              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: TRADING_COLORS.negative }}>
-                ${dailyLow > 0 ? dailyLow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Loading...'}
+              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyLow > 0 ? TRADING_COLORS.negative : '#71717a' }}>
+                {dailyLow > 0 ? `$${dailyLow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
               </div>
             </div>
           </div>
@@ -379,9 +379,14 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
                             {selectedCount > 0 ? (
                               typeof averagePositionPrice === 'number' && averagePositionPrice > 0
                                 ? `~$${averagePositionPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                                : `$${currentBTCPrice ? currentBTCPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Loading...'}`
+                                : (currentBTCPrice && currentBTCPrice > 0 
+                                    ? `$${currentBTCPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : <span className="text-zinc-500">...</span>
+                                  )
                             ) : (
-                              `$${currentBTCPrice ? currentBTCPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 'Loading...'}`
+                              currentBTCPrice && currentBTCPrice > 0 
+                                ? `$${currentBTCPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
+                                : <span className="text-zinc-500">...</span>
                             )}
                           </div>
                         </div>

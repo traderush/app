@@ -15,6 +15,7 @@ export interface ToastNotification {
   message?: string;
   duration?: number;
   timestamp: number;
+  read?: boolean;
 }
 
 export interface UITheme {
@@ -61,6 +62,12 @@ interface UIState {
   // Signature Color (user's custom color)
   signatureColor: string;
   
+  // Asset Preferences
+  favoriteAssets: Set<'BTC' | 'ETH' | 'SOL'>;
+  
+  // Dropdown States
+  isAssetDropdownOpen: boolean;
+  
   // Global UI State
   isLoading: boolean;
   loadingMessage: string;
@@ -88,6 +95,14 @@ interface UIState {
   // Actions - Signature Color
   setSignatureColor: (color: string) => void;
   resetSignatureColor: () => void;
+  
+  // Actions - Asset Preferences
+  toggleFavoriteAsset: (asset: 'BTC' | 'ETH' | 'SOL') => void;
+  setFavoriteAssets: (assets: ('BTC' | 'ETH' | 'SOL')[]) => void;
+  
+  // Actions - Dropdowns
+  setAssetDropdownOpen: (isOpen: boolean) => void;
+  toggleAssetDropdown: () => void;
   
   // Actions - Global State
   setLoading: (loading: boolean, message?: string) => void;
@@ -144,6 +159,8 @@ export const useUIStore = create<UIState>()(
       layout: initialLayout,
       settings: initialSettings,
       signatureColor: '#FA5616', // Default signature color (orange)
+      favoriteAssets: new Set(['BTC']), // BTC is favorited by default
+      isAssetDropdownOpen: false,
       isLoading: false,
       loadingMessage: '',
       isConnected: true,
@@ -247,6 +264,28 @@ export const useUIStore = create<UIState>()(
 
       resetSignatureColor: () =>
         set({ signatureColor: '#FA5616' }),
+      
+      // Asset Preferences Actions
+      toggleFavoriteAsset: (asset) =>
+        set((state) => {
+          const newFavorites = new Set(state.favoriteAssets);
+          if (newFavorites.has(asset)) {
+            newFavorites.delete(asset);
+          } else {
+            newFavorites.add(asset);
+          }
+          return { favoriteAssets: newFavorites };
+        }),
+      
+      setFavoriteAssets: (assets) =>
+        set({ favoriteAssets: new Set(assets) }),
+      
+      // Dropdown Actions
+      setAssetDropdownOpen: (isOpen) =>
+        set({ isAssetDropdownOpen: isOpen }),
+      
+      toggleAssetDropdown: () =>
+        set((state) => ({ isAssetDropdownOpen: !state.isAssetDropdownOpen })),
 
       // Global State Actions
       setLoading: (loading, message = '') =>
@@ -311,13 +350,14 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'ui-store',
-      storage: createPersistentStorage('ui'),
+      storage: createPersistentStorage('ui') as any,
       partialize: (state) => ({
         theme: state.theme,
         layout: state.layout,
         settings: state.settings,
         signatureColor: state.signatureColor,
-      }),
+        favoriteAssets: Array.from(state.favoriteAssets), // Convert Set to Array for JSON serialization
+      }) as any,
     }
   )
 );

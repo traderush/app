@@ -136,7 +136,9 @@ function BoxHitCanvas({
 
   // series
   const [series, setSeries] = useState<Pt[]>([]);
+  const seriesRef = useRef<Pt[]>([]); // Ref for animation loop to avoid dependency issues
   const [center, setCenter] = useState(117_500); // smooth center; mapped to mid-height
+  const centerRef = useRef(117_500); // Ref for animation loop
   
   // Smooth follow mode state (single source of truth)
   const [centerPrice, setCenterPrice] = useState(117_500); // current view center (smoothed)
@@ -145,6 +147,9 @@ function BoxHitCanvas({
   // Smooth price interpolation for fluid movement
   const currentPriceRef = useRef(117_500); // Current interpolated price (smoothed)
   const targetPriceRef = useRef(117_500); // Target price (from realBTCPrice)
+  
+  // Stable base price for grid alignment - only updates when crossing significant thresholds
+  const stableBasePriceRef = useRef(117_500); // Locked base price for grid to prevent jumping
   
   // Grid system - pre-generated multipliers for all possible positions
   const [gridCells, setGridCells] = useState<GridCell[]>([]);
@@ -170,11 +175,13 @@ function BoxHitCanvas({
   
   // Hover state for smooth highlight animations
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const mousePosRef = useRef({ x: 0, y: 0 }); // Use ref instead of state to avoid re-renders
+  const lastHoverCheckRef = useRef(0); // Track last hover check time for throttling
   
   // Drag state for grid movement
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0 }); // Use ref for drag start to avoid re-renders
+  const lastDragUpdateRef = useRef(0); // Track last drag update time for throttling
   
   // Pre-calculated color cache to avoid repeated hexToRgba calls during rendering
   const colorCache = useRef<Map<string, string>>(new Map());
@@ -242,17 +249,18 @@ function BoxHitCanvas({
   // Auto-follow mode (true = following live now line, false = manual view)
   const [autoFollowMode, setAutoFollowMode] = useState(true);
 
-  // Create fixed grid rows - use constant row count instead of dynamic priceGridLines
+  // Create fixed grid rows - centered around ticker (10 above, 10 below)
   const gridRows = useMemo(() => {
     const rows: number[] = [];
-    // Use fixed row count of 20 rows for consistent generation
-    // Row 0 = highest price (top), Row 19 = lowest price (bottom)
-    const FIXED_ROW_COUNT = 20;
-    for (let i = 0; i < FIXED_ROW_COUNT; i++) {
+    // Generate 10 rows above ticker (positive) and 10 rows below (negative)
+    // Row -10 = lowest price (bottom), Row 0 = at ticker, Row +9 = highest price (top)
+    const ROWS_ABOVE = 10; // 10 rows above ticker
+    const ROWS_BELOW = 10; // 10 rows below ticker
+    for (let i = -ROWS_BELOW; i < ROWS_ABOVE; i++) {
       rows.push(i);
     }
-    return rows;
-  }, []); // Remove priceGridLines dependency
+    return rows; // [-10, -9, -8, ..., -1, 0, 1, 2, ..., 8, 9]
+  }, []); // Fixed, no dependencies
 
   // Generate random player counts and tracked player selections
   useEffect(() => {
@@ -298,16 +306,26 @@ function BoxHitCanvas({
       setRandomPlayerCounts(prev => {
         const newCounts = { ...prev };
         
-        // Remove counts from boxes that have passed the NOW line
+        // Remove counts from boxes that have actually passed the NOW line (using screen position, not cell existence)
         Object.keys(newCounts).forEach(key => {
           const [row, col] = key.split('-').map(Number);
           const cell = gridCells.find(c => c.row === row && c.col === col);
-          if (!cell) {
-            // Cell no longer exists (passed NOW line), return count to pool
-            const count = newCounts[key];
-            setAvailablePlayerCounts(prevPool => [...prevPool, count]);
-            delete newCounts[key];
+          
+          if (cell) {
+            // Cell still exists - check if it has crossed NOW line using screen position
+            const gridOffset = size.w * 0.3;
+            const adjustedNOW_X = NOW_X - gridOffset;
+            const screenX = adjustedNOW_X + cell.col * cellW - gridPosition.offsetX - gridScrollOffset;
+            const distanceFromNow = screenX - NOW_X;
+            
+            // Remove if cell has passed NOW line (negative distance = behind NOW line)
+            if (distanceFromNow < -cellW) {
+              const count = newCounts[key];
+              setAvailablePlayerCounts(prevPool => [...prevPool, count]);
+              delete newCounts[key];
+            }
           }
+          // If cell doesn't exist but key still exists, leave it (might reappear after recenter)
         });
         
         // Find cells that are close to NOW line but don't have player counts yet
@@ -382,16 +400,26 @@ function BoxHitCanvas({
       setTrackedPlayerSelections(prev => {
         const newSelections = { ...prev };
         
-        // Remove selections from boxes that have passed the NOW line
+        // Remove selections from boxes that have actually passed the NOW line (using screen position, not cell existence)
         Object.keys(newSelections).forEach(key => {
           const [row, col] = key.split('-').map(Number);
           const cell = gridCells.find(c => c.row === row && c.col === col);
-          if (!cell) {
-            // Cell no longer exists (passed NOW line), return selection to pool
-            const selection = newSelections[key];
-            setAvailableTrackedSelections(prevPool => [...prevPool, selection]);
-            delete newSelections[key];
+          
+          if (cell) {
+            // Cell still exists - check if it has crossed NOW line using screen position
+            const gridOffset = size.w * 0.3;
+            const adjustedNOW_X = NOW_X - gridOffset;
+            const screenX = adjustedNOW_X + cell.col * cellW - gridPosition.offsetX - gridScrollOffset;
+            const distanceFromNow = screenX - NOW_X;
+            
+            // Remove if cell has passed NOW line (negative distance = behind NOW line)
+            if (distanceFromNow < -cellW) {
+              const selection = newSelections[key];
+              setAvailableTrackedSelections(prevPool => [...prevPool, selection]);
+              delete newSelections[key];
+            }
           }
+          // If cell doesn't exist but key still exists, leave it (might reappear after recenter)
         });
         
         // Find cells that are close to NOW line but don't have tracked players yet
@@ -488,14 +516,13 @@ function BoxHitCanvas({
     const timeoutId = setTimeout(() => {
       // Ensure we have valid dimensions
       if (size.w > 0 && size.h > 0) {
-        // Generate initial grid cells using fixed row count
+        // Generate initial grid cells centered around ticker
         const totalCols = Math.ceil((size.w + cellW * 8) / cellW); // Enough columns to prevent gaps
-        const FIXED_ROW_COUNT = 20; // Use fixed row count for consistency
         
         const fresh: GridCell[] = [];
         for (let c = 0; c < totalCols; c++) {
-          // Generate rows using fixed count instead of dynamic calculation
-          for (let rowIndex = 0; rowIndex < FIXED_ROW_COUNT; rowIndex++) {
+          // Generate rows centered around ticker (10 above, 10 below)
+          gridRows.forEach((rowIndex) => {
             // Generate random multiplier between 1.0x and 15.0x
             const mult = +(1.0 + Math.random() * 14.0).toFixed(1);
             
@@ -506,7 +533,7 @@ function BoxHitCanvas({
               state: 'idle',
               crossedTime: undefined,
             });
-          }
+          });
         }
         setGridCells(fresh);
         logger.debug('Grid cells generated', { count: fresh.length }, 'CANVAS');
@@ -526,46 +553,67 @@ function BoxHitCanvas({
       currentPriceRef.current = realBTCPrice;
       targetPriceRef.current = realBTCPrice;
       
+      // Initialize stable base price - round to nearest $10
+      const stepValue = 10;
+      stableBasePriceRef.current = Math.round(realBTCPrice / stepValue) * stepValue;
+      
       // Start fresh with real BTC price - no historical buffer
       const now = Date.now();
-      setSeries([{ t: now, p: realBTCPrice }]); // Single point with real price
+      const initialSeries = [{ t: now, p: realBTCPrice }];
+      setSeries(initialSeries);
+      seriesRef.current = initialSeries; // Sync ref
       setCenter(realBTCPrice);
+      centerRef.current = realBTCPrice; // Sync ref
     }
   }, [realBTCPrice, series.length]);
 
-  // Update selection stats when grid cells change - optimized to prevent unnecessary recalculations
+  // Sync refs when state changes externally (from recenter, initialization, etc.)
   useEffect(() => {
-    // Only count cells that are selected and haven't been hit or passed through the NOW line
+    seriesRef.current = series;
+  }, [series]);
+
+  useEffect(() => {
+    centerRef.current = center;
+  }, [center]);
+
+  // Update selection stats when grid cells change - heavily optimized to prevent FPS drops
+  useEffect(() => {
+    // Create a signature of selected cell IDs to detect actual selection changes
     const activeSel = gridCells.filter(cell => 
       cell.state === 'selected' && 
       !cell.crossedTime // Haven't passed through NOW line
     );
+    
+    const selectedCellIds = activeSel
+      .map(cell => `${cell.row}-${cell.col}`)
+      .sort()
+      .join(',');
+    
+    // Skip if selection hasn't actually changed (prevents updates during dragging/animation)
+    if (selectedCellIds === (selectionRef.current as any).lastSelectedIds) return;
+    
+    // Store the new selection signature
+    (selectionRef.current as any).lastSelectedIds = selectedCellIds;
+    
     const count = activeSel.length;
     const best = count ? Math.max(...activeSel.map(cell => cell.mult)) : 0;
     const multipliers = activeSel.map(cell => cell.mult);
     
-    // Calculate average BTC price based on selected boxes' Y-axis positions
+    // Calculate average BTC price using stable base price (faster, no priceGridLines lookup)
     let averagePrice: number | null = null;
-    if (count > 0 && activeSel.length > 0 && priceGridLines.length > 0) {
+    if (count > 0) {
+      const stepValue = 10;
       const totalPrice = activeSel.reduce((sum, cell) => {
-        // Each row corresponds to a price level in priceGridLines
-        const priceLevel = priceGridLines[cell.row];
-        if (priceLevel && !isNaN(priceLevel)) {
-          return sum + priceLevel;
-        }
-        return sum;
+        const priceAtRow = stableBasePriceRef.current + cell.row * stepValue;
+        return sum + priceAtRow;
       }, 0);
       averagePrice = totalPrice / count;
     }
     
-    // Only trigger callback if there's an actual change to prevent infinite loops
-    if (count !== selectionRef.current.count || 
-        best !== selectionRef.current.best || 
-        averagePrice !== selectionRef.current.averagePrice) {
-      selectionRef.current = { count, best, averagePrice };
-      onSelectionChange?.(count, best, multipliers, averagePrice);
-    }
-  }, [gridCells, onSelectionChange, priceGridLines]);
+    // Update ref and trigger callback
+    selectionRef.current = { count, best, averagePrice };
+    onSelectionChange?.(count, best, multipliers, averagePrice);
+  }, [gridCells, onSelectionChange]);
 
   // Initialize selection count to 0 when component mounts
   useEffect(() => {
@@ -616,7 +664,13 @@ function BoxHitCanvas({
   }, [autoFollowMode, targetCenterPrice, series, cellH, zoomLevel]);
   const handleRecenter = useCallback(() => {
     setAutoFollowMode(true);
-    setTargetCenterPrice(series[series.length - 1]?.p || center);
+    const currentPrice = series[series.length - 1]?.p || center;
+    setTargetCenterPrice(currentPrice);
+    
+    // Reset stable base price to current price
+    const stepValue = 10;
+    stableBasePriceRef.current = Math.round(currentPrice / stepValue) * stepValue;
+    
     // Reset to initial horizontal position (same as page load)
     setGridScrollOffset(0);
     // Reset to initial vertical position (same as page load)
@@ -652,9 +706,10 @@ function BoxHitCanvas({
       // Transform functions (same as grid cells)
       const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
       
-      // FIXED GRID: Calculate Y position using same fixed $10 increments as grid cells
-      const nearestRoundPrice = Math.round(centerPrice / stepValue) * stepValue;
-      const priceAtRow = nearestRoundPrice + (cell.row - Math.floor(size.h / (2 * cellH))) * stepValue;
+      // FIXED GRID: Calculate Y position using centered row indices with STABLE base price
+      // Row 0 = at current price, negative rows = below, positive rows = above
+      // Use stableBasePriceRef to prevent jumping when centerPrice changes slightly
+      const priceAtRow = stableBasePriceRef.current + cell.row * stepValue;
       // Apply same pixel snapping as grid lines for consistent alignment
       const screenY = Math.round(priceToY(priceAtRow) - gridPosition.offsetY) + 0.5;
       
@@ -743,21 +798,28 @@ function BoxHitCanvas({
     // Start path at first point
     path = `M ${points[0].x} ${points[0].y}`;
     
-    // Use cubic Bezier curves for ultra-smooth interpolation
-    for (let i = 1; i < points.length; i++) {
+    // Use Cardinal spline for ultra-smooth curves that handle large movements
+    for (let i = 0; i < points.length - 1; i++) {
+      // Get surrounding points for Cardinal spline calculation
       const p0 = points[Math.max(0, i - 1)];
       const p1 = points[i];
-      const p2 = points[Math.min(points.length - 1, i + 1)];
+      const p2 = points[i + 1];
+      const p3 = points[Math.min(points.length - 1, i + 2)];
       
-      // Calculate control points for smooth Catmull-Rom spline
-      const tension = 0.3; // Lower = smoother curves (0.0 to 1.0)
-      const cp1x = p0.x + (p1.x - p0.x) * (1 - tension);
-      const cp1y = p0.y + (p1.y - p0.y) * (1 - tension);
-      const cp2x = p1.x - (p2.x - p1.x) * tension;
-      const cp2y = p1.y - (p2.y - p1.y) * tension;
+      // Cardinal spline tension (0.0 = Catmull-Rom, 0.5 = tighter)
+      // Use adaptive tension based on distance for better large spike handling
+      const distance = Math.abs(p2.y - p1.y);
+      const baseTension = 0.2; // Low for smooth curves
+      const adaptiveTension = Math.min(baseTension, baseTension * (1 + distance / 100)); // Slightly tighter on big moves
+      
+      // Calculate control points using Cardinal spline formula
+      const cp1x = p1.x + (p2.x - p0.x) / 6 * (1 - adaptiveTension);
+      const cp1y = p1.y + (p2.y - p0.y) / 6 * (1 - adaptiveTension);
+      const cp2x = p2.x - (p3.x - p1.x) / 6 * (1 - adaptiveTension);
+      const cp2y = p2.y - (p3.y - p1.y) / 6 * (1 - adaptiveTension);
       
       // Use cubic Bezier curve for smooth transition
-      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y}`;
+      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
     }
     
     return path;
@@ -863,56 +925,41 @@ function BoxHitCanvas({
         const priceDiff = targetPriceRef.current - currentPriceRef.current;
         currentPriceRef.current += priceDiff * smoothingFactor;
         
-        // Add interpolated price point to series every frame for ultra-smooth line
-        setSeries(s => {
-          const next = [...s, { t: now, p: currentPriceRef.current }];
-          // Keep enough points for smooth rendering
-          const maxPts = Math.max(120, Math.round(NOW_X / 2));
-          return next.slice(-maxPts);
-        });
+        // Update ref series every frame for smooth rendering
+        const next = [...seriesRef.current, { t: now, p: currentPriceRef.current }];
+        const maxPts = Math.max(120, Math.round(NOW_X / 2));
+        seriesRef.current = next.slice(-maxPts);
         
-        // Smoothly update center price to follow interpolated price
-        setCenter(prev => {
-          const diff = currentPriceRef.current - prev;
-          return prev + diff * 0.15; // Gentle center tracking
-        });
+        // Update center ref every frame for smooth tracking
+        const centerDiff = currentPriceRef.current - centerRef.current;
+        centerRef.current = centerRef.current + centerDiff * 0.15;
+        
+        // Only update React state every 2nd frame to prevent animation loop restarts (still 30 updates/sec)
+        if (frameCount.current % 2 === 0) {
+          setSeries([...seriesRef.current]); // Clone to trigger React update
+          setCenter(centerRef.current);
+        }
+        
+        // Update stable base price only when price moves significantly (prevents grid jumping)
+        const priceDiffFromBase = Math.abs(currentPriceRef.current - stableBasePriceRef.current);
+        if (priceDiffFromBase > 50) { // Only update when price moves $50+ from base
+          const stepValue = 10;
+          stableBasePriceRef.current = Math.round(currentPriceRef.current / stepValue) * stepValue;
+        }
       }
       
            // Update grid position to maintain chart tick in center
            setGridPosition(prev => {
              const newOffsetX = prev.offsetX + dx; // Grid moves left
              
-             // Calculate new Y offset using stable transform system
-             const currentPrice = series[series.length - 1]?.p;
-             let newOffsetY = prev.offsetY;
-             
-             if (currentPrice) {
-               // Use stable transform to calculate chart Y position
-               const centerY = size.h / 2;
-               const pxPerUnit = cellH / 10;
-               const actualChartY = centerY - (currentPrice - centerPrice) * pxPerUnit;
-               
-               // Calculate the ideal Y position to keep chart tick centered
-               const idealChartY = size.h / 2; // Center of screen
-               const yOffsetNeeded = actualChartY - idealChartY;
-               
-               // Smoothly adjust Y offset to center the chart tick - balanced responsiveness
-               newOffsetY = prev.offsetY + yOffsetNeeded * 0.15; // Balanced responsiveness
-             }
+             // Keep Y offset stable - grid should not jump vertically
+             // Y offset only changes when user manually drags or recenters
+             const newOffsetY = prev.offsetY;
               
-             // Use the currentPrice we already calculated above
-             if (currentPrice) {
-               // Find the closest price level in our grid
-               const closestPriceLevel = priceGridLines.reduce((closest, price) => {
-                 return Math.abs(price - currentPrice) < Math.abs(closest - currentPrice) ? price : closest;
-               });
-               
-               // Find the grid row for this price level
-               const priceRowIndex = priceGridLines.indexOf(closestPriceLevel);
-               const gridY = priceRowIndex * cellH - prev.offsetY; // Use prev.offsetY to avoid stale closure
+             // Update grid cells for hit detection - throttled to every 3rd frame for performance
+             const currentPrice = seriesRef.current[seriesRef.current.length - 1]?.p;
+             if (currentPrice && frameCount.current % 3 === 0) {
              
-             // Update grid cells for efficient hit detection at chart position and NOW line crossing
-             // Update grid cells for efficient hit detection at chart position and NOW line crossing
              // Only update if there are actual changes to prevent performance issues
              setGridCells(prevCells => {
                let hasChanges = false;
@@ -924,16 +971,16 @@ function BoxHitCanvas({
                  const stepValue = 10; // $10 between adjacent grid lines
                  const gapPx = cellH; // pixel distance between grid lines (row height)
                  const pxPerUnit = gapPx / stepValue;
-                 const centerPrice = series[series.length - 1]?.p || center; // Current view center
+                 const centerPrice = seriesRef.current[seriesRef.current.length - 1]?.p || centerRef.current; // Use refs
                  const centerY = size.h / 2;
                  
                  // Transform functions (same as cell rendering)
                  const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
                  
-                 // Calculate Y position using EXACT same method as cell rendering
-                 // Find the nearest price that ends in 0 to the current center (same as rendering)
-                 const nearestRoundPrice = Math.round(centerPrice / stepValue) * stepValue;
-                 const priceAtRow = nearestRoundPrice + (cell.row - Math.floor(size.h / (2 * cellH))) * stepValue;
+                 // Calculate Y position using EXACT same method as cell rendering with STABLE base price
+                 // Row 0 = at current price, negative rows = below, positive rows = above
+                 // Use stableBasePriceRef to prevent jumping when centerPrice changes slightly
+                 const priceAtRow = stableBasePriceRef.current + cell.row * stepValue;
                  // Apply same pixel snapping as cell rendering for consistent alignment
                  const screenY = Math.round(priceToY(priceAtRow) - gridPosition.offsetY) + 0.5;
                  
@@ -947,9 +994,9 @@ function BoxHitCanvas({
                    
                    if (distanceFromChart < cellW * 1.5) { // Check within 1.5 cell widths of chart
                      // Check if price line intersects with this cell
-                     if (series.length > 1) {
+                     if (seriesRef.current.length > 1) {
                        // Get the most recent price line segment at the chart position
-                       const i2 = series.length - 1, i1 = i2 - 1;
+                       const i2 = seriesRef.current.length - 1, i1 = i2 - 1;
                        
                        // Use EXACT same coordinate system as cell rendering for accurate hit detection
                        const stepValue = 10; // $10 between adjacent grid lines
@@ -963,8 +1010,8 @@ function BoxHitCanvas({
                        const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
                        
                        // Calculate Y positions using EXACT same method as cell rendering
-                       const p1Y = Math.round(priceToY(series[i1].p) - gridPosition.offsetY) + 0.5;
-                       const p2Y = Math.round(priceToY(series[i2].p) - gridPosition.offsetY) + 0.5;
+                       const p1Y = Math.round(priceToY(seriesRef.current[i1].p) - gridPosition.offsetY) + 0.5;
+                       const p2Y = Math.round(priceToY(seriesRef.current[i2].p) - gridPosition.offsetY) + 0.5;
                        
                        const p1 = { x: NOW_X - 6, y: p1Y };
                        const p2 = { x: NOW_X - 2, y: p2Y };
@@ -1087,7 +1134,7 @@ function BoxHitCanvas({
            }
            
            // Generate new rows at top and bottom as needed
-           const currentPrice = series[series.length - 1]?.p;
+           const currentPrice = seriesRef.current[seriesRef.current.length - 1]?.p;
            if (currentPrice) {
              // Find the closest price level in our grid
              const closestPriceLevel = priceGridLines.reduce((closest, price) => {
@@ -1161,24 +1208,20 @@ function BoxHitCanvas({
         const stepValue = 10; // $10 between adjacent grid lines
         const gapPx = cellH; // pixel distance between grid lines (row height)
         const pxPerUnit = gapPx / stepValue;
-        const centerPrice = series[series.length - 1]?.p || center; // Current view center
+        const centerPrice = seriesRef.current[seriesRef.current.length - 1]?.p || centerRef.current; // Use refs for smooth animation
         const centerY = size.h / 2;
         
         // Transform functions (same as grid cells)
         const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
         const yToPrice = (y: number) => centerPrice + (centerY - y) / pxPerUnit;
         
-        // FIXED GRID: Always show prices ending in 0 (112,120; 112,130; 112,140; etc.)
-        // Find the nearest price that ends in 0 to the current center
-        const nearestRoundPrice = Math.round(centerPrice / stepValue) * stepValue;
+        // FIXED GRID: Always show prices ending in 0 using STABLE base price
+        // Use stableBasePriceRef to prevent jumping
         
-        // Use fixed number of grid lines for consistency
-        const numGridLines = 20; // Fixed row count
-        
-        // Draw FIXED grid lines that always end in 0
-        for (let i = 0; i < numGridLines; i++) {
+        // Draw FIXED grid lines centered around stable base (10 above, 10 below)
+        for (let i = -10; i < 10; i++) {
           // Calculate price for this grid line - ALWAYS ends in 0
-          const priceAtLine = nearestRoundPrice + (i - Math.floor(numGridLines / 2)) * stepValue;
+          const priceAtLine = stableBasePriceRef.current + i * stepValue;
           
           // Calculate Y position using stable transform
           const gridY = priceToY(priceAtLine) - gridPosition.offsetY;
@@ -1221,13 +1264,10 @@ function BoxHitCanvas({
         // Transform functions (same as grid lines)
         const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
         
-        // FIXED GRID: Calculate Y position using same fixed $10 increments as grid lines
-        // Find the nearest price that ends in 0 to the current center
-        const nearestRoundPrice = Math.round(centerPrice / stepValue) * stepValue;
-        
-        // Calculate Y position based on row index and FIXED transform
-        // Row 0 = highest price (top), Row N = lowest price (bottom)
-        const priceAtRow = nearestRoundPrice + (cell.row - Math.floor(size.h / (2 * cellH))) * stepValue;
+        // FIXED GRID: Calculate Y position using centered row indices with STABLE base price
+        // Row 0 = at current price, negative rows = below, positive rows = above
+        // Use stableBasePriceRef to prevent jumping when centerPrice changes slightly
+        const priceAtRow = stableBasePriceRef.current + cell.row * stepValue;
         // Apply same pixel snapping as grid lines for consistent alignment
         const screenY = Math.round(priceToY(priceAtRow) - gridPosition.offsetY) + 0.5;
          
@@ -1606,9 +1646,9 @@ function BoxHitCanvas({
       }
 
       // Draw current price ticker - part of the grid element, moves with grid
-      if (series.length > 0) {
-        // Current price ticker - use independent smooth positioning system
-        const currentPrice = series[series.length - 1].p;
+      if (seriesRef.current.length > 0) {
+        // Current price ticker - use interpolated price for ultra-smooth movement
+        const currentPrice = currentPriceRef.current;
         
                  // Use shared scale: both grid and ticker use the same linear mapping
          // This eliminates jumping by allowing ticker to move continuously between grid lines
@@ -1622,7 +1662,7 @@ function BoxHitCanvas({
          
          // STABLE TRANSFORM SYSTEM: No more recalibration via basePrice
          const centerY = size.h / 2; // vertical screen center (CSS px)
-         const centerPrice = series[series.length - 1]?.p || center; // Current view center
+         const centerPrice = seriesRef.current[seriesRef.current.length - 1]?.p || centerRef.current; // Use refs
 
          // Transform used by grid, chart, ticker, cursor, labels—EVERYTHING
          const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
@@ -1661,7 +1701,7 @@ function BoxHitCanvas({
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle'; // Center text vertically
         ctx.letterSpacing = '0.5px';
-        ctx.fillText(`$${Math.round(series[series.length - 1].p).toLocaleString()}`, tickerX - 50, tickerY);
+        ctx.fillText(`$${Math.round(currentPriceRef.current).toLocaleString()}`, tickerX - 50, tickerY);
         
         ctx.restore();
       }
@@ -1694,7 +1734,7 @@ function BoxHitCanvas({
 
     // Always start dragging - this allows dragging from anywhere on the canvas
     setIsDragging(true);
-    setDragStart({ x, y });
+    dragStartRef.current = { x, y };
 
     // Check if clicking on a cell for selection (but still allow dragging)
     const clickedCell = gridCells.find(cell => {
@@ -1713,9 +1753,10 @@ function BoxHitCanvas({
       // Transform functions (same as rendering)
       const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
       
-      // FIXED GRID: Calculate Y position using same fixed $10 increments
-      const nearestRoundPrice = Math.round(centerPrice / stepValue) * stepValue;
-      const priceAtRow = nearestRoundPrice + (cell.row - Math.floor(size.h / (2 * cellH))) * stepValue;
+      // FIXED GRID: Calculate Y position using centered row indices with STABLE base price
+      // Row 0 = at current price, negative rows = below, positive rows = above
+      // Use stableBasePriceRef to prevent jumping when centerPrice changes slightly
+      const priceAtRow = stableBasePriceRef.current + cell.row * stepValue;
       const screenY = priceToY(priceAtRow) - gridPosition.offsetY;
     
       const isInXRange = x >= screenX && x <= screenX + cellW;
@@ -1740,12 +1781,17 @@ function BoxHitCanvas({
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    setMousePos({ x, y });
+    mousePosRef.current = { x, y }; // Use ref instead of state
 
     if (isDragging) {
-      // Handle grid dragging - more responsive and works from anywhere
-      const deltaX = x - dragStart.x;
-      const deltaY = y - dragStart.y;
+      // Handle grid dragging - throttled for performance
+      const deltaX = x - dragStartRef.current.x;
+      const deltaY = y - dragStartRef.current.y;
+      
+      // Throttle drag updates to every 16ms (~60 FPS max)
+      const now = performance.now();
+      if (now - lastDragUpdateRef.current < 16) return;
+      lastDragUpdateRef.current = now;
       
       // Only update if there's actual movement (prevents jitter)
       if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
@@ -1754,22 +1800,24 @@ function BoxHitCanvas({
           setAutoFollowMode(false);
         }
         
-        // Update grid scroll offset for manual navigation (reverse direction for natural feel)
-        setGridScrollOffset(prev => prev - deltaX);
-        
-        // Update center price directly (invert screen Y grows downward)
+        // Batch all state updates together
         const pxPerUnit = cellH / 10;
-        setCenterPrice(prev => prev - deltaY / pxPerUnit);
         
+        setGridScrollOffset(prev => prev - deltaX);
+        setCenterPrice(prev => prev - deltaY / pxPerUnit);
         setGridPosition(prev => ({
           offsetX: prev.offsetX - deltaX,
           offsetY: prev.offsetY - deltaY
         }));
         
-        setDragStart({ x, y });
+        dragStartRef.current = { x, y };
       }
     } else {
-      // Handle hover effects
+      // Handle hover effects - throttled to every 50ms for performance
+      const now = performance.now();
+      if (now - lastHoverCheckRef.current < 50) return;
+      lastHoverCheckRef.current = now;
+      
       const hovered = gridCells.find(cell => {
         // Apply same leftward offset as rendering for consistent positioning
         const gridOffset = size.w * 0.3; // 30% of screen width to the left (same as rendering)
@@ -1786,9 +1834,10 @@ function BoxHitCanvas({
         // Transform functions (same as rendering)
         const priceToY = (p: number) => centerY - (p - centerPrice) * pxPerUnit;
         
-        // FIXED GRID: Calculate Y position using same fixed $10 increments
-        const nearestRoundPrice = Math.round(centerPrice / stepValue) * stepValue;
-        const priceAtRow = nearestRoundPrice + (cell.row - Math.floor(size.h / (2 * cellH))) * stepValue;
+        // FIXED GRID: Calculate Y position using centered row indices with STABLE base price
+        // Row 0 = at current price, negative rows = below, positive rows = above
+        // Use stableBasePriceRef to prevent jumping when centerPrice changes slightly
+        const priceAtRow = stableBasePriceRef.current + cell.row * stepValue;
         const screenY = priceToY(priceAtRow) - gridPosition.offsetY;
         
         const isInXRange = x >= screenX && x <= screenX + cellW;
@@ -1938,11 +1987,75 @@ export default function ClientView() {
   // Get signature color from UI store
   const signatureColor = useUIStore((state) => state.signatureColor);
   
-  // Connection store actions for managing WebSocket connections
+  // Connection store - use refs + throttled state for optimal performance
+  // Refs hold latest values (no re-renders), state updates throttled for UI display
+  const currentBTCPriceRef = useRef(0);
+  const currentETHPriceRef = useRef(0);
+  const currentSOLPriceRef = useRef(0);
+  const [currentBTCPrice, setCurrentBTCPrice] = useState(0);
+  const [currentETHPrice, setCurrentETHPrice] = useState(0);
+  const [currentSOLPrice, setCurrentSOLPrice] = useState(0);
+  const [btc24hChange, setBtc24hChange] = useState(0);
+  const [btc24hVolume, setBtc24hVolume] = useState(0);
+  const [btc24hHigh, setBtc24hHigh] = useState(0);
+  const [btc24hLow, setBtc24hLow] = useState(0);
+  const [eth24hChange, setEth24hChange] = useState(0);
+  const [eth24hVolume, setEth24hVolume] = useState(0);
+  const [sol24hChange, setSol24hChange] = useState(0);
+  const [sol24hVolume, setSol24hVolume] = useState(0);
+  
+  // Subscribe to store updates - refs update immediately, state throttled for UI
+  useEffect(() => {
+    let lastUIUpdate = 0;
+    const UI_UPDATE_THROTTLE = 1000; // Update UI max once per second
+    
+    const unsubscribe = useConnectionStore.subscribe(
+      (state) => ({
+        currentBTCPrice: state.currentBTCPrice,
+        currentETHPrice: state.currentETHPrice,
+        currentSOLPrice: state.currentSOLPrice,
+        btc24hChange: state.btc24hChange,
+        btc24hVolume: state.btc24hVolume,
+        btc24hHigh: state.btc24hHigh,
+        btc24hLow: state.btc24hLow,
+        eth24hChange: state.eth24hChange,
+        eth24hVolume: state.eth24hVolume,
+        sol24hChange: state.sol24hChange,
+        sol24hVolume: state.sol24hVolume,
+      }),
+      (values) => {
+        // Always update refs immediately (no re-renders)
+        currentBTCPriceRef.current = values.currentBTCPrice;
+        currentETHPriceRef.current = values.currentETHPrice;
+        currentSOLPriceRef.current = values.currentSOLPrice;
+        
+        // Throttle state updates for UI (causes re-renders)
+        const now = Date.now();
+        if (now - lastUIUpdate >= UI_UPDATE_THROTTLE) {
+          lastUIUpdate = now;
+          setCurrentBTCPrice(values.currentBTCPrice);
+          setCurrentETHPrice(values.currentETHPrice);
+          setCurrentSOLPrice(values.currentSOLPrice);
+          setBtc24hChange(values.btc24hChange);
+          setBtc24hVolume(values.btc24hVolume);
+          setBtc24hHigh(values.btc24hHigh);
+          setBtc24hLow(values.btc24hLow);
+          setEth24hChange(values.eth24hChange);
+          setEth24hVolume(values.eth24hVolume);
+          setSol24hChange(values.sol24hChange);
+          setSol24hVolume(values.sol24hVolume);
+        }
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+  
+  // Get actions from store
   const setWebSocketConnected = useConnectionStore((state) => state.setWebSocketConnected);
   const setConnectedExchanges = useConnectionStore((state) => state.setConnectedExchanges);
   const setLastUpdateTime = useConnectionStore((state) => state.setLastUpdateTime);
   const setCurrentPrices = useConnectionStore((state) => state.setCurrentPrices);
+  const set24hStats = useConnectionStore((state) => state.set24hStats);
   
   // Zustand stores - get only the actions we need
   const updateGameSettings = useGameStore((state) => state.updateGameSettings);
@@ -1959,22 +2072,17 @@ export default function ClientView() {
   
   const addPricePoint = usePriceStore((state) => state.addPricePoint);
   
+  // UI store for dropdowns and preferences
+  const favoriteAssets = useUIStore((state) => state.favoriteAssets);
+  const isAssetDropdownOpen = useUIStore((state) => state.isAssetDropdownOpen);
+  const toggleFavoriteAsset = useUIStore((state) => state.toggleFavoriteAsset);
+  const setAssetDropdownOpen = useUIStore((state) => state.setAssetDropdownOpen);
+  
   // Local state for UI-specific data (not part of game logic)
   const [selectedCount, setSelectedCount] = useState(0);
   const [bestMultiplier, setBestMultiplier] = useState(0);
   const [selectedMultipliers, setSelectedMultipliers] = useState<number[]>([]);
   const [averagePositionPrice, setAveragePositionPrice] = useState<number | null>(null);
-  const [currentBTCPrice, setCurrentBTCPrice] = useState<number | null>(null); // Current BTC price for display - null until we get real data
-  const [currentETHPrice, setCurrentETHPrice] = useState<number | null>(null); // Current ETH price - null until real data
-  const [currentSOLPrice, setCurrentSOLPrice] = useState<number | null>(null); // Current SOL price - null until real data
-  const [btc24hChange, setBtc24hChange] = useState(0); // 24h price change percentage
-  const [btc24hVolume, setBtc24hVolume] = useState(0); // 24h volume in USD
-  const [btc24hHigh, setBtc24hHigh] = useState(0); // 24h high price
-  const [btc24hLow, setBtc24hLow] = useState(0); // 24h low price
-  const [eth24hChange, setEth24hChange] = useState(0); // ETH 24h price change percentage
-  const [eth24hVolume, setEth24hVolume] = useState(0); // ETH 24h volume in USD
-  const [sol24hChange, setSol24hChange] = useState(0); // SOL 24h price change percentage
-  const [sol24hVolume, setSol24hVolume] = useState(0); // SOL 24h volume in USD
   const [isPriceUpdating, setIsPriceUpdating] = useState(false); // Loading state for price updates
   
   // Use Zustand store for game settings - subscribe to individual values
@@ -1992,21 +2100,11 @@ export default function ClientView() {
   const lastUpdateTimeStoreRef = useRef(0); // Track last time we updated the store to throttle updates
   
   // Audio context initialization is now handled by SoundManager
-  const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
-  const [favoriteAssets, setFavoriteAssets] = useState<Set<'BTC' | 'ETH' | 'SOL'>>(new Set(['BTC'])); // BTC is favorited by default
   
-  // Toggle favorite asset
+  // Toggle favorite asset (now uses Zustand store)
   const toggleFavorite = (asset: 'BTC' | 'ETH' | 'SOL', event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent dropdown from closing
-    setFavoriteAssets(prev => {
-      const newFavorites = new Set(prev);
-      if (newFavorites.has(asset)) {
-        newFavorites.delete(asset);
-      } else {
-        newFavorites.add(asset);
-      }
-      return newFavorites;
-    });
+    toggleFavoriteAsset(asset);
   };
   
   // Close dropdown when clicking outside
@@ -2014,7 +2112,7 @@ export default function ClientView() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('.asset-dropdown')) {
-        setIsAssetDropdownOpen(false);
+        setAssetDropdownOpen(false);
       }
     };
     
@@ -2034,19 +2132,12 @@ export default function ClientView() {
   };
 
   // Asset data with live prices and 24h stats from Binance API
-  const assetData: Record<'BTC' | 'ETH' | 'SOL', {
-    name: string;
-    symbol: string;
-    icon: string;
-    price: number | null;
-    change24h: number;
-    volume24h: string;
-  }> = {
+  const assetData = {
     BTC: {
       name: 'Bitcoin',
       symbol: 'BTC',
       icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/fd/f6/d8fdf69a-e716-1018-1740-b344df03476a/AppIcon-0-0-1x_U007epad-0-11-0-sRGB-85-220.png/460x0w.webp',
-      price: currentBTCPrice, // null until real data loads
+      price: currentBTCPrice || null, // null until real data loads
       change24h: btc24hChange,
       volume24h: btc24hVolume > 0 ? formatVolumeInBillions(btc24hVolume) : '0.00B'
     },
@@ -2054,7 +2145,7 @@ export default function ClientView() {
       name: 'Ethereum',
       symbol: 'ETH',
       icon: 'https://static1.tokenterminal.com//ethereum/logo.png?logo_hash=fd8f54cab23f8f4980041f4e74607cac0c7ab880',
-      price: currentETHPrice, // null until real data loads
+      price: currentETHPrice || null, // null until real data loads
       change24h: eth24hChange,
       volume24h: eth24hVolume > 0 ? formatVolumeInBillions(eth24hVolume) : '0.00B'
     },
@@ -2062,7 +2153,7 @@ export default function ClientView() {
       name: 'Solana',
       symbol: 'SOL',
       icon: 'https://avatarfiles.alphacoders.com/377/377220.png',
-      price: currentSOLPrice, // null until real data loads
+      price: currentSOLPrice || null, // null until real data loads
       change24h: sol24hChange,
       volume24h: sol24hVolume > 0 ? formatVolumeInBillions(sol24hVolume) : '0.00B'
     }
@@ -2457,8 +2548,8 @@ export default function ClientView() {
         if (compositePrice) {
           const timestamp = Date.now();
           
-          // Update current price
-          setCurrentBTCPrice(compositePrice);
+          // Update BTC price in connectionStore - ETH and SOL are updated in fetch24hStats
+          setCurrentPrices(compositePrice, currentETHPriceRef.current || 0, currentSOLPriceRef.current || 0);
           lastCompositePriceRef.current = compositePrice;
           
           // Store price history for chart (keep last 100 points)
@@ -2475,7 +2566,7 @@ export default function ClientView() {
         clearInterval(compositeTimerRef.current);
       }
     };
-  }, [calculateCompositePrice]);
+  }, [calculateCompositePrice, setCurrentPrices]);
   
   // Fetch 24h statistics (change % and volume) from Binance API for all assets
   useEffect(() => {
@@ -2494,40 +2585,25 @@ export default function ClientView() {
           solResponse.json()
         ]);
         
-        // Update BTC stats
-        if (btcData.priceChangePercent) {
-          setBtc24hChange(parseFloat(btcData.priceChangePercent));
-        }
-        if (btcData.quoteVolume) {
-          setBtc24hVolume(parseFloat(btcData.quoteVolume));
-        }
-        if (btcData.highPrice) {
-          setBtc24hHigh(parseFloat(btcData.highPrice));
-        }
-        if (btcData.lowPrice) {
-          setBtc24hLow(parseFloat(btcData.lowPrice));
-        }
+        // Update all stats in one go using connectionStore
+        set24hStats({
+          btc24hChange: btcData.priceChangePercent ? parseFloat(btcData.priceChangePercent) : undefined,
+          btc24hVolume: btcData.quoteVolume ? parseFloat(btcData.quoteVolume) : undefined,
+          btc24hHigh: btcData.highPrice ? parseFloat(btcData.highPrice) : undefined,
+          btc24hLow: btcData.lowPrice ? parseFloat(btcData.lowPrice) : undefined,
+          eth24hChange: ethData.priceChangePercent ? parseFloat(ethData.priceChangePercent) : undefined,
+          eth24hVolume: ethData.quoteVolume ? parseFloat(ethData.quoteVolume) : undefined,
+          sol24hChange: solData.priceChangePercent ? parseFloat(solData.priceChangePercent) : undefined,
+          sol24hVolume: solData.quoteVolume ? parseFloat(solData.quoteVolume) : undefined,
+        });
         
-        // Update ETH stats
-        if (ethData.lastPrice) {
-          setCurrentETHPrice(parseFloat(ethData.lastPrice));
-        }
-        if (ethData.priceChangePercent) {
-          setEth24hChange(parseFloat(ethData.priceChangePercent));
-        }
-        if (ethData.quoteVolume) {
-          setEth24hVolume(parseFloat(ethData.quoteVolume));
-        }
+        // Update current prices for ETH and SOL (BTC is updated via WebSocket composite)
+        const ethPrice = ethData.lastPrice ? parseFloat(ethData.lastPrice) : 0;
+        const solPrice = solData.lastPrice ? parseFloat(solData.lastPrice) : 0;
+        const btcPrice = lastCompositePriceRef.current || (btcData.lastPrice ? parseFloat(btcData.lastPrice) : 0);
         
-        // Update SOL stats
-        if (solData.lastPrice) {
-          setCurrentSOLPrice(parseFloat(solData.lastPrice));
-        }
-        if (solData.priceChangePercent) {
-          setSol24hChange(parseFloat(solData.priceChangePercent));
-        }
-        if (solData.quoteVolume) {
-          setSol24hVolume(parseFloat(solData.quoteVolume));
+        if (btcPrice || ethPrice || solPrice) {
+          setCurrentPrices(btcPrice, ethPrice, solPrice);
         }
       } catch (error) {
         logger.error('Failed to fetch 24h statistics', error);
@@ -2539,18 +2615,7 @@ export default function ClientView() {
     const statsInterval = setInterval(fetch24hStats, 60000);
     
     return () => clearInterval(statsInterval);
-  }, []);
-  
-  // Update connection context with current prices whenever they change
-  useEffect(() => {
-    if (currentBTCPrice !== null && currentETHPrice !== null && currentSOLPrice !== null) {
-      setCurrentPrices(
-        currentBTCPrice,
-        currentETHPrice,
-        currentSOLPrice
-      );
-    }
-  }, [currentBTCPrice, currentETHPrice, currentSOLPrice, setCurrentPrices]);
+  }, [set24hStats, setCurrentPrices]);
 
   // Update slider background when minMultiplier changes
   useEffect(() => {
@@ -2626,7 +2691,7 @@ export default function ClientView() {
               <div className="relative asset-dropdown">
                 <div 
                   className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
+                  onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
                     {assetData[selectedAsset].symbol}
@@ -2660,7 +2725,7 @@ export default function ClientView() {
                         }`}
                         onClick={() => {
                           setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL');
-                          setIsAssetDropdownOpen(false);
+                          setAssetDropdownOpen(false);
                         }}
                       >
                         {/* Star icon for favorites - clickable */}
@@ -2701,7 +2766,10 @@ export default function ClientView() {
                         {/* Price and change */}
                         <div className="text-right flex-shrink-0">
                           <div className="text-white text-xs font-medium">
-                            {asset.price !== null ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 'Loading...'}
+                            {asset.price 
+                              ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                              : <span className="text-zinc-500">--</span>
+                            }
                           </div>
                           <div 
                             style={{ 
@@ -2710,7 +2778,10 @@ export default function ClientView() {
                               fontWeight: 500
                             }}
                           >
-                            {asset.change24h !== 0 ? `${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%` : '--'}
+                            {asset.change24h !== 0 
+                              ? `${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`
+                              : <span className="text-zinc-500">--</span>
+                            }
                           </div>
                         </div>
                         
@@ -2727,12 +2798,12 @@ export default function ClientView() {
               {/* Current Value */}
               <div className="flex items-center gap-2">
                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                  {assetData[selectedAsset].price !== null 
-                    ? assetData[selectedAsset].price!.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                    : <span className="text-zinc-500" style={{ fontSize: '18px' }}>Loading...</span>
+                  {assetData[selectedAsset].price 
+                    ? assetData[selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                    : <span className="text-zinc-500" style={{ fontSize: '16px' }}>Loading...</span>
                   }
                 </div>
-                {isPriceUpdating && assetData[selectedAsset].price !== null && (
+                {isPriceUpdating && (
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10AE80', border: '2px solid #134335' }}></div>
                 )}
               </div>
@@ -2922,7 +2993,7 @@ export default function ClientView() {
             selectedCount={selectedCount}
             selectedMultipliers={selectedMultipliers}
             betAmount={betAmount}
-            currentBTCPrice={assetData[selectedAsset].price}
+            currentBTCPrice={assetData[selectedAsset].price || 0}
             onPositionHit={(positionId) => {
               // Handle position hit - this will be called when a box is hit
               logger.info('Position hit', { positionId }, 'GAME');
@@ -2943,7 +3014,7 @@ export default function ClientView() {
           selectedCount={selectedCount}
           bestMultiplier={bestMultiplier}
           selectedMultipliers={selectedMultipliers}
-          currentBTCPrice={assetData[selectedAsset].price}
+          currentBTCPrice={assetData[selectedAsset].price || 0}
           averagePositionPrice={averagePositionPrice}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}

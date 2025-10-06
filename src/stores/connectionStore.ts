@@ -5,9 +5,9 @@ export interface ConnectionStatus {
   isWebSocketConnected: boolean;
   connectedExchanges: string[];
   lastUpdateTime: number | null;
-  currentBTCPrice: number | null;
-  currentETHPrice: number | null;
-  currentSOLPrice: number | null;
+  currentBTCPrice: number;
+  currentETHPrice: number;
+  currentSOLPrice: number;
   isBackendConnected: boolean;
 }
 
@@ -30,10 +30,20 @@ interface ConnectionState {
   connectedExchanges: string[];
   lastUpdateTime: number | null;
   
-  // Prices (may move to priceStore later)
-  currentBTCPrice: number | null;
-  currentETHPrice: number | null;
-  currentSOLPrice: number | null;
+  // Prices
+  currentBTCPrice: number;
+  currentETHPrice: number;
+  currentSOLPrice: number;
+  
+  // 24h Market Stats
+  btc24hChange: number;
+  btc24hVolume: number;
+  btc24hHigh: number;
+  btc24hLow: number;
+  eth24hChange: number;
+  eth24hVolume: number;
+  sol24hChange: number;
+  sol24hVolume: number;
   
   // Backend API
   isBackendConnected: boolean;
@@ -59,6 +69,18 @@ interface ConnectionState {
   setCurrentPrices: (btc: number, eth: number, sol: number) => void;
   updatePrice: (asset: 'BTC' | 'ETH' | 'SOL', price: number) => void;
   
+  // Market stats actions
+  set24hStats: (stats: {
+    btc24hChange?: number;
+    btc24hVolume?: number;
+    btc24hHigh?: number;
+    btc24hLow?: number;
+    eth24hChange?: number;
+    eth24hVolume?: number;
+    sol24hChange?: number;
+    sol24hVolume?: number;
+  }) => void;
+  
   // Backend actions
   setBackendConnected: (connected: boolean) => void;
   
@@ -79,9 +101,17 @@ const initialState = {
   isWebSocketConnected: false,
   connectedExchanges: [],
   lastUpdateTime: null,
-  currentBTCPrice: null, // No preset value - will be null until real data loads
-  currentETHPrice: null, // No preset value - will be null until real data loads
-  currentSOLPrice: null, // No preset value - will be null until real data loads
+  currentBTCPrice: 0, // No preset value - will be set when data loads
+  currentETHPrice: 0, // No preset value - will be set when data loads
+  currentSOLPrice: 0, // No preset value - will be set when data loads
+  btc24hChange: 0,
+  btc24hVolume: 0,
+  btc24hHigh: 0,
+  btc24hLow: 0,
+  eth24hChange: 0,
+  eth24hVolume: 0,
+  sol24hChange: 0,
+  sol24hVolume: 0,
   isBackendConnected: false,
   lastMessage: null,
 };
@@ -140,6 +170,13 @@ export const useConnectionStore = create<ConnectionState>()(
         [`current${asset}Price`]: price,
         lastUpdateTime: Date.now(),
       } as Partial<ConnectionState>)),
+    
+    // Market stats actions
+    set24hStats: (stats) =>
+      set((state) => ({
+        ...state,
+        ...stats,
+      })),
     
     // Backend actions
     setBackendConnected: (connected) =>
