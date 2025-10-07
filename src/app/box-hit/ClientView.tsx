@@ -2219,11 +2219,16 @@ export default function ClientView() {
   const [isCanvasStarted, setIsCanvasStarted] = useState(false); // Controls mock backend canvas
   const [mockBackendPositions, setMockBackendPositions] = useState<Map<string, any>>(new Map());
   const [mockBackendContracts, setMockBackendContracts] = useState<any[]>([]);
+  const [mockBackendHitBoxes, setMockBackendHitBoxes] = useState<string[]>([]);
+  const [mockBackendMissedBoxes, setMockBackendMissedBoxes] = useState<string[]>([]);
   
   // Handle mock backend positions and contracts update
-  const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[]) => {
+  const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => {
+    console.log('🔄 Received from Canvas:', { hitBoxes, missedBoxes, positionsSize: positions.size });
     setMockBackendPositions(positions);
     setMockBackendContracts(contracts);
+    setMockBackendHitBoxes(hitBoxes);
+    setMockBackendMissedBoxes(missedBoxes);
   }, []);
   
   // Derive position stats from mock backend positions
@@ -3072,8 +3077,10 @@ export default function ClientView() {
               // Handle position missed - this will be called when a box is missed
               logger.info('Position missed', { positionId }, 'GAME');
             }}
-            hitBoxes={[]} // TODO: Connect to actual hit detection
-            missedBoxes={[]} // TODO: Connect to actual hit detection
+            hitBoxes={activeTab === 'copy' ? mockBackendHitBoxes : []}
+            missedBoxes={activeTab === 'copy' ? mockBackendMissedBoxes : []}
+            realPositions={activeTab === 'copy' ? mockBackendPositions : undefined}
+            contracts={activeTab === 'copy' ? mockBackendContracts : undefined}
           />
         </div>
         

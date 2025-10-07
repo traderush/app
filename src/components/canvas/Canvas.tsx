@@ -15,7 +15,7 @@ interface CanvasProps {
   externalIsStarted?: boolean;
   onExternalStartChange?: (isStarted: boolean) => void;
   externalTimeframe?: number; // Timeframe in ms (e.g., 500, 1000, 2000, 4000, 10000)
-  onPositionsChange?: (positions: Map<string, any>, contracts: any[]) => void;
+  onPositionsChange?: (positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => void;
   betAmount?: number; // Bet amount for trades (default 100)
 }
 
@@ -89,12 +89,18 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     }
   }, [userBalance, updateBalance]);
 
-  // Sync positions and contracts to parent component (for right panel integration)
+  // Track hit/missed boxes state changes to trigger position sync
+  const [hitMissedUpdateTrigger, setHitMissedUpdateTrigger] = useState(0);
+
+  // Sync positions, contracts, and hit/missed states to parent component (for right panel integration)
   useEffect(() => {
-    if (onPositionsChange && positions) {
-      onPositionsChange(positions, contracts);
+    if (onPositionsChange && positions && gameRef.current) {
+      const hitBoxes = gameRef.current.getHitBoxes();
+      const missedBoxes = gameRef.current.getMissedBoxes();
+      console.log('🔄 Syncing to parent - hit/missed states:', { hitBoxes, missedBoxes, positionsSize: positions.size });
+      onPositionsChange(positions, contracts, hitBoxes, missedBoxes);
     }
-  }, [positions, contracts, onPositionsChange]);
+  }, [positions, contracts, onPositionsChange, hitMissedUpdateTrigger]);
 
   // Debug contracts
   useEffect(() => {
@@ -124,9 +130,11 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         if (outcome === 'hit') {
           console.log('➡️ Calling markContractAsHit');
           gameRef.current.markContractAsHit(contractId);
+          setHitMissedUpdateTrigger(prev => prev + 1); // Trigger position sync
         } else if (outcome === 'miss') {
           console.log('➡️ Calling markContractAsMissed');
           gameRef.current.markContractAsMissed(contractId);
+          setHitMissedUpdateTrigger(prev => prev + 1); // Trigger position sync
         } else {
           console.log('⚠️ Unknown outcome:', outcome);
         }

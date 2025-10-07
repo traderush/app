@@ -15,11 +15,13 @@ interface PositionsTableProps {
   currentBTCPrice: number;
   onPositionHit?: (positionId: string) => void;
   onPositionMiss?: (positionId: string) => void;
-  hitBoxes?: string[]; // Array of box IDs that were successfully hit
-  missedBoxes?: string[]; // Array of box IDs that were missed
+  hitBoxes?: string[]; // Array of contract IDs that were successfully hit
+  missedBoxes?: string[]; // Array of contract IDs that were missed
+  realPositions?: Map<string, any>; // Real backend positions (for mock backend mode)
+  contracts?: any[]; // Backend contracts (for mock backend mode)
 }
 
-const PositionsTable = React.memo(function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [] }: PositionsTableProps) {
+const PositionsTable = React.memo(function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [], realPositions, contracts = [] }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
   const signatureColor = useUIStore((state) => state.signatureColor);
   
@@ -181,9 +183,59 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
     }
   }, [memoizedStableValues.selectedCount, memoizedStableValues.selectedMultipliers, memoizedStableValues.betAmount, memoizedStableValues.currentBTCPrice]);
 
-  // Monitor for changes in selectedMultipliers to detect when boxes are hit
+  // Monitor hitBoxes and missedBoxes to resolve positions
   useEffect(() => {
-    // If selectedMultipliers decreased, it means some boxes were hit
+    if ((hitBoxes.length === 0 && missedBoxes.length === 0) || !realPositions) return;
+    
+    console.log('📊 Checking positions against hit/missed boxes:', { 
+      hitBoxes, 
+      missedBoxes, 
+      activePositionsCount: activePositions.length,
+      realPositions: Array.from(realPositions.entries())
+    });
+    
+    // Process each position from the backend
+    activePositions.forEach(position => {
+      // Try to find the real backend position that matches
+      let contractId: string | null = null;
+      
+      // If we have real positions, find the contract ID
+      realPositions.forEach((realPos, tradeId) => {
+        // Check if this position's multiplier matches
+        const contract = contracts.find(c => c.contractId === realPos.contractId);
+        if (contract && contract.returnMultiplier === position.multiplier) {
+          contractId = realPos.contractId;
+        }
+      });
+      
+      if (!contractId) {
+        // Fallback: try to match by multiplier in contracts
+        const matchingContract = contracts.find(c => c.returnMultiplier === position.multiplier);
+        if (matchingContract) {
+          contractId = matchingContract.contractId;
+        }
+      }
+      
+      if (contractId) {
+        // Check if this contract was hit
+        if (hitBoxes.includes(contractId)) {
+          console.log('✅ Position HIT:', position.id, 'contractId:', contractId);
+          moveToHistory(position.id, 'Won');
+          if (onPositionHit) onPositionHit(position.id);
+        }
+        // Check if this contract was missed
+        else if (missedBoxes.includes(contractId)) {
+          console.log('❌ Position MISSED:', position.id, 'contractId:', contractId);
+          moveToHistory(position.id, 'Lost');
+          if (onPositionMiss) onPositionMiss(position.id);
+        }
+      }
+    });
+  }, [hitBoxes, missedBoxes, activePositions, onPositionHit, onPositionMiss, realPositions, contracts]);
+
+  // Monitor for changes in selectedMultipliers to detect when boxes are deselected
+  useEffect(() => {
+    // If selectedMultipliers decreased, it means some boxes were deselected or resolved
     if (stableSelectedMultipliers.length < activePositions.length) {
       // Find positions that no longer have matching multipliers
       const positionsToRemove = activePositions.filter(position => {
@@ -194,16 +246,17 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
         return !hasMatchingMultipliers;
       });
 
-      // Evaluate each position based on actual hit/miss data
+      // For positions not in hit/missed lists, we'll keep the random fallback
+      const hitBoxesSet = new Set(hitBoxes);
+      const missedBoxesSet = new Set(missedBoxes);
+      
       positionsToRemove.forEach(position => {
-        // Check if this position's boxes were hit or missed
-        const positionMultipliers = position.selectedMultipliers;
+        // Skip if already handled by hit/missed monitoring
+        if (hitBoxesSet.has(position.id) || missedBoxesSet.has(position.id)) {
+          return;
+        }
         
-        // For now, we'll use a more realistic approach:
-        // If the position had high probability (>=70%), it's more likely to be a hit
-        // If it had low probability (<30%), it's more likely to be a miss
-        // Middle range (30-70%) is random
-        
+        // Fallback random evaluation for positions not explicitly marked
         const hitProbability = parseInt(position.hit);
         let isHit = false;
         

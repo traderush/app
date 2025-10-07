@@ -1374,6 +1374,14 @@ export class GridGame extends BaseGame {
     this.missedBoxes.clear();
   }
 
+  public getHitBoxes(): string[] {
+    return Array.from(this.hitBoxes);
+  }
+
+  public getMissedBoxes(): string[] {
+    return Array.from(this.missedBoxes);
+  }
+
 
   public getViewportBounds(): {
     minX: number;
