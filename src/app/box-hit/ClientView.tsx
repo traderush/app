@@ -321,10 +321,10 @@ function BoxHitCanvas({
             
             // Remove if cell has passed NOW line (negative distance = behind NOW line)
             if (distanceFromNow < -cellW) {
-              const count = newCounts[key];
-              setAvailablePlayerCounts(prevPool => [...prevPool, count]);
-              delete newCounts[key];
-            }
+            const count = newCounts[key];
+            setAvailablePlayerCounts(prevPool => [...prevPool, count]);
+            delete newCounts[key];
+          }
           }
           // If cell doesn't exist but key still exists, leave it (might reappear after recenter)
         });
@@ -415,10 +415,10 @@ function BoxHitCanvas({
             
             // Remove if cell has passed NOW line (negative distance = behind NOW line)
             if (distanceFromNow < -cellW) {
-              const selection = newSelections[key];
-              setAvailableTrackedSelections(prevPool => [...prevPool, selection]);
-              delete newSelections[key];
-            }
+            const selection = newSelections[key];
+            setAvailableTrackedSelections(prevPool => [...prevPool, selection]);
+            delete newSelections[key];
+          }
           }
           // If cell doesn't exist but key still exists, leave it (might reappear after recenter)
         });
@@ -534,7 +534,7 @@ function BoxHitCanvas({
               state: 'idle',
               crossedTime: undefined,
             });
-          });
+            });
         }
         setGridCells(fresh);
         logger.debug('Grid cells generated', { count: fresh.length }, 'CANVAS');
@@ -613,7 +613,7 @@ function BoxHitCanvas({
     
     // Update ref and trigger callback
     selectionRef.current = { count, best, averagePrice };
-    onSelectionChange?.(count, best, multipliers, averagePrice);
+      onSelectionChange?.(count, best, multipliers, averagePrice);
   }, [gridCells, onSelectionChange]);
 
   // Initialize selection count to 0 when component mounts
@@ -913,10 +913,10 @@ function BoxHitCanvas({
       
       // Calculate movement using fixed time step for consistent speed
       const dx = baseSpeed; // Use constant movement per frame (baseSpeed is already per-frame)
-      const now = Date.now();
-      
+                    const now = Date.now();
+                    
       // Smooth price interpolation for fluid movement
-      if (live && realBTCPrice > 0) {
+                    if (live && realBTCPrice > 0) {
         // Update target price from real BTC price
         targetPriceRef.current = realBTCPrice;
         
@@ -928,7 +928,7 @@ function BoxHitCanvas({
         
         // Update ref series every frame for smooth rendering
         const next = [...seriesRef.current, { t: now, p: currentPriceRef.current }];
-        const maxPts = Math.max(120, Math.round(NOW_X / 2));
+                          const maxPts = Math.max(120, Math.round(NOW_X / 2));
         seriesRef.current = next.slice(-maxPts);
         
         // Update center ref every frame for smooth tracking
@@ -946,8 +946,8 @@ function BoxHitCanvas({
         if (priceDiffFromBase > 50) { // Only update when price moves $50+ from base
           const stepValue = 10;
           stableBasePriceRef.current = Math.round(currentPriceRef.current / stepValue) * stepValue;
-        }
-      }
+                      }
+                    }
       
            // Update grid position to maintain chart tick in center
            setGridPosition(prev => {
@@ -1059,17 +1059,17 @@ function BoxHitCanvas({
                  return cell; // Return original cell if no changes
                });
                
-              // Only update state if there are actual changes
-              if (hasChanges) {
-                return updatedCells;
-              }
-              
-              return prevCells; // Return original cells if no changes
-            });
-            }
-           
+               // Only update state if there are actual changes
+               if (hasChanges) {
+                 return updatedCells;
+               }
+               
+               return prevCells; // Return original cells if no changes
+             });
+                       }
+            
             return { offsetX: newOffsetX, offsetY: newOffsetY };
-          });
+         });
          
          // Generate new grid cells and clean up old ones - optimized to prevent excessive updates
          setGridCells(prevCells => {
@@ -2224,8 +2224,9 @@ export default function ClientView() {
   const [mockBackendCurrentPrice, setMockBackendCurrentPrice] = useState(100);
   
   // Handle mock backend positions and contracts update
+  // Keep this callback stable (no dependencies) to ensure Canvas always calls it properly
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => {
-    console.log('🔄 Received from Canvas (ACTIVE ONLY):', { 
+    console.log('🔄 ClientView: Received from Canvas:', { 
       activePositionsSize: positions.size,
       positions: Array.from(positions.entries()),
       hitBoxes, 
@@ -2299,6 +2300,20 @@ export default function ClientView() {
       setIsCanvasStarted(false);
     }
   }, [activeTab]);
+  
+  // Debug: Log what will be passed to PositionsTable
+  useEffect(() => {
+    console.log('📊 ClientView: PositionsTable props:', {
+      activeTab,
+      willPassRealPositions: activeTab === 'copy',
+      mockBackendPositionsSize: mockBackendPositions.size,
+      mockBackendContractsLength: mockBackendContracts.length,
+      mockBackendHitBoxesLength: mockBackendHitBoxes.length,
+      mockBackendMissedBoxesLength: mockBackendMissedBoxes.length,
+      mockBackendPositionCount,
+      mockBackendMultipliers: mockBackendMultipliers.length
+    });
+  }, [activeTab, mockBackendPositions, mockBackendContracts, mockBackendHitBoxes, mockBackendMissedBoxes, mockBackendPositionCount, mockBackendMultipliers]);
   
   // Multi-exchange BTC price index system
   const wsRefs = useRef<{ [key: string]: WebSocket | null }>({});
@@ -2410,7 +2425,7 @@ export default function ClientView() {
           setIsWebSocketConnected(true);
           if (!wsConnectionStatusRef.current) {
             wsConnectionStatusRef.current = true;
-            setWebSocketConnected(true);
+          setWebSocketConnected(true);
           }
           
           // Update connected exchanges list
@@ -2587,7 +2602,7 @@ export default function ClientView() {
       setIsCanvasStarted(tradingMode);
     } else {
       // In Place Trade mode, control normal trading mode
-      setIsTradingMode(tradingMode);
+    setIsTradingMode(tradingMode);
     }
   }, [activeTab]);
 
@@ -2788,14 +2803,14 @@ export default function ClientView() {
                     {activeTab === 'copy' ? 'BTC' : assetData[selectedAsset].symbol}
                   </div>
                   {activeTab !== 'copy' && (
-                    <svg 
-                      className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                  <svg 
+                    className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                   )}
                 </div>
                 
@@ -3013,7 +3028,7 @@ export default function ClientView() {
                     { label: '4s', value: 4000 },
                     { label: '10s', value: 10000 }
                   ].map((tf) => (
-                    <button
+                  <button
                       key={tf.value}
                       onClick={() => setTimeframe(tf.value)}
                       className={`px-2 py-1 rounded text-xs transition-colors ${
@@ -3024,7 +3039,7 @@ export default function ClientView() {
                       title={`${tf.label} timeframe`}
                     >
                       {tf.label}
-                    </button>
+                  </button>
                   ))}
                 </div>
             </div>
@@ -3060,18 +3075,18 @@ export default function ClientView() {
                 </div>
               ) : (
                 // Place Trade Mode - Show normal BoxHitCanvas
-                <BoxHitCanvas 
-                  live={true} 
+              <BoxHitCanvas 
+                live={true} 
                   tickMs={timeframe}
-                  minMultiplier={minMultiplier}
-                  onSelectionChange={handleSelectionChange}
-                  isTradingMode={isTradingMode}
+                minMultiplier={minMultiplier}
+                onSelectionChange={handleSelectionChange}
+                isTradingMode={isTradingMode}
                   realBTCPrice={assetData[selectedAsset].price || 0}
-                  showProbabilities={showProbabilities}
-                  showOtherPlayers={showOtherPlayers}
-                  signatureColor={signatureColor}
-                  zoomLevel={zoomLevel}
-                />
+                showProbabilities={showProbabilities}
+                showOtherPlayers={showOtherPlayers}
+                signatureColor={signatureColor}
+                zoomLevel={zoomLevel}
+              />
               )}
             </ErrorBoundary>
           </div>

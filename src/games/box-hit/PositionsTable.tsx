@@ -138,12 +138,14 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
 
   // Sync active positions - use real backend positions when available
   useEffect(() => {
-    console.log('🔍 PositionsTable sync triggered:', {
+    console.log('🔍 PositionsTable: Sync triggered:', {
       hasRealPositions: !!realPositions,
       realPositionsSize: realPositions?.size || 0,
       contractsLength: contracts.length,
       stableSelectedCount,
-      stableSelectedMultipliers
+      stableSelectedMultipliers,
+      realPositionsType: typeof realPositions,
+      realPositionsValue: realPositions
     });
     
     // If we have real backend positions (mock backend mode), use them directly
@@ -238,8 +240,13 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
   }, [memoizedStableValues.selectedCount, memoizedStableValues.selectedMultipliers, memoizedStableValues.betAmount, memoizedStableValues.currentBTCPrice, realPositions, contracts]);
 
   // Monitor hitBoxes and missedBoxes to resolve positions
+  // IMPORTANT: activePositions is NOT in the dependency array to prevent infinite loops
+  // We only react to changes in hitBoxes/missedBoxes and read the latest activePositions from state
   useEffect(() => {
-    if ((hitBoxes.length === 0 && missedBoxes.length === 0) || activePositions.length === 0) return;
+    if (hitBoxes.length === 0 && missedBoxes.length === 0) {
+      console.log('📊 No hitBoxes or missedBoxes, skipping resolution check');
+      return;
+    }
     
     console.log('📊 Checking positions for resolution:', { 
       hitBoxes, 
@@ -248,20 +255,33 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
       activePositions: activePositions.map(p => ({ id: p.id, contractId: p.contractId, multiplier: p.multiplier }))
     });
     
+    if (activePositions.length === 0) {
+      console.log('📊 No active positions to resolve');
+      return;
+    }
+    
     const hitSet = new Set(hitBoxes);
     const missedSet = new Set(missedBoxes);
     
     // Find all positions that should be resolved (and haven't been processed yet)
     const positionsToResolve = activePositions.filter(position => {
       const contractId = position.contractId;
-      if (!contractId) return false;
-      
-      // Skip if already processed
-      if (processedContractsRef.current.has(contractId)) {
+      if (!contractId) {
+        console.log('⚠️ Position has no contractId:', position.id);
         return false;
       }
       
-      return hitSet.has(contractId) || missedSet.has(contractId);
+      // Skip if already processed
+      if (processedContractsRef.current.has(contractId)) {
+        console.log('⏭️ Skipping already processed contract:', contractId);
+        return false;
+      }
+      
+      const shouldResolve = hitSet.has(contractId) || missedSet.has(contractId);
+      if (shouldResolve) {
+        console.log('✓ Position should be resolved:', { id: position.id, contractId, isHit: hitSet.has(contractId) });
+      }
+      return shouldResolve;
     });
     
     // Move resolved positions to history
@@ -278,7 +298,7 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
           multiplier: position.multiplier
         });
         
-        // Mark as processed
+        // Mark as processed BEFORE calling moveToHistory to prevent any potential race conditions
         processedContractsRef.current.add(contractId);
         
         moveToHistory(position.id, result);
@@ -289,8 +309,10 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
           onPositionMiss(position.id);
         }
       });
+    } else {
+      console.log('📊 No positions need to be resolved');
     }
-  }, [hitBoxes, missedBoxes, activePositions, onPositionHit, onPositionMiss, moveToHistory]);
+  }, [hitBoxes, missedBoxes, onPositionHit, onPositionMiss, moveToHistory]);
 
   // Monitor for changes in selectedMultipliers to detect when boxes are deselected
   useEffect(() => {
