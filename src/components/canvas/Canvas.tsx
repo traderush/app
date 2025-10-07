@@ -16,9 +16,10 @@ interface CanvasProps {
   onExternalStartChange?: (isStarted: boolean) => void;
   externalTimeframe?: number; // Timeframe in ms (e.g., 500, 1000, 2000, 4000, 10000)
   onPositionsChange?: (positions: Map<string, any>, contracts: any[]) => void;
+  betAmount?: number; // Bet amount for trades (default 100)
 }
 
-export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange }: CanvasProps = {}) {
+export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100 }: CanvasProps = {}) {
   // Convert external timeframe (ms) to TimeFrame enum
   const getTimeFrameFromMs = (ms?: number): TimeFrame => {
     switch (ms) {
@@ -634,8 +635,8 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
 
         // Handle trade placement using refs to avoid stale closure
         if (isJoinedRef.current && handleTradePlaceRef.current) {
-          console.log('Placing trade for contract:', squareId, 'amount: 100');
-          handleTradePlaceRef.current(squareId, 100);
+          console.log('Placing trade for contract:', squareId, 'amount:', betAmount);
+          handleTradePlaceRef.current(squareId, betAmount);
         } else {
           console.log('Cannot place trade - not joined or handler not ready');
         }

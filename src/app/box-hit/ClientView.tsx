@@ -2222,12 +2222,6 @@ export default function ClientView() {
   
   // Handle mock backend positions and contracts update
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[]) => {
-    console.log('🔄 Mock backend positions/contracts updated:', {
-      positionsSize: positions.size,
-      contractsLength: contracts.length,
-      positions: Array.from(positions.entries()),
-      contracts
-    });
     setMockBackendPositions(positions);
     setMockBackendContracts(contracts);
   }, []);
@@ -2237,26 +2231,23 @@ export default function ClientView() {
   const mockBackendMultipliers = useMemo(() => {
     const mults: number[] = [];
     
-    console.log('🔍 Calculating mock backend multipliers:', {
-      positionsSize: mockBackendPositions.size,
-      contractsLength: mockBackendContracts.length,
-      positions: Array.from(mockBackendPositions.entries()),
-      contracts: mockBackendContracts
-    });
-    
     mockBackendPositions.forEach((position, positionId) => {
-      console.log('📋 Processing position:', { positionId, position });
-      // Find the contract for this position
+      // Find the contract for this position using contractId
       const contract = mockBackendContracts.find(c => c.contractId === position.contractId);
-      console.log('📋 Found contract:', contract);
       if (contract) {
-        const multiplier = contract.value || 0;
-        console.log('📋 Adding multiplier:', multiplier);
+        // Use returnMultiplier from backend contract
+        const multiplier = contract.returnMultiplier || 0;
         mults.push(multiplier);
       }
     });
     
-    console.log('✅ Final multipliers array:', mults);
+    console.log('📊 Mock Backend Stats:', {
+      positionCount: mockBackendPositions.size,
+      contractsAvailable: mockBackendContracts.length,
+      multipliers: mults,
+      bestMultiplier: mults.length > 0 ? Math.max(...mults) : 0
+    });
+    
     return mults;
   }, [mockBackendPositions, mockBackendContracts]);
   
@@ -2265,19 +2256,26 @@ export default function ClientView() {
     
     mockBackendPositions.forEach((position) => {
       const contract = mockBackendContracts.find(c => c.contractId === position.contractId);
-      if (contract && contract.priceRange) {
-        const avgPrice = (contract.priceRange.min + contract.priceRange.max) / 2;
+      if (contract) {
+        // Use lowerStrike and upperStrike for price range
+        const avgPrice = (contract.lowerStrike + contract.upperStrike) / 2;
         prices.push(avgPrice);
       }
     });
     
-    console.log('📊 Mock backend average price calculation:', {
-      prices,
-      average: prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null
+    const average = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+    
+    console.log('📊 Mock Backend Right Panel Values:', {
+      selectedCount: mockBackendPositionCount,
+      bestMultiplier: mockBackendMultipliers.length > 0 ? Math.max(...mockBackendMultipliers) : 0,
+      multipliers: mockBackendMultipliers,
+      averagePrice: average,
+      betAmount: betAmount,
+      totalPayout: mockBackendMultipliers.length > 0 ? betAmount * mockBackendMultipliers.reduce((a, b) => a + b, 0) : 0
     });
     
-    return prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
-  }, [mockBackendPositions, mockBackendContracts]);
+    return average;
+  }, [mockBackendPositions, mockBackendContracts, mockBackendMultipliers, mockBackendPositionCount, betAmount]);
   
   // Reset canvas started state when switching away from Mock Backend tab
   useEffect(() => {
@@ -3040,6 +3038,7 @@ export default function ClientView() {
                     onExternalStartChange={setIsCanvasStarted}
                     externalTimeframe={timeframe}
                     onPositionsChange={handleMockBackendPositionsChange}
+                    betAmount={betAmount}
                   />
                 </div>
               ) : (
@@ -3084,11 +3083,7 @@ export default function ClientView() {
           onTradingModeChange={handleTradingModeChange}
           selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
           bestMultiplier={activeTab === 'copy' ? (mockBackendMultipliers.length > 0 ? Math.max(...mockBackendMultipliers) : 0) : bestMultiplier}
-          selectedMultipliers={(() => {
-            const mults = activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers;
-            console.log('🎯 RightPanel selectedMultipliers:', mults);
-            return mults;
-          })()}
+          selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
           currentBTCPrice={activeTab === 'copy' ? 100 : (assetData[selectedAsset].price || 0)}
           averagePositionPrice={activeTab === 'copy' ? mockBackendAveragePrice : averagePositionPrice}
           betAmount={betAmount}
