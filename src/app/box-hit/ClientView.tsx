@@ -2223,6 +2223,26 @@ export default function ClientView() {
   const [mockBackendMissedBoxes, setMockBackendMissedBoxes] = useState<string[]>([]);
   const [mockBackendCurrentPrice, setMockBackendCurrentPrice] = useState(100);
   
+  // Mock backend selection stats (updated immediately when boxes are selected)
+  const [mockBackendSelectedCount, setMockBackendSelectedCount] = useState(0);
+  const [mockBackendSelectedMultipliers, setMockBackendSelectedMultipliers] = useState<number[]>([]);
+  const [mockBackendBestMultiplier, setMockBackendBestMultiplier] = useState(0);
+  const [mockBackendSelectedAveragePrice, setMockBackendSelectedAveragePrice] = useState<number | null>(null);
+  
+  // Handle mock backend selection changes (immediate feedback when boxes are selected)
+  const handleMockBackendSelectionChange = useCallback((count: number, best: number, multipliers: number[], averagePrice?: number | null) => {
+    console.log('📊 ClientView: Selection changed from Canvas:', {
+      count,
+      bestMultiplier: best,
+      multipliers,
+      averagePrice
+    });
+    setMockBackendSelectedCount(count);
+    setMockBackendBestMultiplier(best);
+    setMockBackendSelectedMultipliers(multipliers);
+    setMockBackendSelectedAveragePrice(averagePrice ?? null);
+  }, []);
+  
   // Handle mock backend positions and contracts update
   // Keep this callback stable (no dependencies) to ensure Canvas always calls it properly
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => {
@@ -3069,6 +3089,7 @@ export default function ClientView() {
                     onExternalStartChange={setIsCanvasStarted}
                     externalTimeframe={timeframe}
                     onPositionsChange={handleMockBackendPositionsChange}
+                    onSelectionChange={handleMockBackendSelectionChange}
                     betAmount={betAmount}
                     onPriceUpdate={setMockBackendCurrentPrice}
                   />
@@ -3115,11 +3136,11 @@ export default function ClientView() {
         <RightPanel 
           isTradingMode={activeTab === 'copy' ? isCanvasStarted : isTradingMode}
           onTradingModeChange={handleTradingModeChange}
-          selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
-          bestMultiplier={activeTab === 'copy' ? (mockBackendMultipliers.length > 0 ? Math.max(...mockBackendMultipliers) : 0) : bestMultiplier}
-          selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
+          selectedCount={activeTab === 'copy' ? mockBackendSelectedCount : selectedCount}
+          bestMultiplier={activeTab === 'copy' ? mockBackendBestMultiplier : bestMultiplier}
+          selectedMultipliers={activeTab === 'copy' ? mockBackendSelectedMultipliers : selectedMultipliers}
           currentBTCPrice={activeTab === 'copy' ? mockBackendCurrentPrice : (assetData[selectedAsset].price || 0)}
-          averagePositionPrice={activeTab === 'copy' ? mockBackendAveragePrice : averagePositionPrice}
+          averagePositionPrice={activeTab === 'copy' ? mockBackendSelectedAveragePrice : averagePositionPrice}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
           dailyHigh={activeTab === 'copy' ? (mockBackendCurrentPrice + 2) : btc24hHigh}

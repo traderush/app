@@ -32,6 +32,10 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
   // Track which contracts have been resolved to prevent duplicate processing
   const processedContractsRef = useRef<Set<string>>(new Set());
   
+  // Prevent constant re-processing that causes flickering
+  const resolutionCheckRef = useRef<string>('');
+  const selectionCheckRef = useRef<string>('');
+  
   // Stabilize props to prevent infinite loops - use useMemo to avoid creating new arrays
   const stableSelectedCount = selectedCount || 0;
   const stableSelectedMultipliers = useMemo(() => 
@@ -106,10 +110,15 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
 
   // Function to move position from active to history when hit
   const moveToHistory = useCallback((positionId: string, result: 'Won' | 'Lost') => {
+    console.log('🔄 Moving position to history:', { positionId, result });
+    
     setActivePositions(prev => {
+      console.log('🔍 Current active positions:', prev.map(p => ({ id: p.id, contractId: p.contractId })));
+      
       const position = prev.find(p => p.id === positionId);
       if (!position) {
         console.warn('⚠️ Position not found in active positions:', positionId);
+        console.log('🔍 Available positions:', prev.map(p => p.id));
         return prev;
       }
       
@@ -121,8 +130,18 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
         equity: result === 'Won' ? `$${(position.betAmount * position.multiplier).toFixed(2)}` : '$0.00'
       };
       
+      console.log('📊 Creating history position:', {
+        id: historyPosition.id,
+        result: historyPosition.result,
+        equity: historyPosition.equity,
+        multiplier: historyPosition.multiplier
+      });
+      
+      // Use functional update to ensure we get the latest history state
       setHistoryPositions(prevHistory => {
         const newHistory = [historyPosition, ...prevHistory];
+        console.log('📊 History positions count:', newHistory.length);
+        console.log('📊 New history positions:', newHistory.map(h => ({ id: h.id, result: h.result })));
         // Keep only last 10 positions
         return newHistory.slice(0, 10);
       });
@@ -156,7 +175,10 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
       realPositionsSize: realPositions?.size || 0,
       contractsLength: stableContracts.length,
       stableSelectedCount,
-      stableSelectedMultipliersLength: stableSelectedMultipliers.length
+      stableSelectedMultipliersLength: stableSelectedMultipliers.length,
+      hitBoxesLength: stableHitBoxes.length,
+      missedBoxesLength: stableMissedBoxes.length,
+      realPositions: realPositions ? Array.from(realPositions.entries()) : []
     });
     
     // If we have real backend positions (mock backend mode), use them directly
@@ -167,7 +189,11 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
         contractsSample: stableContracts.slice(0, 3)
       });
       
-      const newPositions = Array.from(realPositions.entries()).map(([tradeId, position]) => {
+      // Filter out resolved positions (hit/missed) for active positions
+      const hitSet = new Set(stableHitBoxes);
+      const missedSet = new Set(stableMissedBoxes);
+      
+      const allPositions = Array.from(realPositions.entries()).map(([tradeId, position]) => {
         // Find the contract for this position
         const contract = stableContracts.find(c => c.contractId === position.contractId);
         const multiplier = contract?.returnMultiplier || 0;
@@ -177,7 +203,9 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
           tradeId,
           contractId: position.contractId,
           foundContract: !!contract,
-          multiplier
+          multiplier,
+          isHit: hitSet.has(position.contractId),
+          isMissed: missedSet.has(position.contractId)
         });
         
         return {
@@ -195,8 +223,37 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
         };
       });
       
-      console.log('✅ Created', newPositions.length, 'positions from backend:', newPositions.map(p => ({ id: p.id, contractId: p.contractId, multiplier: p.multiplier })));
-      setActivePositions(newPositions);
+      // Only set active positions that haven't been resolved yet
+      const activePositions = allPositions.filter(pos => 
+        !hitSet.has(pos.contractId) && !missedSet.has(pos.contractId)
+      );
+      
+      console.log('✅ Created positions from backend:', { 
+        total: allPositions.length,
+        active: activePositions.length,
+        resolved: allPositions.length - activePositions.length,
+        activePositions: activePositions.map(p => ({ id: p.id, contractId: p.contractId, multiplier: p.multiplier }))
+      });
+      
+      setActivePositions(activePositions);
+      
+      // Automatically move resolved positions to history
+      const resolvedPositions = allPositions.filter(pos => 
+        hitSet.has(pos.contractId) || missedSet.has(pos.contractId)
+      );
+      
+      if (resolvedPositions.length > 0) {
+        console.log('🔄 Auto-moving resolved positions to history:', resolvedPositions.length);
+        // Use setTimeout to ensure state is updated before moving to history
+        setTimeout(() => {
+          resolvedPositions.forEach(position => {
+            const result = hitSet.has(position.contractId) ? 'Won' : 'Lost';
+            console.log('🔄 Auto-moving to history:', { id: position.id, contractId: position.contractId, result });
+            moveToHistory(position.id, result);
+          });
+        }, 100);
+      }
+      
       return; // Don't continue to normal mode logic
     }
     
@@ -207,26 +264,26 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
       const currentPositionMultipliers = new Set(activePositions.map(p => p.multiplier));
       const newMultipliers = stableSelectedMultipliers.filter(mult => !currentPositionMultipliers.has(mult));
       
-      if (newMultipliers.length > 0) {
-        const newPositions = newMultipliers.map((multiplier, index) => {
-          const timestamp = Date.now();
-          const uniqueIndex = index;
-          const positionId = `box-${multiplier}-${timestamp}-${uniqueIndex}`;
+        if (newMultipliers.length > 0) {
+          const newPositions = newMultipliers.map((multiplier, index) => {
+            const timestamp = Date.now();
+            const uniqueIndex = index;
+            const positionId = `box-${multiplier}-${timestamp}-${uniqueIndex}`;
           
-          return {
-            id: positionId,
-            time: new Date().toLocaleTimeString(),
-            size: betPerBox,
-            equity: `$${(betPerBox * multiplier).toFixed(2)}`,
-            hit: `${Math.round(Math.random() * 100)}%`,
-            prog: '0%',
-            entry: `$${stableCurrentBTCPrice.toFixed(2)}`.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
-            betAmount: betPerBox,
-            selectedMultipliers: [multiplier],
+            return {
+              id: positionId,
+              time: new Date().toLocaleTimeString(),
+              size: betPerBox,
+              equity: `$${(betPerBox * multiplier).toFixed(2)}`,
+              hit: `${Math.round(Math.random() * 100)}%`,
+              prog: '0%',
+              entry: `$${stableCurrentBTCPrice.toFixed(2)}`.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+              betAmount: betPerBox,
+              selectedMultipliers: [multiplier],
             multiplier,
             contractId: undefined
-          };
-        });
+            };
+          });
         
         setActivePositions(prev => {
           const existingMultipliers = new Set(prev.map(p => p.multiplier));
@@ -251,19 +308,28 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
   }, [stableSelectedCount, stableSelectedMultipliers, stableBetAmount, stableCurrentBTCPrice, realPositions, stableContracts]);
 
   // Monitor hitBoxes and missedBoxes to resolve positions
-  // IMPORTANT: activePositions is NOT in the dependency array to prevent infinite loops
-  // We only react to changes in hitBoxes/missedBoxes and read the latest activePositions from state
+  // IMPORTANT: We need to include activePositions in dependencies to get latest state
   useEffect(() => {
     if (stableHitBoxes.length === 0 && stableMissedBoxes.length === 0) {
       console.log('📊 No hitBoxes or missedBoxes, skipping resolution check');
       return;
     }
     
+    // Create a unique key for this resolution check
+    const resolutionKey = `${stableHitBoxes.join(',')}-${stableMissedBoxes.join(',')}`;
+    
+    // Prevent processing the same hit/miss data multiple times
+    if (resolutionCheckRef.current === resolutionKey) {
+      console.log('📊 Same resolution data already processed, skipping');
+      return;
+    }
+    
+    resolutionCheckRef.current = resolutionKey;
+    
     console.log('📊 Checking positions for resolution:', { 
       hitBoxes: stableHitBoxes, 
       missedBoxes: stableMissedBoxes, 
-      activePositionsCount: activePositions.length,
-      activePositions: activePositions.map(p => ({ id: p.id, contractId: p.contractId, multiplier: p.multiplier }))
+      activePositionsCount: activePositions.length
     });
     
     if (activePositions.length === 0) {
@@ -323,12 +389,24 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
     } else {
       console.log('📊 No positions need to be resolved');
     }
-  }, [stableHitBoxes, stableMissedBoxes, onPositionHit, onPositionMiss, moveToHistory]);
+    
+    // No need to reset - the key will change when new hit/miss data arrives
+  }, [stableHitBoxes, stableMissedBoxes, activePositions, onPositionHit, onPositionMiss, moveToHistory]);
 
   // Monitor for changes in selectedMultipliers to detect when boxes are deselected
   useEffect(() => {
     // If selectedMultipliers decreased, it means some boxes were deselected or resolved
     if (stableSelectedMultipliers.length < activePositions.length) {
+      // Create a unique key for this selection check
+      const selectionKey = stableSelectedMultipliers.join(',');
+      
+      // Prevent processing the same selection data multiple times
+      if (selectionCheckRef.current === selectionKey) {
+        console.log('📊 Same selection data already processed, skipping');
+        return;
+      }
+      
+      selectionCheckRef.current = selectionKey;
       // Find positions that no longer have matching multipliers
       const positionsToRemove = activePositions.filter(position => {
         // Check if this position's multipliers are still in the current selection
@@ -367,30 +445,36 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
           handlePositionMiss(position.id);
         }
       });
+      
+      // No need to reset - the key will change when selection changes
     }
-  }, [stableSelectedMultipliers, activePositions]);
+  }, [stableSelectedMultipliers, activePositions, stableHitBoxes, stableMissedBoxes, handlePositionHit, handlePositionMiss]);
 
   // Simulate position progress updates (in real app, this would come from chart movement)
   useEffect(() => {
     if (activePositions.length > 0) {
       const interval = setInterval(() => {
-        setActivePositions(prev => 
-          prev.map(pos => {
+        setActivePositions(prev => {
+          // Only update if there are positions that need progress updates
+          const needsUpdate = prev.some(pos => pos.prog !== '100%');
+          if (!needsUpdate) return prev;
+          
+          return prev.map(pos => {
             // Only update progress if it's not already at 100%
             if (pos.prog === '100%') return pos;
             
             // More stable progress updates - smaller increments, less random
             const currentProgress = parseInt(pos.prog) || 0;
-            const increment = Math.min(Math.floor(Math.random() * 5) + 1, 100 - currentProgress); // 1-5% increments
+            const increment = Math.min(Math.floor(Math.random() * 3) + 1, 100 - currentProgress); // 1-3% increments
             const newProgress = Math.min(currentProgress + increment, 100);
             
             return {
               ...pos,
               prog: `${newProgress}%`
             };
-          })
-        );
-      }, 5000); // Increased from 3s to 5s for more stability
+          });
+        });
+      }, 15000); // Increased to 15s for more stability
 
       return () => clearInterval(interval);
     }
@@ -518,7 +602,9 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
                   </td>
                 </tr>
               ) : (
-                historyPositions.map((r,i)=>(
+                (() => {
+                  console.log('📊 Rendering history positions:', historyPositions.length, historyPositions.map(p => ({ id: p.id, result: p.result })));
+                  return historyPositions.map((r,i)=>(
                   <tr key={r.id} className="[&>td]:py-2 [&>td]:px-3 border-t border-zinc-800/70" style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}>
                     <td>{r.time}</td>
                     <td>${r.size.toFixed(2)}</td>
@@ -551,7 +637,8 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
                       </span>
                     </td>
                   </tr>
-                ))
+                ));
+                })()
               )}
             </tbody>
             </table>

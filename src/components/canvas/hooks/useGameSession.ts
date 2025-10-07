@@ -44,10 +44,25 @@ export function useGameSession({
   // Handle trade placement
   const handleTradePlace = useCallback(
     (contractId: string, amount: number) => {
+      console.log('🔍 handleTradePlace called:', {
+        contractId,
+        amount,
+        hasWs: !!wsRef.current,
+        isJoined,
+        enabled
+      });
+      
       if (wsRef.current && isJoined) {
+        console.log('✅ Sending place_trade message:', { contractId, amount });
         wsRef.current.send({
           type: 'place_trade',
           payload: { contractId, amount },
+        });
+      } else {
+        console.log('❌ Cannot place trade:', {
+          hasWs: !!wsRef.current,
+          isJoined,
+          enabled
         });
       }
     },
@@ -166,7 +181,11 @@ export function useGameSession({
       setPositions((prev) => {
         const newPositions = new Map(prev);
         newPositions.set(tradeId, position);
-        console.log('📋 Updated positions map:', { size: newPositions.size, positions: Array.from(newPositions.entries()) });
+        console.log('📋 Updated positions map:', { 
+          size: newPositions.size, 
+          positions: Array.from(newPositions.entries()),
+          newPosition: { tradeId, contractId, amount }
+        });
         return newPositions;
       });
     };

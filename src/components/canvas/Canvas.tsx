@@ -18,9 +18,10 @@ interface CanvasProps {
   onPositionsChange?: (positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => void;
   betAmount?: number; // Bet amount for trades (default 100)
   onPriceUpdate?: (price: number) => void; // Live price updates
+  onSelectionChange?: (count: number, best: number, multipliers: number[], averagePrice?: number | null) => void; // Immediate selection feedback
 }
 
-export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate }: CanvasProps = {}) {
+export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange }: CanvasProps = {}) {
   // Convert external timeframe (ms) to TimeFrame enum
   const getTimeFrameFromMs = (ms?: number): TimeFrame => {
     switch (ms) {
@@ -83,6 +84,17 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
       enabled: isConnected,
     });
 
+  // Debug WebSocket connection status
+  useEffect(() => {
+    console.log('🔍 Canvas WebSocket status:', {
+      isConnected,
+      isJoined,
+      positionsSize: positions?.size || 0,
+      contractsLength: contracts?.length || 0,
+      positions: positions ? Array.from(positions.entries()) : []
+    });
+  }, [isConnected, isJoined, positions, contracts]);
+
   // Sync userBalance from game session to Zustand store
   useEffect(() => {
     if (userBalance !== undefined && userBalance !== null) {
@@ -100,36 +112,43 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
       const missedBoxes = gameRef.current.getMissedBoxes();
       const selectedSquares = gameRef.current.getSelectedSquares();
       
-      // Filter out resolved positions (hit or missed) before passing to parent
-      const hitSet = new Set(hitBoxes);
-      const missedSet = new Set(missedBoxes);
-      const activePositions = new Map<string, any>();
-      
-      positions.forEach((position, tradeId) => {
-        const contractId = position.contractId;
-        // Only include positions that haven't been resolved yet
-        if (!hitSet.has(contractId) && !missedSet.has(contractId)) {
-          activePositions.set(tradeId, position);
-        } else {
-          console.log('⏭️ Filtering out resolved position:', {
-            tradeId,
-            contractId,
-            isHit: hitSet.has(contractId),
-            isMissed: missedSet.has(contractId)
-          });
-        }
+      console.log('🔍 Canvas: Hit/Miss status:', {
+        hitBoxes: hitBoxes,
+        missedBoxes: missedBoxes,
+        selectedSquares: selectedSquares,
+        positionsSize: positions.size,
+        contractsLength: contracts.length,
+        hitMissedUpdateTrigger
       });
       
-      console.log('🔄 Syncing to parent - filtered positions:', { 
+      // Pass ALL positions (including resolved ones) to parent for proper history tracking
+      console.log('🔄 Syncing to parent - all positions:', { 
         totalPositions: positions.size,
-        activePositions: activePositions.size,
         selectedSquares: selectedSquares.length,
         hitBoxes: hitBoxes.length, 
         missedBoxes: missedBoxes.length,
-        activePositionsDetail: Array.from(activePositions.entries()).map(([id, p]) => ({ id, contractId: p.contractId, amount: p.amount }))
+        positionsDetail: Array.from(positions.entries()).map(([id, p]) => ({ 
+          id, 
+          contractId: p.contractId, 
+          amount: p.amount,
+          isHit: hitBoxes.includes(p.contractId),
+          isMissed: missedBoxes.includes(p.contractId)
+        }))
       });
       
-      onPositionsChange(activePositions, contracts, hitBoxes, missedBoxes);
+      console.log('🔄 Calling onPositionsChange with:', {
+        positionsSize: positions.size,
+        contractsLength: contracts.length,
+        hitBoxesLength: hitBoxes.length,
+        missedBoxesLength: missedBoxes.length,
+        hasCallback: !!onPositionsChange
+      });
+      
+      if (onPositionsChange) {
+        onPositionsChange(positions, contracts, hitBoxes, missedBoxes);
+      } else {
+        console.log('❌ onPositionsChange callback not provided');
+      }
     }
   }, [positions, contracts, onPositionsChange, hitMissedUpdateTrigger]);
 
@@ -647,8 +666,40 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         }
       );
 
+      // Handle selection changes (when boxes are selected, hit, or missed)
+      const updateSelectionStats = () => {
+        const selectedSquares = game.getSelectedSquares();
+        const multipliers: number[] = [];
+        const prices: number[] = [];
+        
+        selectedSquares.forEach(id => {
+          const contract = contractsRef.current.find(c => c.contractId === id);
+          if (contract) {
+            multipliers.push(contract.returnMultiplier || 0);
+            const avgPrice = (contract.lowerStrike + contract.upperStrike) / 2;
+            prices.push(avgPrice);
+          }
+        });
+        
+        const bestMult = multipliers.length > 0 ? Math.max(...multipliers) : 0;
+        const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+        
+        console.log('📊 Canvas: Selection changed:', {
+          count: selectedSquares.length,
+          bestMultiplier: bestMult,
+          multipliers,
+          averagePrice: avgPrice
+        });
+        
+        // Emit to parent for immediate right panel update
+        if (onSelectionChange) {
+          onSelectionChange(selectedSquares.length, bestMult, multipliers, avgPrice);
+        }
+      };
+
       game.on('squareSelected', ({ squareId }: { squareId: string }) => {
         console.log('Square selected (double-clicked):', squareId);
+        updateSelectionStats();
 
         // Find the contract details to understand column mapping
         const contract = contractsRef.current.find(
@@ -679,12 +730,35 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         }
 
         // Handle trade placement using refs to avoid stale closure
+        console.log('🔍 Trade placement check:', {
+          isJoined: isJoinedRef.current,
+          hasHandler: !!handleTradePlaceRef.current,
+          squareId,
+          betAmount,
+          isConnected,
+          positionsSize: positions?.size || 0
+        });
+        
         if (isJoinedRef.current && handleTradePlaceRef.current) {
-          console.log('Placing trade for contract:', squareId, 'amount:', betAmount);
+          console.log('✅ Placing trade for contract:', squareId, 'amount:', betAmount);
           handleTradePlaceRef.current(squareId, betAmount);
         } else {
-          console.log('Cannot place trade - not joined or handler not ready');
+          console.log('❌ Cannot place trade - not joined or handler not ready:', {
+            isJoined: isJoinedRef.current,
+            hasHandler: !!handleTradePlaceRef.current,
+            isConnected,
+            positionsSize: positions?.size || 0
+          });
         }
+      });
+
+      // Handle selection changes when boxes are hit or missed
+      game.on('selectionChanged', () => {
+        console.log('📊 Canvas: Selection changed (hit/miss)');
+        // Small delay to ensure selectedSquareIds is updated
+        setTimeout(() => {
+          updateSelectionStats();
+        }, 10);
       });
 
       gameRef.current = game;

@@ -1382,6 +1382,9 @@ export class GridGame extends BaseGame {
     // Clear from highlighted/selected when hit
     this.highlightedSquareIds.delete(contractId);
     this.selectedSquareIds.delete(contractId);
+    
+    // Emit selection change event to update right panel
+    this.emit('selectionChanged', {});
   }
 
   public markContractAsMissed(contractId: string): void {
@@ -1410,6 +1413,9 @@ export class GridGame extends BaseGame {
     // Clear from highlighted/selected when missed
     this.highlightedSquareIds.delete(contractId);
     this.selectedSquareIds.delete(contractId);
+    
+    // Emit selection change event to update right panel
+    this.emit('selectionChanged', {});
   }
 
   /**
@@ -1454,6 +1460,13 @@ export class GridGame extends BaseGame {
     // Get last two price points to form a line segment
     const lastPoint = this.priceData[this.priceData.length - 1];
     const prevPoint = this.priceData[this.priceData.length - 2];
+    
+    console.log('🔍 checkPriceCollisions called:', {
+      selectedSquares: Array.from(this.selectedSquareIds),
+      priceDataLength: this.priceData.length,
+      lastPrice: lastPoint.price,
+      smoothLineEndX: this.smoothLineEndX
+    });
 
     // Convert to screen coordinates
     const lastWorldPos = this.world.getLinePosition(
@@ -1510,6 +1523,13 @@ export class GridGame extends BaseGame {
    */
   protected checkBoxesPastNowLine(): void {
     if (this.smoothLineEndX <= 0) return;
+
+    console.log('🔍 checkBoxesPastNowLine called:', {
+      selectedSquares: Array.from(this.selectedSquareIds),
+      smoothLineEndX: this.smoothLineEndX,
+      hitBoxes: Array.from(this.hitBoxes),
+      missedBoxes: Array.from(this.missedBoxes)
+    });
 
     // Only check SELECTED boxes that haven't been hit or missed yet
     this.selectedSquareIds.forEach(contractId => {
