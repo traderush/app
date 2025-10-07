@@ -82,8 +82,8 @@ export class SquareRenderer {
       this.ctx.fillStyle = hexToRgba(signatureColor, 0.28);
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'missed') {
-      // Missed state - same as selected but for missed boxes
-      this.ctx.fillStyle = hexToRgba(signatureColor, 0.18);
+      // Missed state - greyed out appearance
+      this.ctx.fillStyle = 'rgba(50, 50, 50, 0.25)'; // Dark grey with low opacity
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'selected') {
       // Selected state - signature color with lower opacity
@@ -127,27 +127,51 @@ export class SquareRenderer {
       const pulseOffsetX = (actualWidth - pulseWidth) / 2;
       const pulseOffsetY = (actualHeight - pulseHeight) / 2;
       
-      // Draw expanding glow (brighter for hit, dimmer for miss)
-      const glowOpacity = (state === 'activated' ? 0.6 : 0.4) * flashOpacity;
-      this.ctx.fillStyle = hexToRgba(signatureColor, glowOpacity);
-      this.ctx.fillRect(
-        x + pulseOffsetX + 0.5,
-        y + pulseOffsetY + 0.5,
-        pulseWidth - 1,
-        pulseHeight - 1
-      );
-      
-      // Draw pulsing outline
-      const outlineOpacity = (state === 'activated' ? 0.9 : 0.6) * flashOpacity;
-      this.ctx.strokeStyle = hexToRgba(signatureColor, outlineOpacity);
-      this.ctx.lineWidth = 2;
-      this.ctx.setLineDash([]);
-      this.ctx.strokeRect(
-        x + pulseOffsetX + 0.5,
-        y + pulseOffsetY + 0.5,
-        pulseWidth - 1,
-        pulseHeight - 1
-      );
+      if (state === 'activated') {
+        // HIT animation - signature color glow
+        const glowOpacity = 0.6 * flashOpacity;
+        this.ctx.fillStyle = hexToRgba(signatureColor, glowOpacity);
+        this.ctx.fillRect(
+          x + pulseOffsetX + 0.5,
+          y + pulseOffsetY + 0.5,
+          pulseWidth - 1,
+          pulseHeight - 1
+        );
+        
+        // Draw pulsing outline
+        const outlineOpacity = 0.9 * flashOpacity;
+        this.ctx.strokeStyle = hexToRgba(signatureColor, outlineOpacity);
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([]);
+        this.ctx.strokeRect(
+          x + pulseOffsetX + 0.5,
+          y + pulseOffsetY + 0.5,
+          pulseWidth - 1,
+          pulseHeight - 1
+        );
+      } else {
+        // MISS animation - grey fade out effect (no glow, just dimming)
+        const dimOpacity = 0.3 * flashOpacity;
+        this.ctx.fillStyle = `rgba(70, 70, 70, ${dimOpacity})`;
+        this.ctx.fillRect(
+          x + pulseOffsetX + 0.5,
+          y + pulseOffsetY + 0.5,
+          pulseWidth - 1,
+          pulseHeight - 1
+        );
+        
+        // Draw fading grey outline
+        const outlineOpacity = 0.4 * flashOpacity;
+        this.ctx.strokeStyle = `rgba(100, 100, 100, ${outlineOpacity})`;
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([]);
+        this.ctx.strokeRect(
+          x + pulseOffsetX + 0.5,
+          y + pulseOffsetY + 0.5,
+          pulseWidth - 1,
+          pulseHeight - 1
+        );
+      }
     }
     
     // Selection animation - growing outline from center
@@ -197,8 +221,11 @@ export class SquareRenderer {
       let borderColor = '#2b2b2b';
       let borderWidth = 0.6;
       
-      if (state === 'activated' || state === 'selected' || state === 'missed') {
+      if (state === 'activated' || state === 'selected') {
         borderColor = signatureColor;
+        borderWidth = 1;
+      } else if (state === 'missed') {
+        borderColor = 'rgba(100, 100, 100, 0.5)'; // Grey border for missed
         borderWidth = 1;
       } else if (state === 'highlighted') {
         borderColor = 'rgba(255, 170, 0, 0.9)'; // Orange border for pending confirmation
@@ -227,8 +254,10 @@ export class SquareRenderer {
       // Adjust text color based on state
       let textColor = 'rgba(255, 255, 255, 0.12)'; // Default faint text
       
-      if (state === 'selected' || state === 'activated' || state === 'missed') {
-        textColor = 'rgba(255, 255, 255, 1.0)'; // Bright text for selected/hit/missed
+      if (state === 'selected' || state === 'activated') {
+        textColor = 'rgba(255, 255, 255, 1.0)'; // Bright text for selected/hit
+      } else if (state === 'missed') {
+        textColor = 'rgba(120, 120, 120, 0.6)'; // Greyed out text for missed
       } else if (state === 'highlighted') {
         textColor = 'rgba(255, 170, 0, 0.9)'; // Orange text for pending confirmation
       } else if (state === 'hovered') {
@@ -259,7 +288,7 @@ export class SquareRenderer {
     } else if (state === 'missed') {
       this.ctx.save();
       this.ctx.globalAlpha = 1.0; // Full opacity for badge
-      this.ctx.fillStyle = 'rgba(156, 163, 175, 1.0)'; // Slightly darker grey for MISS
+      this.ctx.fillStyle = 'rgba(100, 100, 100, 0.7)'; // Darker grey for MISS (more subtle)
       this.ctx.font = '11px sans-serif';
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'bottom';
