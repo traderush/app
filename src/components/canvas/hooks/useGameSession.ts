@@ -143,19 +143,32 @@ export function useGameSession({
 
     const handleTradeConfirmed = (msg: any) => {
       if (!mounted) return;
-      console.log('Trade confirmed:', msg);
+      console.log('✅ Trade confirmed event:', msg);
       if (msg.payload && typeof msg.payload.balance === 'number') {
         setUserBalance(msg.payload.balance);
       } else if (typeof msg.balance === 'number') {
         setUserBalance(msg.balance);
       }
+      
+      // Extract contractId from payload or root level
+      const contractId = msg.payload?.contractId || msg.contractId;
+      const amount = msg.payload?.amount || msg.amount;
+      const tradeId = msg.payload?.tradeId || msg.tradeId;
+      
       const position = {
-        contractId: msg.contractId,
-        amount: msg.amount,
-        timestamp: msg.timestamp,
-        tradeId: msg.tradeId,
+        contractId: contractId,
+        amount: amount,
+        timestamp: msg.timestamp || Date.now(),
+        tradeId: tradeId,
       };
-      setPositions((prev) => new Map(prev).set(msg.tradeId, position));
+      
+      console.log('📋 Adding position to map:', { tradeId, position });
+      setPositions((prev) => {
+        const newPositions = new Map(prev);
+        newPositions.set(tradeId, position);
+        console.log('📋 Updated positions map:', { size: newPositions.size, positions: Array.from(newPositions.entries()) });
+        return newPositions;
+      });
     };
 
     const handleTradeResult = (msg: any) => {

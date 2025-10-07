@@ -2222,6 +2222,12 @@ export default function ClientView() {
   
   // Handle mock backend positions and contracts update
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[]) => {
+    console.log('🔄 Mock backend positions/contracts updated:', {
+      positionsSize: positions.size,
+      contractsLength: contracts.length,
+      positions: Array.from(positions.entries()),
+      contracts
+    });
     setMockBackendPositions(positions);
     setMockBackendContracts(contracts);
   }, []);
@@ -2230,21 +2236,27 @@ export default function ClientView() {
   const mockBackendPositionCount = mockBackendPositions.size;
   const mockBackendMultipliers = useMemo(() => {
     const mults: number[] = [];
-    const prices: number[] = [];
     
-    mockBackendPositions.forEach((position) => {
+    console.log('🔍 Calculating mock backend multipliers:', {
+      positionsSize: mockBackendPositions.size,
+      contractsLength: mockBackendContracts.length,
+      positions: Array.from(mockBackendPositions.entries()),
+      contracts: mockBackendContracts
+    });
+    
+    mockBackendPositions.forEach((position, positionId) => {
+      console.log('📋 Processing position:', { positionId, position });
       // Find the contract for this position
       const contract = mockBackendContracts.find(c => c.contractId === position.contractId);
+      console.log('📋 Found contract:', contract);
       if (contract) {
-        mults.push(contract.value || 0);
-        // Calculate average price from contract price range
-        if (contract.priceRange) {
-          const avgPrice = (contract.priceRange.min + contract.priceRange.max) / 2;
-          prices.push(avgPrice);
-        }
+        const multiplier = contract.value || 0;
+        console.log('📋 Adding multiplier:', multiplier);
+        mults.push(multiplier);
       }
     });
     
+    console.log('✅ Final multipliers array:', mults);
     return mults;
   }, [mockBackendPositions, mockBackendContracts]);
   
@@ -2257,6 +2269,11 @@ export default function ClientView() {
         const avgPrice = (contract.priceRange.min + contract.priceRange.max) / 2;
         prices.push(avgPrice);
       }
+    });
+    
+    console.log('📊 Mock backend average price calculation:', {
+      prices,
+      average: prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null
     });
     
     return prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
@@ -3067,7 +3084,11 @@ export default function ClientView() {
           onTradingModeChange={handleTradingModeChange}
           selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
           bestMultiplier={activeTab === 'copy' ? (mockBackendMultipliers.length > 0 ? Math.max(...mockBackendMultipliers) : 0) : bestMultiplier}
-          selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
+          selectedMultipliers={(() => {
+            const mults = activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers;
+            console.log('🎯 RightPanel selectedMultipliers:', mults);
+            return mults;
+          })()}
           currentBTCPrice={activeTab === 'copy' ? 100 : (assetData[selectedAsset].price || 0)}
           averagePositionPrice={activeTab === 'copy' ? mockBackendAveragePrice : averagePositionPrice}
           betAmount={betAmount}
