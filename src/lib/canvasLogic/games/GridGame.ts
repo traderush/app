@@ -1412,14 +1412,15 @@ export class GridGame extends BaseGame {
   /**
    * Check for boxes that have passed the NOW line and resolve them as hit/missed
    * This runs automatically during render to detect when boxes cross the threshold
+   * IMPORTANT: Only checks SELECTED boxes (user placed bets)
    */
   protected checkBoxesPastNowLine(): void {
     if (this.smoothLineEndX <= 0 || !this.priceData.length) return;
 
     const currentPrice = this.priceData[this.priceData.length - 1].price;
 
-    // Check all backend boxes (selected/placed trades)
-    Object.entries(this.backendMultipliers).forEach(([contractId, box]) => {
+    // Only check SELECTED boxes (user placed bets on these)
+    this.selectedSquareIds.forEach(contractId => {
       // Skip if already processed
       if (this.processedBoxes.has(contractId)) return;
       
@@ -1429,18 +1430,23 @@ export class GridGame extends BaseGame {
         return;
       }
 
+      // Get the box data
+      const box = this.backendMultipliers[contractId];
+      if (!box) {
+        console.warn('⚠️ Selected box not found in backend:', contractId);
+        return;
+      }
+
       // Convert box world coordinates to screen coordinates
       const topLeft = this.world.worldToScreen(box.worldX, box.worldY + box.height);
       const bottomRight = this.world.worldToScreen(box.worldX + box.width, box.worldY);
-      const boxCenterX = topLeft.x + Math.abs(bottomRight.x - topLeft.x) / 2;
       const boxRightEdge = bottomRight.x;
 
       // Check if box's right edge has passed the NOW line
       if (boxRightEdge < this.smoothLineEndX) {
         // Box has completely passed the NOW line - determine if hit or missed
-        console.log('🎯 Box passed NOW line:', {
+        console.log('🎯 Selected box passed NOW line:', {
           contractId,
-          boxCenterX,
           boxRightEdge,
           nowLineX: this.smoothLineEndX,
           boxPriceRange: `${box.worldY.toFixed(2)} - ${(box.worldY + box.height).toFixed(2)}`,
@@ -1451,34 +1457,30 @@ export class GridGame extends BaseGame {
         const boxLowerPrice = box.worldY;
         const boxUpperPrice = box.worldY + box.height;
 
-        // For a hit, the price must have been within the box range at some point
-        // We check if current price is near the box, or if the price path crossed it
-        const priceInBox = currentPrice >= boxLowerPrice && currentPrice <= boxUpperPrice;
+        // For a hit, check if price was ever within the box range
+        // Need to check historical price data to see if it crossed through
+        let priceHitBox = false;
+        
+        // Check recent price history (last 50 data points should cover the box duration)
+        const recentData = this.priceData.slice(Math.max(0, this.priceData.length - 50));
+        for (const dataPoint of recentData) {
+          if (dataPoint.price >= boxLowerPrice && dataPoint.price <= boxUpperPrice) {
+            priceHitBox = true;
+            break;
+          }
+        }
         
         // Mark as processed first to prevent re-checking
         this.processedBoxes.add(contractId);
 
-        if (priceInBox) {
-          // Price is currently in the box range - it's a hit
-          console.log('✅ Box HIT - price in range');
+        if (priceHitBox) {
+          // Price went through the box - it's a hit!
+          console.log('✅ Box HIT - price crossed through box');
           this.markContractAsHit(contractId);
         } else {
-          // Price is outside the box range - check if it might have passed through
-          // For now, we'll check if it's close (within reasonable distance)
-          const distanceToBox = Math.min(
-            Math.abs(currentPrice - boxLowerPrice),
-            Math.abs(currentPrice - boxUpperPrice)
-          );
-          
-          // If within 2x the box height, consider it a hit (price likely passed through)
-          const boxHeight = boxUpperPrice - boxLowerPrice;
-          if (distanceToBox < boxHeight * 2) {
-            console.log('✅ Box HIT - price close enough');
-            this.markContractAsHit(contractId);
-          } else {
-            console.log('❌ Box MISSED - price too far');
-            this.markContractAsMissed(contractId);
-          }
+          // Price never touched the box - it's a miss
+          console.log('❌ Box MISSED - price never entered box range');
+          this.markContractAsMissed(contractId);
         }
       }
     });
