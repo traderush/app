@@ -2221,6 +2221,7 @@ export default function ClientView() {
   const [mockBackendContracts, setMockBackendContracts] = useState<any[]>([]);
   const [mockBackendHitBoxes, setMockBackendHitBoxes] = useState<string[]>([]);
   const [mockBackendMissedBoxes, setMockBackendMissedBoxes] = useState<string[]>([]);
+  const [mockBackendCurrentPrice, setMockBackendCurrentPrice] = useState(100);
   
   // Handle mock backend positions and contracts update
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => {
@@ -2881,7 +2882,7 @@ export default function ClientView() {
               <div className="flex items-center gap-2">
                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
                   {activeTab === 'copy' ? (
-                    '100.00'
+                    mockBackendCurrentPrice.toFixed(2)
                   ) : (
                     assetData[selectedAsset].price 
                       ? assetData[selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -3044,6 +3045,7 @@ export default function ClientView() {
                     externalTimeframe={timeframe}
                     onPositionsChange={handleMockBackendPositionsChange}
                     betAmount={betAmount}
+                    onPriceUpdate={setMockBackendCurrentPrice}
                   />
                 </div>
               ) : (
@@ -3068,7 +3070,7 @@ export default function ClientView() {
             selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
             selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
             betAmount={betAmount}
-            currentBTCPrice={activeTab === 'copy' ? 100 : (assetData[selectedAsset].price || 0)}
+            currentBTCPrice={activeTab === 'copy' ? mockBackendCurrentPrice : (assetData[selectedAsset].price || 0)}
             onPositionHit={(positionId) => {
               // Handle position hit - this will be called when a box is hit
               logger.info('Position hit', { positionId }, 'GAME');
@@ -3091,12 +3093,12 @@ export default function ClientView() {
           selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
           bestMultiplier={activeTab === 'copy' ? (mockBackendMultipliers.length > 0 ? Math.max(...mockBackendMultipliers) : 0) : bestMultiplier}
           selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
-          currentBTCPrice={activeTab === 'copy' ? 100 : (assetData[selectedAsset].price || 0)}
+          currentBTCPrice={activeTab === 'copy' ? mockBackendCurrentPrice : (assetData[selectedAsset].price || 0)}
           averagePositionPrice={activeTab === 'copy' ? mockBackendAveragePrice : averagePositionPrice}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
-          dailyHigh={activeTab === 'copy' ? 102 : btc24hHigh}
-          dailyLow={activeTab === 'copy' ? 98 : btc24hLow}
+          dailyHigh={activeTab === 'copy' ? (mockBackendCurrentPrice + 2) : btc24hHigh}
+          dailyLow={activeTab === 'copy' ? (mockBackendCurrentPrice - 2) : btc24hLow}
           activeTab={activeTab}
           onActiveTabChange={setActiveTab}
         />

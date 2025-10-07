@@ -17,9 +17,10 @@ interface CanvasProps {
   externalTimeframe?: number; // Timeframe in ms (e.g., 500, 1000, 2000, 4000, 10000)
   onPositionsChange?: (positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => void;
   betAmount?: number; // Bet amount for trades (default 100)
+  onPriceUpdate?: (price: number) => void; // Live price updates
 }
 
-export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100 }: CanvasProps = {}) {
+export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate }: CanvasProps = {}) {
   // Convert external timeframe (ms) to TimeFrame enum
   const getTimeFrameFromMs = (ms?: number): TimeFrame => {
     switch (ms) {
@@ -249,12 +250,18 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     if (isConnected) {
       const handlePriceUpdate = (msg: any) => {
         if (msg.payload && typeof msg.payload.price === 'number') {
-          setCurrentPrice(msg.payload.price);
+          const newPrice = msg.payload.price;
+          setCurrentPrice(newPrice);
+          
+          // Notify parent of price update (for header display)
+          if (onPriceUpdate) {
+            onPriceUpdate(newPrice);
+          }
 
           // Update canvas game with new price
           if (gameRef.current) {
             gameRef.current.addPriceData({
-              price: msg.payload.price,
+              price: newPrice,
               timestamp: Date.now(),
             });
             // Increment data point count to stay in sync with GridGame
