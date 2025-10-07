@@ -138,12 +138,20 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
 
   // Sync active positions - use real backend positions when available
   useEffect(() => {
+    console.log('🔍 PositionsTable sync triggered:', {
+      hasRealPositions: !!realPositions,
+      realPositionsSize: realPositions?.size || 0,
+      contractsLength: contracts.length,
+      stableSelectedCount,
+      stableSelectedMultipliers
+    });
+    
     // If we have real backend positions (mock backend mode), use them directly
-    if (realPositions && realPositions.size > 0) {
+    if (realPositions && realPositions.size > 0 && contracts.length > 0) {
       console.log('📋 Using real backend positions:', {
         positionsSize: realPositions.size,
         positions: Array.from(realPositions.entries()),
-        contracts: contracts.slice(0, 3)
+        contractsSample: contracts.slice(0, 3)
       });
       
       const newPositions = Array.from(realPositions.entries()).map(([tradeId, position]) => {
@@ -151,6 +159,13 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
         const contract = contracts.find(c => c.contractId === position.contractId);
         const multiplier = contract?.returnMultiplier || 0;
         const avgPrice = contract ? (contract.lowerStrike + contract.upperStrike) / 2 : stableCurrentBTCPrice;
+        
+        console.log('📋 Creating position from backend:', {
+          tradeId,
+          contractId: position.contractId,
+          foundContract: !!contract,
+          multiplier
+        });
         
         return {
           id: tradeId, // Use tradeId as the position ID
@@ -167,10 +182,13 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
         };
       });
       
-      console.log('📋 Created positions from backend:', newPositions.length, newPositions);
+      console.log('✅ Created', newPositions.length, 'positions from backend:', newPositions.map(p => ({ id: p.id, contractId: p.contractId, multiplier: p.multiplier })));
       setActivePositions(newPositions);
-      
-    } else if (stableSelectedCount > 0 && stableSelectedMultipliers.length > 0 && stableBetAmount > 0) {
+      return; // Don't continue to normal mode logic
+    }
+    
+    // Normal mode - create from selectedMultipliers
+    if (stableSelectedCount > 0 && stableSelectedMultipliers.length > 0 && stableBetAmount > 0) {
       // Fallback to normal mode (creating from selectedMultipliers)
       const betPerBox = stableBetAmount / stableSelectedCount;
       const currentPositionMultipliers = new Set(activePositions.map(p => p.multiplier));

@@ -2227,8 +2227,9 @@ export default function ClientView() {
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => {
     console.log('🔄 Received from Canvas (ACTIVE ONLY):', { 
       activePositionsSize: positions.size,
-      hitBoxes: hitBoxes.length, 
-      missedBoxes: missedBoxes.length,
+      positions: Array.from(positions.entries()),
+      hitBoxes, 
+      missedBoxes,
       contractsCount: contracts.length
     });
     setMockBackendPositions(positions);
