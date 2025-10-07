@@ -98,6 +98,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     if (onPositionsChange && positions && gameRef.current) {
       const hitBoxes = gameRef.current.getHitBoxes();
       const missedBoxes = gameRef.current.getMissedBoxes();
+      const selectedSquares = gameRef.current.getSelectedSquares();
       
       // Filter out resolved positions (hit or missed) before passing to parent
       const hitSet = new Set(hitBoxes);
@@ -109,14 +110,23 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         // Only include positions that haven't been resolved yet
         if (!hitSet.has(contractId) && !missedSet.has(contractId)) {
           activePositions.set(tradeId, position);
+        } else {
+          console.log('⏭️ Filtering out resolved position:', {
+            tradeId,
+            contractId,
+            isHit: hitSet.has(contractId),
+            isMissed: missedSet.has(contractId)
+          });
         }
       });
       
       console.log('🔄 Syncing to parent - filtered positions:', { 
         totalPositions: positions.size,
         activePositions: activePositions.size,
+        selectedSquares: selectedSquares.length,
         hitBoxes: hitBoxes.length, 
-        missedBoxes: missedBoxes.length
+        missedBoxes: missedBoxes.length,
+        activePositionsDetail: Array.from(activePositions.entries()).map(([id, p]) => ({ id, contractId: p.contractId, amount: p.amount }))
       });
       
       onPositionsChange(activePositions, contracts, hitBoxes, missedBoxes);

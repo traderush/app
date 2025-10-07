@@ -1382,6 +1382,10 @@ export class GridGame extends BaseGame {
     return Array.from(this.missedBoxes);
   }
 
+  public getSelectedSquares(): string[] {
+    return Array.from(this.selectedSquareIds);
+  }
+
 
   public getViewportBounds(): {
     minX: number;
