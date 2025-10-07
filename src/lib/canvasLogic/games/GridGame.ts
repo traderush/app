@@ -15,6 +15,7 @@ export interface PriceData {
 export interface SquareAnimation {
   startTime: number;
   progress: number;
+  type?: 'select' | 'activate';
 }
 
 export interface GridGameConfig extends GameConfig {
@@ -107,7 +108,7 @@ export class GridGame extends BaseGame {
         min: number;
         max: number;
       };
-      status?: 'hit';
+      status?: 'hit' | 'missed';
       isEmpty?: boolean;
       isClickable?: boolean;
     }
@@ -828,9 +829,27 @@ export class GridGame extends BaseGame {
       if (hasBeenHit) {
         state = 'activated'; // Box has been hit (from WebSocket event)
         console.log('🎯 Box marked as ACTIVATED:', squareId);
+        // Check for hit animation
+        const animationData = this.squareAnimations.get(squareId);
+        if (animationData && animationData.progress < 1) {
+          animation = {
+            progress: animationData.progress,
+            type: 'activate',
+          };
+          console.log('🎬 Rendering HIT animation:', squareId, 'progress:', animationData.progress);
+        }
       } else if (hasBeenMissed) {
         state = 'missed'; // Box was not hit
         console.log('🎯 Box marked as MISSED:', squareId);
+        // Check for miss animation
+        const animationData = this.squareAnimations.get(squareId);
+        if (animationData && animationData.progress < 1) {
+          animation = {
+            progress: animationData.progress,
+            type: 'activate',
+          };
+          console.log('🎬 Rendering MISS animation:', squareId, 'progress:', animationData.progress);
+        }
       } else if (isSelected) {
         state = 'selected';
         const animationData = this.squareAnimations.get(squareId);
@@ -1259,7 +1278,7 @@ export class GridGame extends BaseGame {
           min: number;
           max: number;
         };
-        status?: 'hit';
+        status?: 'hit' | 'missed';
       }
     >
   ): void {
@@ -1335,14 +1354,24 @@ export class GridGame extends BaseGame {
     console.log('📦 Current hitBoxes before:', Array.from(this.hitBoxes));
     this.hitBoxes.add(contractId);
     console.log('📦 Current hitBoxes after:', Array.from(this.hitBoxes));
+    
     // Update backend data status if contract exists
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'hit';
-      console.log('✅ Updated backend multiplier status');
+      console.log('✅ Updated backend multiplier status to HIT');
+      
+      // Trigger hit animation (expanding green glow)
+      this.squareAnimations.set(contractId, {
+        progress: 0,
+        type: 'activate',
+        startTime: performance.now(),
+      });
+      console.log('🎬 Started HIT animation for:', contractId);
     } else {
       console.warn('⚠️ Contract not found in backend:', contractId);
       console.log('📋 Available backend contracts:', Object.keys(this.backendMultipliers));
     }
+    
     // Clear from highlighted/selected when hit
     this.highlightedSquareIds.delete(contractId);
     this.selectedSquareIds.delete(contractId);
@@ -1353,6 +1382,24 @@ export class GridGame extends BaseGame {
     console.log('📦 Current missedBoxes before:', Array.from(this.missedBoxes));
     this.missedBoxes.add(contractId);
     console.log('📦 Current missedBoxes after:', Array.from(this.missedBoxes));
+    
+    // Update backend data status if contract exists (for consistency)
+    if (this.backendMultipliers[contractId]) {
+      this.backendMultipliers[contractId].status = 'missed';
+      console.log('❌ Updated backend multiplier status to MISSED');
+      
+      // Trigger missed animation (pulse effect)
+      this.squareAnimations.set(contractId, {
+        progress: 0,
+        type: 'activate',
+        startTime: performance.now(),
+      });
+      console.log('🎬 Started MISS animation for:', contractId);
+    } else {
+      console.warn('⚠️ Contract not found in backend:', contractId);
+      console.log('📋 Available backend contracts:', Object.keys(this.backendMultipliers));
+    }
+    
     // Clear from highlighted/selected when missed
     this.highlightedSquareIds.delete(contractId);
     this.selectedSquareIds.delete(contractId);

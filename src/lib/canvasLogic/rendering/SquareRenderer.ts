@@ -61,7 +61,7 @@ export class SquareRenderer {
     const actualHeight = height ?? size ?? 50;
 
     this.ctx.save();
-    
+
     // Apply global opacity for fade effect
     this.ctx.globalAlpha = opacity;
 
@@ -105,6 +105,51 @@ export class SquareRenderer {
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
+    // Hit/Miss activation animation - expanding flash effect
+    if ((state === 'activated' || state === 'missed') && animation?.type === 'activate' && animation.progress < 1) {
+      // Easing function for smooth animation (cubic ease-out)
+      const easeOut = 1 - Math.pow(1 - animation.progress, 3);
+      
+      // Flash effect - fade in then fade out
+      let flashOpacity: number;
+      if (animation.progress < 0.3) {
+        // Quick fade in (0 -> 1 over first 30%)
+        flashOpacity = animation.progress / 0.3;
+      } else {
+        // Slower fade out (1 -> 0 over remaining 70%)
+        flashOpacity = 1 - ((animation.progress - 0.3) / 0.7);
+      }
+      
+      // Pulsing expand effect
+      const pulseScale = 1 + (0.15 * Math.sin(animation.progress * Math.PI));
+      const pulseWidth = actualWidth * pulseScale;
+      const pulseHeight = actualHeight * pulseScale;
+      const pulseOffsetX = (actualWidth - pulseWidth) / 2;
+      const pulseOffsetY = (actualHeight - pulseHeight) / 2;
+      
+      // Draw expanding glow (brighter for hit, dimmer for miss)
+      const glowOpacity = (state === 'activated' ? 0.6 : 0.4) * flashOpacity;
+      this.ctx.fillStyle = hexToRgba(signatureColor, glowOpacity);
+      this.ctx.fillRect(
+        x + pulseOffsetX + 0.5,
+        y + pulseOffsetY + 0.5,
+        pulseWidth - 1,
+        pulseHeight - 1
+      );
+      
+      // Draw pulsing outline
+      const outlineOpacity = (state === 'activated' ? 0.9 : 0.6) * flashOpacity;
+      this.ctx.strokeStyle = hexToRgba(signatureColor, outlineOpacity);
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([]);
+      this.ctx.strokeRect(
+        x + pulseOffsetX + 0.5,
+        y + pulseOffsetY + 0.5,
+        pulseWidth - 1,
+        pulseHeight - 1
+      );
+    }
+    
     // Selection animation - growing outline from center
     if (state === 'selected' && animation?.type === 'select' && animation.progress < 1) {
       // Easing function for smooth animation (cubic ease-out)
@@ -144,7 +189,10 @@ export class SquareRenderer {
         currentWidth - 1,
         currentHeight - 1
       );
-    } else {
+    }
+    
+    // Draw borders for non-animating states
+    if (!(animation && animation.progress < 1)) {
       // Draw border for non-animating states
       let borderColor = '#2b2b2b';
       let borderWidth = 0.6;
@@ -170,7 +218,7 @@ export class SquareRenderer {
     if (isLost) {
       this.ctx.strokeStyle = '#ff0000';
       this.ctx.lineWidth = 3;
-      this.ctx.strokeRect(x, y, actualWidth, actualHeight);
+        this.ctx.strokeRect(x, y, actualWidth, actualHeight);
       this.ctx.setLineDash([]);
     }
 
