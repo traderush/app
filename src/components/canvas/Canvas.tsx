@@ -98,8 +98,28 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     if (onPositionsChange && positions && gameRef.current) {
       const hitBoxes = gameRef.current.getHitBoxes();
       const missedBoxes = gameRef.current.getMissedBoxes();
-      console.log('🔄 Syncing to parent - hit/missed states:', { hitBoxes, missedBoxes, positionsSize: positions.size });
-      onPositionsChange(positions, contracts, hitBoxes, missedBoxes);
+      
+      // Filter out resolved positions (hit or missed) before passing to parent
+      const hitSet = new Set(hitBoxes);
+      const missedSet = new Set(missedBoxes);
+      const activePositions = new Map<string, any>();
+      
+      positions.forEach((position, tradeId) => {
+        const contractId = position.contractId;
+        // Only include positions that haven't been resolved yet
+        if (!hitSet.has(contractId) && !missedSet.has(contractId)) {
+          activePositions.set(tradeId, position);
+        }
+      });
+      
+      console.log('🔄 Syncing to parent - filtered positions:', { 
+        totalPositions: positions.size,
+        activePositions: activePositions.size,
+        hitBoxes: hitBoxes.length, 
+        missedBoxes: missedBoxes.length
+      });
+      
+      onPositionsChange(activePositions, contracts, hitBoxes, missedBoxes);
     }
   }, [positions, contracts, onPositionsChange, hitMissedUpdateTrigger]);
 

@@ -2225,26 +2225,24 @@ export default function ClientView() {
   
   // Handle mock backend positions and contracts update
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => {
-    console.log('🔄 Received from Canvas:', { hitBoxes, missedBoxes, positionsSize: positions.size });
+    console.log('🔄 Received from Canvas (ACTIVE ONLY):', { 
+      activePositionsSize: positions.size,
+      hitBoxes: hitBoxes.length, 
+      missedBoxes: missedBoxes.length,
+      contractsCount: contracts.length
+    });
     setMockBackendPositions(positions);
     setMockBackendContracts(contracts);
     setMockBackendHitBoxes(hitBoxes);
     setMockBackendMissedBoxes(missedBoxes);
   }, []);
   
-  // Derive position stats from mock backend positions (excluding resolved ones)
+  // Derive position stats from mock backend positions (now pre-filtered to only active positions)
   const mockBackendMultipliers = useMemo(() => {
     const mults: number[] = [];
-    const hitSet = new Set(mockBackendHitBoxes);
-    const missedSet = new Set(mockBackendMissedBoxes);
     
+    // mockBackendPositions is already filtered to only active positions by Canvas
     mockBackendPositions.forEach((position, positionId) => {
-      // Skip positions that have been resolved (hit or missed)
-      if (hitSet.has(position.contractId) || missedSet.has(position.contractId)) {
-        console.log('⏭️ Skipping resolved position:', position.contractId);
-        return;
-      }
-      
       // Find the contract for this position using contractId
       const contract = mockBackendContracts.find(c => c.contractId === position.contractId);
       if (contract) {
@@ -2254,11 +2252,10 @@ export default function ClientView() {
       }
     });
     
-    console.log('📊 Mock Backend Stats (active only):', {
-      totalPositions: mockBackendPositions.size,
+    console.log('📊 Mock Backend Stats:', {
+      activePositionsCount: mockBackendPositions.size,
       hitCount: mockBackendHitBoxes.length,
       missedCount: mockBackendMissedBoxes.length,
-      activePositions: mults.length,
       multipliers: mults,
       bestMultiplier: mults.length > 0 ? Math.max(...mults) : 0
     });
@@ -2266,19 +2263,13 @@ export default function ClientView() {
     return mults;
   }, [mockBackendPositions, mockBackendContracts, mockBackendHitBoxes, mockBackendMissedBoxes]);
   
-  const mockBackendPositionCount = mockBackendMultipliers.length; // Count only active positions
+  const mockBackendPositionCount = mockBackendPositions.size; // Already filtered to only active
   
   const mockBackendAveragePrice = useMemo(() => {
     const prices: number[] = [];
-    const hitSet = new Set(mockBackendHitBoxes);
-    const missedSet = new Set(mockBackendMissedBoxes);
     
+    // mockBackendPositions is already filtered to only active positions
     mockBackendPositions.forEach((position) => {
-      // Skip positions that have been resolved (hit or missed)
-      if (hitSet.has(position.contractId) || missedSet.has(position.contractId)) {
-        return;
-      }
-      
       const contract = mockBackendContracts.find(c => c.contractId === position.contractId);
       if (contract) {
         // Use lowerStrike and upperStrike for price range
@@ -2289,7 +2280,7 @@ export default function ClientView() {
     
     const average = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
     
-    console.log('📊 Mock Backend Right Panel Values (active only):', {
+    console.log('📊 Mock Backend Right Panel Values:', {
       selectedCount: mockBackendPositionCount,
       bestMultiplier: mockBackendMultipliers.length > 0 ? Math.max(...mockBackendMultipliers) : 0,
       multipliers: mockBackendMultipliers,
@@ -2299,7 +2290,7 @@ export default function ClientView() {
     });
     
     return average;
-  }, [mockBackendPositions, mockBackendContracts, mockBackendMultipliers, mockBackendPositionCount, betAmount, mockBackendHitBoxes, mockBackendMissedBoxes]);
+  }, [mockBackendPositions, mockBackendContracts, mockBackendMultipliers, mockBackendPositionCount, betAmount]);
   
   // Reset canvas started state when switching away from Mock Backend tab
   useEffect(() => {
