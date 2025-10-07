@@ -517,7 +517,10 @@ export class GridGame extends BaseGame {
 
     const data = [...this.priceData];
 
-    // Check for boxes that have passed the NOW line (auto-resolve)
+    // Check for immediate price collisions with selected boxes (HIT detection)
+    this.checkPriceCollisions();
+    
+    // Check for boxes that have passed the NOW line without being hit (MISS detection)
     this.checkBoxesPastNowLine();
 
     // Draw multiplier overlay first (background)
@@ -1410,16 +1413,105 @@ export class GridGame extends BaseGame {
   }
 
   /**
-   * Check for boxes that have passed the NOW line and resolve them as hit/missed
-   * This runs automatically during render to detect when boxes cross the threshold
-   * IMPORTANT: Only checks SELECTED boxes (user placed bets)
+   * Liang-Barsky line-rectangle intersection algorithm
+   * Checks if a line segment intersects with a rectangle
+   */
+  private segmentIntersectsRect(
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    r: { x: number; y: number; w: number; h: number }
+  ): boolean {
+    let t0 = 0, t1 = 1;
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const p = [-dx, dx, -dy, dy];
+    const q = [p1.x - r.x, r.x + r.w - p1.x, p1.y - r.y, r.y + r.h - p1.y];
+    
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) {
+        if (q[i] < 0) return false;
+      } else {
+        const t = q[i] / p[i];
+        if (p[i] < 0) {
+          if (t > t1) return false;
+          if (t > t0) t0 = t;
+        } else {
+          if (t < t0) return false;
+          if (t < t1) t1 = t;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Check for price line collisions with selected boxes (immediate HIT detection)
+   * This runs every frame to detect hits as soon as price touches a box
+   */
+  protected checkPriceCollisions(): void {
+    if (this.smoothLineEndX <= 0 || this.priceData.length < 2) return;
+
+    // Get last two price points to form a line segment
+    const lastPoint = this.priceData[this.priceData.length - 1];
+    const prevPoint = this.priceData[this.priceData.length - 2];
+
+    // Convert to screen coordinates
+    const lastWorldPos = this.world.getLinePosition(
+      this.priceData.length - 1,
+      this.dataOffset,
+      lastPoint.price
+    );
+    const prevWorldPos = this.world.getLinePosition(
+      this.priceData.length - 2,
+      this.dataOffset,
+      prevPoint.price
+    );
+
+    const p2 = this.world.worldToScreen(lastWorldPos.x, lastWorldPos.y);
+    const p1 = this.world.worldToScreen(prevWorldPos.x, prevWorldPos.y);
+
+    // Check collision with all SELECTED boxes
+    this.selectedSquareIds.forEach(contractId => {
+      // Skip if already marked as hit
+      if (this.hitBoxes.has(contractId)) return;
+
+      const box = this.backendMultipliers[contractId];
+      if (!box) return;
+
+      // Convert box to screen coordinates
+      const topLeft = this.world.worldToScreen(box.worldX, box.worldY + box.height);
+      const bottomRight = this.world.worldToScreen(box.worldX + box.width, box.worldY);
+
+      const rect = {
+        x: topLeft.x,
+        y: topLeft.y,
+        w: Math.abs(bottomRight.x - topLeft.x),
+        h: Math.abs(bottomRight.y - topLeft.y)
+      };
+
+      // Check if price line segment intersects the box
+      if (this.segmentIntersectsRect(p1, p2, rect)) {
+        console.log('✅ IMMEDIATE HIT detected:', {
+          contractId,
+          boxPriceRange: `${box.worldY.toFixed(2)} - ${(box.worldY + box.height).toFixed(2)}`,
+          currentPrice: lastPoint.price.toFixed(2)
+        });
+        
+        // Mark as hit immediately and trigger animation
+        this.markContractAsHit(contractId);
+      }
+    });
+  }
+
+  /**
+   * Check for boxes that have passed the NOW line and mark unselected as MISSED
+   * This runs every frame to detect when boxes cross the NOW line
+   * IMPORTANT: Only marks as MISS if selected but not yet hit
    */
   protected checkBoxesPastNowLine(): void {
-    if (this.smoothLineEndX <= 0 || !this.priceData.length) return;
+    if (this.smoothLineEndX <= 0) return;
 
-    const currentPrice = this.priceData[this.priceData.length - 1].price;
-
-    // Only check SELECTED boxes (user placed bets on these)
+    // Only check SELECTED boxes that haven't been hit or missed yet
     this.selectedSquareIds.forEach(contractId => {
       // Skip if already processed
       if (this.processedBoxes.has(contractId)) return;
@@ -1442,46 +1534,18 @@ export class GridGame extends BaseGame {
       const bottomRight = this.world.worldToScreen(box.worldX + box.width, box.worldY);
       const boxRightEdge = bottomRight.x;
 
-      // Check if box's right edge has passed the NOW line
+      // Check if box's right edge has completely passed the NOW line
       if (boxRightEdge < this.smoothLineEndX) {
-        // Box has completely passed the NOW line - determine if hit or missed
-        console.log('🎯 Selected box passed NOW line:', {
+        // Box passed NOW line and wasn't hit - mark as MISSED
+        console.log('❌ Box passed NOW line without hit:', {
           contractId,
           boxRightEdge,
-          nowLineX: this.smoothLineEndX,
-          boxPriceRange: `${box.worldY.toFixed(2)} - ${(box.worldY + box.height).toFixed(2)}`,
-          currentPrice: currentPrice.toFixed(2)
+          nowLineX: this.smoothLineEndX
         });
-
-        // Check if price went through the box (hit) or missed it
-        const boxLowerPrice = box.worldY;
-        const boxUpperPrice = box.worldY + box.height;
-
-        // For a hit, check if price was ever within the box range
-        // Need to check historical price data to see if it crossed through
-        let priceHitBox = false;
         
-        // Check recent price history (last 50 data points should cover the box duration)
-        const recentData = this.priceData.slice(Math.max(0, this.priceData.length - 50));
-        for (const dataPoint of recentData) {
-          if (dataPoint.price >= boxLowerPrice && dataPoint.price <= boxUpperPrice) {
-            priceHitBox = true;
-            break;
-          }
-        }
-        
-        // Mark as processed first to prevent re-checking
+        // Mark as processed and missed
         this.processedBoxes.add(contractId);
-
-        if (priceHitBox) {
-          // Price went through the box - it's a hit!
-          console.log('✅ Box HIT - price crossed through box');
-          this.markContractAsHit(contractId);
-        } else {
-          // Price never touched the box - it's a miss
-          console.log('❌ Box MISSED - price never entered box range');
-          this.markContractAsMissed(contractId);
-        }
+        this.markContractAsMissed(contractId);
       }
     });
   }
