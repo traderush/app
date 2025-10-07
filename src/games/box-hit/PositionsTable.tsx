@@ -21,26 +21,39 @@ interface PositionsTableProps {
   contracts?: any[]; // Backend contracts (for mock backend mode)
 }
 
-const PositionsTable = React.memo(function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [], realPositions, contracts = [] }: PositionsTableProps) {
+// Stable empty array to prevent infinite loops
+const EMPTY_ARRAY: number[] = [];
+const EMPTY_STRING_ARRAY: string[] = [];
+
+const PositionsTable = React.memo(function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = EMPTY_STRING_ARRAY, missedBoxes = EMPTY_STRING_ARRAY, realPositions, contracts = EMPTY_ARRAY as any[] }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
   const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Track which contracts have been resolved to prevent duplicate processing
   const processedContractsRef = useRef<Set<string>>(new Set());
   
-  // Ensure stable default values to prevent dependency array size changes
+  // Stabilize props to prevent infinite loops - use useMemo to avoid creating new arrays
   const stableSelectedCount = selectedCount || 0;
-  const stableSelectedMultipliers = selectedMultipliers || [];
+  const stableSelectedMultipliers = useMemo(() => 
+    selectedMultipliers && selectedMultipliers.length > 0 ? selectedMultipliers : EMPTY_ARRAY,
+    [selectedMultipliers]
+  );
   const stableBetAmount = betAmount || 0;
   const stableCurrentBTCPrice = currentBTCPrice || 0;
   
-  // Memoize the stable values to prevent unnecessary re-renders
-  const memoizedStableValues = useMemo(() => ({
-    selectedCount: stableSelectedCount,
-    selectedMultipliers: stableSelectedMultipliers,
-    betAmount: stableBetAmount,
-    currentBTCPrice: stableCurrentBTCPrice
-  }), [stableSelectedCount, stableSelectedMultipliers, stableBetAmount, stableCurrentBTCPrice]);
+  // Stabilize contracts and hitBoxes/missedBoxes to prevent re-renders on array reference changes
+  const stableContracts = useMemo(() => 
+    contracts && contracts.length > 0 ? contracts : (EMPTY_ARRAY as any[]),
+    [contracts]
+  );
+  const stableHitBoxes = useMemo(() => 
+    hitBoxes && hitBoxes.length > 0 ? hitBoxes : EMPTY_STRING_ARRAY,
+    [hitBoxes]
+  );
+  const stableMissedBoxes = useMemo(() => 
+    missedBoxes && missedBoxes.length > 0 ? missedBoxes : EMPTY_STRING_ARRAY,
+    [missedBoxes]
+  );
   
   // Active positions (boxes that are selected but not yet hit)
   const [activePositions, setActivePositions] = useState<Array<{
@@ -141,24 +154,22 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
     console.log('🔍 PositionsTable: Sync triggered:', {
       hasRealPositions: !!realPositions,
       realPositionsSize: realPositions?.size || 0,
-      contractsLength: contracts.length,
+      contractsLength: stableContracts.length,
       stableSelectedCount,
-      stableSelectedMultipliers,
-      realPositionsType: typeof realPositions,
-      realPositionsValue: realPositions
+      stableSelectedMultipliersLength: stableSelectedMultipliers.length
     });
     
     // If we have real backend positions (mock backend mode), use them directly
-    if (realPositions && realPositions.size > 0 && contracts.length > 0) {
+    if (realPositions && realPositions.size > 0 && stableContracts.length > 0) {
       console.log('📋 Using real backend positions:', {
         positionsSize: realPositions.size,
         positions: Array.from(realPositions.entries()),
-        contractsSample: contracts.slice(0, 3)
+        contractsSample: stableContracts.slice(0, 3)
       });
       
       const newPositions = Array.from(realPositions.entries()).map(([tradeId, position]) => {
         // Find the contract for this position
-        const contract = contracts.find(c => c.contractId === position.contractId);
+        const contract = stableContracts.find(c => c.contractId === position.contractId);
         const multiplier = contract?.returnMultiplier || 0;
         const avgPrice = contract ? (contract.lowerStrike + contract.upperStrike) / 2 : stableCurrentBTCPrice;
         
@@ -237,20 +248,20 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
       // Clear all active positions when no boxes are selected
       setActivePositions([]);
     }
-  }, [memoizedStableValues.selectedCount, memoizedStableValues.selectedMultipliers, memoizedStableValues.betAmount, memoizedStableValues.currentBTCPrice, realPositions, contracts]);
+  }, [stableSelectedCount, stableSelectedMultipliers, stableBetAmount, stableCurrentBTCPrice, realPositions, stableContracts]);
 
   // Monitor hitBoxes and missedBoxes to resolve positions
   // IMPORTANT: activePositions is NOT in the dependency array to prevent infinite loops
   // We only react to changes in hitBoxes/missedBoxes and read the latest activePositions from state
   useEffect(() => {
-    if (hitBoxes.length === 0 && missedBoxes.length === 0) {
+    if (stableHitBoxes.length === 0 && stableMissedBoxes.length === 0) {
       console.log('📊 No hitBoxes or missedBoxes, skipping resolution check');
       return;
     }
     
     console.log('📊 Checking positions for resolution:', { 
-      hitBoxes, 
-      missedBoxes, 
+      hitBoxes: stableHitBoxes, 
+      missedBoxes: stableMissedBoxes, 
       activePositionsCount: activePositions.length,
       activePositions: activePositions.map(p => ({ id: p.id, contractId: p.contractId, multiplier: p.multiplier }))
     });
@@ -260,8 +271,8 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
       return;
     }
     
-    const hitSet = new Set(hitBoxes);
-    const missedSet = new Set(missedBoxes);
+    const hitSet = new Set(stableHitBoxes);
+    const missedSet = new Set(stableMissedBoxes);
     
     // Find all positions that should be resolved (and haven't been processed yet)
     const positionsToResolve = activePositions.filter(position => {
@@ -312,7 +323,7 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
     } else {
       console.log('📊 No positions need to be resolved');
     }
-  }, [hitBoxes, missedBoxes, onPositionHit, onPositionMiss, moveToHistory]);
+  }, [stableHitBoxes, stableMissedBoxes, onPositionHit, onPositionMiss, moveToHistory]);
 
   // Monitor for changes in selectedMultipliers to detect when boxes are deselected
   useEffect(() => {
@@ -328,8 +339,8 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
       });
 
       // For positions not in hit/missed lists, we'll keep the random fallback
-      const hitBoxesSet = new Set(hitBoxes);
-      const missedBoxesSet = new Set(missedBoxes);
+      const hitBoxesSet = new Set(stableHitBoxes);
+      const missedBoxesSet = new Set(stableMissedBoxes);
       
       positionsToRemove.forEach(position => {
         // Skip if already handled by hit/missed monitoring
