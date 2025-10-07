@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useUIStore } from '@/stores';
 
 /** centralized trading colors */
@@ -24,6 +24,9 @@ interface PositionsTableProps {
 const PositionsTable = React.memo(function PositionsTable({ selectedCount, selectedMultipliers, betAmount, currentBTCPrice, onPositionHit, onPositionMiss, hitBoxes = [], missedBoxes = [], realPositions, contracts = [] }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
   const signatureColor = useUIStore((state) => state.signatureColor);
+  
+  // Track which contracts have been resolved to prevent duplicate processing
+  const processedContractsRef = useRef<Set<string>>(new Set());
   
   // Ensure stable default values to prevent dependency array size changes
   const stableSelectedCount = selectedCount || 0;
@@ -89,9 +92,14 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
   };
 
   // Function to move position from active to history when hit
-  const moveToHistory = (positionId: string, result: 'Won' | 'Lost') => {
-    const position = activePositions.find(p => p.id === positionId);
-    if (position) {
+  const moveToHistory = useCallback((positionId: string, result: 'Won' | 'Lost') => {
+    setActivePositions(prev => {
+      const position = prev.find(p => p.id === positionId);
+      if (!position) {
+        console.warn('⚠️ Position not found in active positions:', positionId);
+        return prev;
+      }
+      
       const historyPosition = {
         ...position,
         entry: position.entry.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
@@ -100,15 +108,16 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
         equity: result === 'Won' ? `$${(position.betAmount * position.multiplier).toFixed(2)}` : '$0.00'
       };
       
-      setHistoryPositions(prev => {
-        const newHistory = [historyPosition, ...prev];
+      setHistoryPositions(prevHistory => {
+        const newHistory = [historyPosition, ...prevHistory];
         // Keep only last 10 positions
         return newHistory.slice(0, 10);
       });
       
-      setActivePositions(prev => prev.filter(p => p.id !== positionId));
-    }
-  };
+      console.log('🔄 Removed position from active:', positionId);
+      return prev.filter(p => p.id !== positionId);
+    });
+  }, []);
 
   // Function to handle when a position is hit (called from parent component)
   const handlePositionHit = (positionId: string) => {
@@ -127,36 +136,51 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
     );
   };
 
-  // Sync active positions with selected boxes - create one position per selected box
+  // Sync active positions - use real backend positions when available
   useEffect(() => {
-    if (stableSelectedCount > 0 && stableSelectedMultipliers.length > 0 && stableBetAmount > 0) {
-      // Calculate bet amount per box (divide total bet by number of selected boxes)
+    // If we have real backend positions (mock backend mode), use them directly
+    if (realPositions && realPositions.size > 0) {
+      console.log('📋 Using real backend positions:', {
+        positionsSize: realPositions.size,
+        positions: Array.from(realPositions.entries()),
+        contracts: contracts.slice(0, 3)
+      });
+      
+      const newPositions = Array.from(realPositions.entries()).map(([tradeId, position]) => {
+        // Find the contract for this position
+        const contract = contracts.find(c => c.contractId === position.contractId);
+        const multiplier = contract?.returnMultiplier || 0;
+        const avgPrice = contract ? (contract.lowerStrike + contract.upperStrike) / 2 : stableCurrentBTCPrice;
+        
+        return {
+          id: tradeId, // Use tradeId as the position ID
+          time: new Date(position.timestamp || Date.now()).toLocaleTimeString(),
+          size: position.amount,
+          equity: `$${(position.amount * multiplier).toFixed(2)}`,
+          hit: `${Math.round(Math.random() * 100)}%`,
+          prog: '0%',
+          entry: `$${avgPrice.toFixed(2)}`.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+          betAmount: position.amount,
+          selectedMultipliers: [multiplier],
+          multiplier,
+          contractId: position.contractId // Use actual contractId from backend
+        };
+      });
+      
+      console.log('📋 Created positions from backend:', newPositions.length, newPositions);
+      setActivePositions(newPositions);
+      
+    } else if (stableSelectedCount > 0 && stableSelectedMultipliers.length > 0 && stableBetAmount > 0) {
+      // Fallback to normal mode (creating from selectedMultipliers)
       const betPerBox = stableBetAmount / stableSelectedCount;
-      
-      // Get current position multipliers to detect new selections
       const currentPositionMultipliers = new Set(activePositions.map(p => p.multiplier));
-      
-      // Find new multipliers that don't have positions yet
       const newMultipliers = stableSelectedMultipliers.filter(mult => !currentPositionMultipliers.has(mult));
       
-      // Create positions only for newly selected boxes
       if (newMultipliers.length > 0) {
         const newPositions = newMultipliers.map((multiplier, index) => {
-          // Create truly unique ID using timestamp and index to prevent duplicates
           const timestamp = Date.now();
           const uniqueIndex = index;
           const positionId = `box-${multiplier}-${timestamp}-${uniqueIndex}`;
-          
-          // Find backend contract ID for this multiplier (if using real positions)
-          let contractId: string | undefined;
-          if (realPositions && contracts.length > 0) {
-            // Find contract with matching multiplier
-            const matchingContract = contracts.find(c => c.returnMultiplier === multiplier);
-            if (matchingContract) {
-              contractId = matchingContract.contractId;
-              console.log('📋 Mapped position to contract:', { positionId, contractId, multiplier });
-            }
-          }
           
           return {
             id: positionId,
@@ -169,16 +193,13 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
             betAmount: betPerBox,
             selectedMultipliers: [multiplier],
             multiplier,
-            contractId // Store contract ID for hit/miss tracking
+            contractId: undefined
           };
         });
         
-        // Add new positions to existing ones, ensuring no duplicate IDs
         setActivePositions(prev => {
-          // Filter out any existing positions with the same multipliers to prevent duplicates
           const existingMultipliers = new Set(prev.map(p => p.multiplier));
           const filteredNewPositions = newPositions.filter(pos => !existingMultipliers.has(pos.multiplier));
-          
           console.log('Adding new positions:', filteredNewPositions.length, 'Total positions:', prev.length + filteredNewPositions.length);
           return [...prev, ...filteredNewPositions];
         });
@@ -200,36 +221,58 @@ const PositionsTable = React.memo(function PositionsTable({ selectedCount, selec
 
   // Monitor hitBoxes and missedBoxes to resolve positions
   useEffect(() => {
-    if (hitBoxes.length === 0 && missedBoxes.length === 0) return;
+    if ((hitBoxes.length === 0 && missedBoxes.length === 0) || activePositions.length === 0) return;
     
-    console.log('📊 Checking positions against hit/missed boxes:', { 
+    console.log('📊 Checking positions for resolution:', { 
       hitBoxes, 
       missedBoxes, 
       activePositionsCount: activePositions.length,
       activePositions: activePositions.map(p => ({ id: p.id, contractId: p.contractId, multiplier: p.multiplier }))
     });
     
-    // Process each position
-    activePositions.forEach(position => {
-      // Use the stored contractId if available
+    const hitSet = new Set(hitBoxes);
+    const missedSet = new Set(missedBoxes);
+    
+    // Find all positions that should be resolved (and haven't been processed yet)
+    const positionsToResolve = activePositions.filter(position => {
       const contractId = position.contractId;
+      if (!contractId) return false;
       
-      if (contractId) {
-        // Check if this contract was hit
-        if (hitBoxes.includes(contractId)) {
-          console.log('✅ Position HIT:', position.id, 'contractId:', contractId, 'multiplier:', position.multiplier);
-          moveToHistory(position.id, 'Won');
-          if (onPositionHit) onPositionHit(position.id);
-        }
-        // Check if this contract was missed
-        else if (missedBoxes.includes(contractId)) {
-          console.log('❌ Position MISSED:', position.id, 'contractId:', contractId, 'multiplier:', position.multiplier);
-          moveToHistory(position.id, 'Lost');
-          if (onPositionMiss) onPositionMiss(position.id);
-        }
+      // Skip if already processed
+      if (processedContractsRef.current.has(contractId)) {
+        return false;
       }
+      
+      return hitSet.has(contractId) || missedSet.has(contractId);
     });
-  }, [hitBoxes, missedBoxes, activePositions, onPositionHit, onPositionMiss]);
+    
+    // Move resolved positions to history
+    if (positionsToResolve.length > 0) {
+      console.log('🔄 Moving', positionsToResolve.length, 'positions to history');
+      
+      positionsToResolve.forEach(position => {
+        const contractId = position.contractId!;
+        const result = hitSet.has(contractId) ? 'Won' : 'Lost';
+        
+        console.log(result === 'Won' ? '✅ Position HIT:' : '❌ Position MISSED:', {
+          id: position.id,
+          contractId,
+          multiplier: position.multiplier
+        });
+        
+        // Mark as processed
+        processedContractsRef.current.add(contractId);
+        
+        moveToHistory(position.id, result);
+        
+        if (result === 'Won' && onPositionHit) {
+          onPositionHit(position.id);
+        } else if (result === 'Lost' && onPositionMiss) {
+          onPositionMiss(position.id);
+        }
+      });
+    }
+  }, [hitBoxes, missedBoxes, activePositions, onPositionHit, onPositionMiss, moveToHistory]);
 
   // Monitor for changes in selectedMultipliers to detect when boxes are deselected
   useEffect(() => {
