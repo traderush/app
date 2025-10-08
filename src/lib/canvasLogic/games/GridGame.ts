@@ -527,14 +527,24 @@ export class GridGame extends BaseGame {
       // Don't update camera position unless explicitly changed by user interaction
     }
 
-    // Update square animations
-    this.squareAnimations.forEach((animation) => {
+    // Update square animations and clean up completed ones
+    this.squareAnimations.forEach((animation, squareId) => {
       const elapsed = performance.now() - animation.startTime;
       animation.progress = Math.min(elapsed / this.config.animationDuration, 1);
+      
+      // Remove completed animations to prevent memory leak
+      if (animation.progress >= 1) {
+        this.squareAnimations.delete(squareId);
+      }
     });
 
     // Update empty boxes based on viewport changes
     this.updateEmptyBoxes();
+    
+    // Cleanup old hit/missed/processed boxes every 300 frames (~5 seconds at 60fps)
+    if (this.frameCount % 300 === 0) {
+      this.cleanupOldBoxes();
+    }
   }
 
   protected render(): void {
@@ -1454,15 +1464,25 @@ export class GridGame extends BaseGame {
       }
     }
 
-    // Limit total boxes for all games to prevent performance issues
+    // Limit total boxes for all games to prevent performance issues and memory leaks
     const boxCount = Object.keys(this.backendMultipliers).length;
-    if (boxCount > 1000) {
+    if (boxCount > 500) {
       // Keep only the most recent boxes (by world X position)
       const sortedBoxes = Object.entries(this.backendMultipliers)
         .sort(([, a], [, b]) => a.worldX - b.worldX) // Sort by world X position
-        .slice(-800); // Keep last 800 boxes to allow some margin
+        .slice(-400); // Keep last 400 boxes to prevent FPS degradation
 
       this.backendMultipliers = Object.fromEntries(sortedBoxes);
+      
+      // Also clean up clickability cache for removed boxes
+      const remainingBoxIds = new Set(sortedBoxes.map(([id]) => id));
+      const cacheKeysToRemove: string[] = [];
+      this.boxClickabilityCache.forEach((_, key) => {
+        if (!remainingBoxIds.has(key)) {
+          cacheKeysToRemove.push(key);
+        }
+      });
+      cacheKeysToRemove.forEach(key => this.boxClickabilityCache.delete(key));
     }
   }
 
@@ -1859,6 +1879,60 @@ export class GridGame extends BaseGame {
     // Throttle empty box generation to avoid performance issues
     if (this.frameCount % 30 === 0) { // Update every 30 frames (0.5 seconds at 60fps)
       this.generateEmptyBoxes();
+    }
+  }
+
+  /**
+   * Cleanup old boxes that are no longer visible to prevent memory leaks
+   * Removes boxes from hitBoxes, missedBoxes, and processedBoxes that are far off-screen
+   */
+  private cleanupOldBoxes(): void {
+    // Get current viewport bounds
+    const viewport = this.getViewportBounds();
+    if (!viewport) return;
+
+    // Calculate cleanup threshold (boxes that are way off-screen to the left)
+    const cleanupThresholdX = viewport.minX - 1000; // 1000 pixels buffer before cleanup
+
+    // Clean up hit boxes that are no longer in backend multipliers or far off-screen
+    const hitBoxesToRemove: string[] = [];
+    this.hitBoxes.forEach(contractId => {
+      const box = this.backendMultipliers[contractId];
+      if (!box || box.worldX < cleanupThresholdX) {
+        hitBoxesToRemove.push(contractId);
+      }
+    });
+    hitBoxesToRemove.forEach(id => this.hitBoxes.delete(id));
+
+    // Clean up missed boxes that are no longer in backend multipliers or far off-screen
+    const missedBoxesToRemove: string[] = [];
+    this.missedBoxes.forEach(contractId => {
+      const box = this.backendMultipliers[contractId];
+      if (!box || box.worldX < cleanupThresholdX) {
+        missedBoxesToRemove.push(contractId);
+      }
+    });
+    missedBoxesToRemove.forEach(id => this.missedBoxes.delete(id));
+
+    // Clean up processed boxes that are no longer in backend multipliers or far off-screen
+    const processedBoxesToRemove: string[] = [];
+    this.processedBoxes.forEach(contractId => {
+      const box = this.backendMultipliers[contractId];
+      if (!box || box.worldX < cleanupThresholdX) {
+        processedBoxesToRemove.push(contractId);
+      }
+    });
+    processedBoxesToRemove.forEach(id => this.processedBoxes.delete(id));
+
+    // Limit total animations to prevent memory issues
+    if (this.squareAnimations.size > 100) {
+      // Remove oldest animations (those with highest progress or oldest startTime)
+      const sortedAnimations = Array.from(this.squareAnimations.entries())
+        .sort(([, a], [, b]) => a.startTime - b.startTime)
+        .slice(50); // Keep only the 50 most recent
+      
+      this.squareAnimations.clear();
+      sortedAnimations.forEach(([id, anim]) => this.squareAnimations.set(id, anim));
     }
   }
 }

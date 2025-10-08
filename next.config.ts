@@ -9,10 +9,12 @@ const nextConfig: NextConfig = {
     pagesBufferLength: 2,
   },
   // Webpack configuration to prevent cache errors
-  webpack: (config, { isServer }) => {
-    // Disable webpack caching in development to prevent ENOENT errors
-    if (!isServer) {
-      config.cache = false;
+  webpack: (config, { dev, isServer }) => {
+    // Use memory cache in development to prevent ENOENT file system errors
+    if (dev && !isServer) {
+      config.cache = {
+        type: 'memory',
+      };
     }
     return config;
   },
