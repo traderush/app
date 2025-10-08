@@ -105,11 +105,8 @@ export class SquareRenderer {
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
-    // Hit/Miss activation animation - expanding flash effect
+    // Hit/Miss activation animation - simple flash overlay (no expanding, stays within borders)
     if ((state === 'activated' || state === 'missed') && animation?.type === 'activate' && animation.progress < 1) {
-      // Easing function for smooth animation (cubic ease-out)
-      const easeOut = 1 - Math.pow(1 - animation.progress, 3);
-      
       // Flash effect - fade in then fade out
       let flashOpacity: number;
       if (animation.progress < 0.3) {
@@ -120,57 +117,23 @@ export class SquareRenderer {
         flashOpacity = 1 - ((animation.progress - 0.3) / 0.7);
       }
       
-      // Pulsing expand effect
-      const pulseScale = 1 + (0.15 * Math.sin(animation.progress * Math.PI));
-      const pulseWidth = actualWidth * pulseScale;
-      const pulseHeight = actualHeight * pulseScale;
-      const pulseOffsetX = (actualWidth - pulseWidth) / 2;
-      const pulseOffsetY = (actualHeight - pulseHeight) / 2;
-      
       if (state === 'activated') {
-        // HIT animation - signature color glow
-        const glowOpacity = 0.6 * flashOpacity;
+        // HIT animation - simple signature color flash overlay (stays within borders)
+        const glowOpacity = 0.35 * flashOpacity;
         this.ctx.fillStyle = hexToRgba(signatureColor, glowOpacity);
-        this.ctx.fillRect(
-          x + pulseOffsetX + 0.5,
-          y + pulseOffsetY + 0.5,
-          pulseWidth - 1,
-          pulseHeight - 1
-        );
-        
-        // Draw pulsing outline
-        const outlineOpacity = 0.9 * flashOpacity;
-        this.ctx.strokeStyle = hexToRgba(signatureColor, outlineOpacity);
-        this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([]);
-        this.ctx.strokeRect(
-          x + pulseOffsetX + 0.5,
-          y + pulseOffsetY + 0.5,
-          pulseWidth - 1,
-          pulseHeight - 1
-        );
+        this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
       } else {
-        // MISS animation - grey fade out effect (no glow, just dimming)
-        const dimOpacity = 0.3 * flashOpacity;
+        // MISS animation - grey fade out effect (no glow, stays within borders)
+        const dimOpacity = 0.25 * flashOpacity;
         this.ctx.fillStyle = `rgba(70, 70, 70, ${dimOpacity})`;
-        this.ctx.fillRect(
-          x + pulseOffsetX + 0.5,
-          y + pulseOffsetY + 0.5,
-          pulseWidth - 1,
-          pulseHeight - 1
-        );
+        this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
         
-        // Draw fading grey outline
+        // Draw fading grey outline (stays within borders)
         const outlineOpacity = 0.4 * flashOpacity;
         this.ctx.strokeStyle = `rgba(100, 100, 100, ${outlineOpacity})`;
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([]);
-        this.ctx.strokeRect(
-          x + pulseOffsetX + 0.5,
-          y + pulseOffsetY + 0.5,
-          pulseWidth - 1,
-          pulseHeight - 1
-        );
+        this.ctx.strokeRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
       }
     }
     
