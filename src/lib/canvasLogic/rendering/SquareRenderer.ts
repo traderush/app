@@ -76,14 +76,14 @@ export class SquareRenderer {
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
-    // Draw base background fill
+    // Draw base background fill (this persists after animation completes)
     if (state === 'activated') {
-      // Hit state - higher opacity signature color
-      this.ctx.fillStyle = hexToRgba(signatureColor, 0.28);
+      // Hit state - permanent signature color overlay (matches regular box-hit canvas)
+      this.ctx.fillStyle = hexToRgba(signatureColor, 0.35);
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'missed') {
-      // Missed state - greyed out appearance
-      this.ctx.fillStyle = 'rgba(50, 50, 50, 0.25)'; // Dark grey with low opacity
+      // Missed state - permanent greyed out appearance
+      this.ctx.fillStyle = 'rgba(60, 60, 60, 0.3)';
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'selected') {
       // Selected state - signature color with lower opacity

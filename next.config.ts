@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
   },
+  // Webpack configuration to prevent cache errors
+  webpack: (config, { isServer }) => {
+    // Disable webpack caching in development to prevent ENOENT errors
+    if (!isServer) {
+      config.cache = false;
+    }
+    return config;
+  },
   // Configure Content Security Policy
   async headers() {
     return [
