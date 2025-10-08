@@ -1280,29 +1280,59 @@ export class GridGame extends BaseGame {
   }
 
   private renderDashedGrid(): void {
-    // Use fixed grid size in screen coordinates to prevent grid movement
-    const gridSize = 50; // Fixed grid size in pixels
-    const buffer = gridSize * 2; // Buffer for grid lines
+    // Get actual box dimensions from backend to ensure grid alignment
+    const boxValues = Object.values(this.backendMultipliers);
+    if (boxValues.length === 0) {
+      return; // No boxes yet, skip grid rendering
+    }
+
+    // Use first box to get standard dimensions
+    const standardBox = boxValues[0];
+    if (!standardBox) return;
+
+    const boxWidth = standardBox.width;
+    const boxHeight = standardBox.height;
+
+    // Convert box dimensions from world to screen coordinates to get grid size
+    const topLeft = this.world.worldToScreen(0, boxHeight);
+    const bottomRight = this.world.worldToScreen(boxWidth, 0);
+    const gridSizeX = Math.abs(bottomRight.x - topLeft.x);
+    const gridSizeY = Math.abs(bottomRight.y - topLeft.y);
 
     this.ctx.save();
     this.ctx.strokeStyle = 'rgba(180, 180, 180, 0.15)';
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
 
-    // Draw vertical lines - use screen coordinates directly
-    for (let x = 0; x <= this.width + buffer; x += gridSize) {
+    // Get viewport bounds in world coordinates
+    const worldBounds = this.world.getVisibleWorldBounds(0);
+    
+    // Calculate grid offset to align with boxes
+    const gridOffsetX = standardBox.worldX % boxWidth;
+    const gridOffsetY = standardBox.worldY % boxHeight;
+
+    // Draw vertical lines aligned with box columns
+    const startGridX = Math.floor(worldBounds.left / boxWidth) * boxWidth + gridOffsetX;
+    for (let worldX = startGridX; worldX <= worldBounds.right + boxWidth; worldX += boxWidth) {
+      const screenX = this.world.worldToScreen(worldX, 0).x;
+      if (screenX >= -10 && screenX <= this.width + 10) {
         this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.height);
+        this.ctx.moveTo(screenX, 0);
+        this.ctx.lineTo(screenX, this.height);
         this.ctx.stroke();
+      }
     }
 
-    // Draw horizontal lines - use screen coordinates directly
-    for (let y = 0; y <= this.height + buffer; y += gridSize) {
+    // Draw horizontal lines aligned with box rows
+    const startGridY = Math.floor(worldBounds.bottom / boxHeight) * boxHeight + gridOffsetY;
+    for (let worldY = startGridY; worldY <= worldBounds.top + boxHeight; worldY += boxHeight) {
+      const screenY = this.world.worldToScreen(0, worldY).y;
+      if (screenY >= -10 && screenY <= this.height + 10) {
         this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.width, y);
+        this.ctx.moveTo(0, screenY);
+        this.ctx.lineTo(this.width, screenY);
         this.ctx.stroke();
+      }
     }
 
     this.ctx.restore();
