@@ -18,6 +18,28 @@ export interface SquareAnimation {
   type?: 'select' | 'activate';
 }
 
+/**
+ * Configuration options for GridGame
+ * 
+ * @property multipliers - Array of multiplier strings to display
+ * @property pixelsPerPoint - Pixels per data point for horizontal spacing
+ * @property pricePerPixel - Price units per pixel for vertical scaling
+ * @property verticalMarginRatio - Ratio of vertical margin to total height
+ * @property cameraOffsetRatio - Camera offset ratio for positioning
+ * @property smoothingFactorX - Horizontal camera smoothing (0-1, higher = more smoothing)
+ * @property smoothingFactorY - Vertical camera smoothing (0-1, higher = more smoothing)
+ * @property lineEndSmoothing - Price line end point smoothing factor
+ * @property animationDuration - Duration of animations in milliseconds
+ * @property maxDataPoints - Maximum number of price data points to retain
+ * @property showMultiplierOverlay - Whether to show multiplier values on boxes
+ * @property externalDataSource - Whether price data comes from external source
+ * @property visibleSquares - Array of squares to show (for boxes mode)
+ * @property showDashedGrid - Whether to show dashed grid background
+ * @property debugMode - Whether to show debug info overlays
+ * @property gameType - Game type for rendering adjustments
+ * @property showProbabilities - Whether to show probability heatmap overlay
+ * @property minMultiplier - Minimum multiplier threshold to display
+ */
 export interface GridGameConfig extends GameConfig {
   multipliers?: string[];
   pixelsPerPoint?: number;
@@ -31,10 +53,12 @@ export interface GridGameConfig extends GameConfig {
   maxDataPoints?: number;
   showMultiplierOverlay?: boolean;
   externalDataSource?: boolean;
-  visibleSquares?: Array<{ gridX: number; gridY: number }>; // For boxes mode - only show these squares
-  showDashedGrid?: boolean; // For boxes mode - show dashed grid background
-  debugMode?: boolean; // Show debug info in corners
-  gameType?: IronCondorGameType; // Game type for rendering adjustments
+  visibleSquares?: Array<{ gridX: number; gridY: number }>;
+  showDashedGrid?: boolean;
+  debugMode?: boolean;
+  gameType?: IronCondorGameType;
+  showProbabilities?: boolean;
+  minMultiplier?: number;
 }
 
 export class GridGame extends BaseGame {
@@ -137,8 +161,8 @@ export class GridGame extends BaseGame {
       pricePerPixel: 0.8,
       verticalMarginRatio: 0.1,
       cameraOffsetRatio: 0.2,
-      smoothingFactorX: 0.3, // Light smoothing for fluid movement without excessive lag
-      smoothingFactorY: 0.92,
+      smoothingFactorX: 0.85, // More stable smoothing to prevent jitter
+      smoothingFactorY: 0.95,
       lineEndSmoothing: 0.88,
       animationDuration: 800,
       maxDataPoints: 500,
@@ -148,6 +172,8 @@ export class GridGame extends BaseGame {
       showDashedGrid: false,
       debugMode: false,
       gameType: GameType.GRID,
+      showProbabilities: false,
+      minMultiplier: 1.0,
       ...config,
     };
 
@@ -481,6 +507,7 @@ export class GridGame extends BaseGame {
         this.camera.smoothY = this.camera.targetY;
       }
 
+      // Apply smoothing to X position
       this.camera.smoothX =
         this.camera.smoothX * this.config.smoothingFactorX +
         this.camera.targetX * (1 - this.config.smoothingFactorX);
@@ -493,8 +520,11 @@ export class GridGame extends BaseGame {
         this.camera.y = Math.max(this.visiblePriceRange / 2, this.camera.smoothY);
       }
 
-      // Round camera X to whole pixels to prevent sub-pixel jitter
-      this.camera.x = Math.round(this.camera.smoothX);
+      // Use smooth X directly to prevent jitter from rounding
+      this.camera.x = this.camera.smoothX;
+    } else {
+      // When not following price, keep camera stable to prevent grid movement
+      // Don't update camera position unless explicitly changed by user interaction
     }
 
     // Update square animations
@@ -523,7 +553,12 @@ export class GridGame extends BaseGame {
     // Check for boxes that have passed the NOW line without being hit (MISS detection)
     this.checkBoxesPastNowLine();
 
-    // Draw multiplier overlay first (background)
+    // Draw probabilities heatmap overlay first (background)
+    if (this.config.showProbabilities) {
+      this.renderProbabilitiesHeatmap();
+    }
+
+    // Draw multiplier overlay
     if (this.config.showMultiplierOverlay) {
       this.renderMultiplierOverlay();
     }
@@ -721,6 +756,123 @@ export class GridGame extends BaseGame {
     }
   }
 
+  /**
+   * Render probability heatmap overlay on unselected boxes
+   * Uses color coding: Green (high probability) -> Yellow (medium) -> Red (low probability)
+   * Probability is calculated based on multiplier values (lower multiplier = higher probability)
+   * Only renders on boxes that haven't been selected and meet minimum multiplier threshold
+   */
+  private renderProbabilitiesHeatmap(): void {
+    // Only render heatmap if enabled
+    if (!this.config.showProbabilities) {
+      return;
+    }
+
+    // Skip rendering for sketch and cobra games - boxes are only in memory
+    if (
+      this.config.gameType === GameType.SKETCH ||
+      this.config.gameType === GameType.COBRA
+    ) {
+      return;
+    }
+    
+    // Combine backend boxes with empty boxes for rendering
+    const allBoxes = {
+      ...this.backendMultipliers,
+      ...Object.fromEntries(
+        Object.entries(this.emptyBoxes).map(([id, box]) => [
+          id,
+          {
+            ...box,
+            value: 0,
+            x: 0,
+            y: 0,
+            totalBets: 0,
+            status: undefined,
+            timestampRange: undefined,
+            priceRange: undefined,
+            userBet: undefined
+          }
+        ])
+      )
+    };
+
+    Object.entries(allBoxes).forEach(([squareId, box]) => {
+      // Skip if we have visible squares defined and this square is not in the list
+      if (this.visibleSquares.size > 0 && !this.visibleSquares.has(squareId)) {
+        return;
+      }
+
+      // Skip if box is selected (heatmap only shows on unselected boxes)
+      if (this.selectedSquareIds.has(squareId)) {
+        return;
+      }
+
+      // Skip if box is empty (no multiplier data) or below min multiplier
+      if (box.isEmpty || box.value === 0 || box.value < this.config.minMultiplier) {
+        return;
+      }
+
+      // Use actual world coordinates from backend
+      const worldX = box.worldX;
+      const worldY = box.worldY;
+      const boxWidth = box.width;
+      const boxHeight = box.height;
+
+      // Convert world coordinates to screen
+      const topLeft = this.world.worldToScreen(worldX, worldY + boxHeight);
+      const bottomRight = this.world.worldToScreen(worldX + boxWidth, worldY);
+
+      const screenX = topLeft.x;
+      const screenY = topLeft.y;
+      const screenWidth = bottomRight.x - topLeft.x;
+      const screenHeight = bottomRight.y - topLeft.y;
+
+      // Skip if off-screen
+      if (
+        screenX > this.width ||
+        screenX + screenWidth < 0 ||
+        screenY > this.height ||
+        screenY + screenHeight < 0
+      ) {
+        return;
+      }
+
+      // Calculate probability based on multiplier
+      // Lower multipliers = higher probability (green)
+      const probability = Math.max(0, Math.min(1, (15 - box.value) / 14));
+      
+      // Create heatmap colors using TRADING_COLORS with shade variation based on multiplier
+      // TRADING_COLORS.positive = #2fe3ac = rgb(47, 227, 172)
+      // Proper trading red = #ef4444 = rgb(239, 68, 68) - NOT the pink #ec397a
+      // Yellow = #facc15 = rgb(250, 204, 21)
+      let heatmapColor;
+      if (probability > 0.7) {
+        // High probability - green (#2fe3ac)
+        // Vary opacity more granularly: mult 1.0 = lighter, mult 5.0 = darker green
+        const normalizedProb = (probability - 0.7) / 0.3; // 0 to 1 within green range
+        const opacity = 0.04 + normalizedProb * 0.08; // 0.04 to 0.12 opacity (very subtle)
+        heatmapColor = `rgba(47, 227, 172, ${opacity})`;
+      } else if (probability > 0.4) {
+        // Medium probability - yellow (#facc15)
+        // Vary opacity: mult ~5.0-8.0 with gradual intensity
+        const normalizedProb = (probability - 0.4) / 0.3; // 0 to 1 within yellow range
+        const opacity = 0.05 + normalizedProb * 0.09; // 0.05 to 0.14 opacity (very subtle)
+        heatmapColor = `rgba(250, 204, 21, ${opacity})`;
+      } else {
+        // Low probability - proper red (#ef4444)
+        // Vary opacity: mult 8.0+ = darker red, up to mult 15.0
+        const normalizedProb = (0.4 - probability) / 0.4; // 0 to 1 within red range
+        const opacity = 0.06 + normalizedProb * 0.12; // 0.06 to 0.18 opacity (very subtle)
+        heatmapColor = `rgba(239, 68, 68, ${opacity})`;
+      }
+      
+      // Draw heatmap overlay only on unselected boxes
+      this.ctx.fillStyle = heatmapColor;
+      this.ctx.fillRect(screenX + 0.5, screenY + 0.5, screenWidth - 1, screenHeight - 1);
+    });
+  }
+
   private renderMultiplierOverlay(): void {
     // Skip rendering for sketch and cobra games - boxes are only in memory
     if (
@@ -755,10 +907,7 @@ export class GridGame extends BaseGame {
       )
     };
 
-    const emptyBoxCount = Object.keys(this.emptyBoxes).length;
-    if (emptyBoxCount > 0) {
-      console.log('🎨 Rendering with', emptyBoxCount, 'empty boxes');
-    }
+    // Reduced logging for performance
 
     // Render all boxes (backend + empty)
     Object.entries(allBoxes).forEach(([squareId, box]) => {
@@ -790,7 +939,10 @@ export class GridGame extends BaseGame {
         return;
       }
 
-      const text = box.isEmpty ? '' : `${box.value.toFixed(1)}X`;
+      // Apply min multiplier filtering
+      const shouldShow = box.isEmpty || box.value >= this.config.minMultiplier;
+      
+      const text = box.isEmpty ? '' : (shouldShow ? `${box.value.toFixed(1)}X` : '--');
 
       // Check if box is clickable - use cached value if available
       let isClickable = this.boxClickabilityCache.get(squareId);
@@ -835,7 +987,6 @@ export class GridGame extends BaseGame {
 
       if (hasBeenHit) {
         state = 'activated'; // Box has been hit (from WebSocket event)
-        console.log('🎯 Box marked as ACTIVATED:', squareId);
         // Check for hit animation
         const animationData = this.squareAnimations.get(squareId);
         if (animationData && animationData.progress < 1) {
@@ -843,11 +994,9 @@ export class GridGame extends BaseGame {
             progress: animationData.progress,
             type: 'activate',
           };
-          console.log('🎬 Rendering HIT animation:', squareId, 'progress:', animationData.progress);
         }
       } else if (hasBeenMissed) {
         state = 'missed'; // Box was not hit
-        console.log('🎯 Box marked as MISSED:', squareId);
         // Check for miss animation
         const animationData = this.squareAnimations.get(squareId);
         if (animationData && animationData.progress < 1) {
@@ -855,7 +1004,6 @@ export class GridGame extends BaseGame {
             progress: animationData.progress,
             type: 'activate',
           };
-          console.log('🎬 Rendering MISS animation:', squareId, 'progress:', animationData.progress);
         }
       } else if (isSelected) {
         state = 'selected';
@@ -1025,14 +1173,14 @@ export class GridGame extends BaseGame {
         axisY + 15
       );
     }
-    
+
     ctx.restore();
   }
 
   private renderYAxis(): void {
     // Render price labels in $0.10 increments
     // No vertical axis line, no background panel, just clean price labels
-    
+
     const verticalMargin = this.height * this.config.verticalMarginRatio;
     const viewportTop = verticalMargin;
     const viewportBottom = this.height - verticalMargin;
@@ -1071,7 +1219,7 @@ export class GridGame extends BaseGame {
 
       // Only render if on screen
       if (y < 10 || y > canvasHeight - 10) continue;
-      
+
       // Draw price label at left edge (ending with .X0)
       this.ctx.fillText(`$${price.toFixed(2)}`, 5, y + 4);
     }
@@ -1122,56 +1270,29 @@ export class GridGame extends BaseGame {
   }
 
   private renderDashedGrid(): void {
-    const squareSize = Math.min(this.width, this.height) / 9;
-    const squareWorldSize = this.world.getSquareWorldSize(squareSize);
-    const buffer = squareSize * 4; // Larger buffer for grid lines
-    const worldBounds = this.world.getVisibleWorldBounds(buffer);
-
-    const startGridX = Math.floor(worldBounds.left / squareWorldSize.x);
-    const endGridX = Math.ceil(worldBounds.right / squareWorldSize.x);
-    const startGridY = Math.floor(worldBounds.bottom / squareWorldSize.y);
-    const endGridY = Math.ceil(worldBounds.top / squareWorldSize.y);
+    // Use fixed grid size in screen coordinates to prevent grid movement
+    const gridSize = 50; // Fixed grid size in pixels
+    const buffer = gridSize * 2; // Buffer for grid lines
 
     this.ctx.save();
     this.ctx.strokeStyle = 'rgba(180, 180, 180, 0.15)';
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
 
-    // Draw vertical lines
-    for (let gridX = startGridX; gridX <= endGridX; gridX++) {
-      const worldX = gridX * squareWorldSize.x;
-      const startScreenPos = this.world.worldToScreen(
-        worldX,
-        worldBounds.bottom
-      );
-      const endScreenPos = this.world.worldToScreen(worldX, worldBounds.top);
-
-      if (
-        startScreenPos.x >= -buffer &&
-        startScreenPos.x <= this.width + buffer
-      ) {
+    // Draw vertical lines - use screen coordinates directly
+    for (let x = 0; x <= this.width + buffer; x += gridSize) {
         this.ctx.beginPath();
-        this.ctx.moveTo(startScreenPos.x, 0);
-        this.ctx.lineTo(endScreenPos.x, this.height);
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, this.height);
         this.ctx.stroke();
-      }
     }
 
-    // Draw horizontal lines
-    for (let gridY = startGridY; gridY <= endGridY; gridY++) {
-      const worldY = gridY * squareWorldSize.y;
-      const startScreenPos = this.world.worldToScreen(worldBounds.left, worldY);
-      const endScreenPos = this.world.worldToScreen(worldBounds.right, worldY);
-
-      if (
-        startScreenPos.y >= -buffer &&
-        startScreenPos.y <= this.height + buffer
-      ) {
+    // Draw horizontal lines - use screen coordinates directly
+    for (let y = 0; y <= this.height + buffer; y += gridSize) {
         this.ctx.beginPath();
-        this.ctx.moveTo(0, startScreenPos.y);
-        this.ctx.lineTo(this.width, endScreenPos.y);
+      this.ctx.moveTo(0, y);
+      this.ctx.lineTo(this.width, y);
         this.ctx.stroke();
-      }
     }
 
     this.ctx.restore();
@@ -1245,7 +1366,12 @@ export class GridGame extends BaseGame {
     return false;
   }
 
-  // Method to add external price data
+  /**
+   * Add external price data to the game
+   * Applies smoothing and manages data point limit
+   * 
+   * @param data - Price data with price value and optional timestamp
+   */
   public addPriceData(data: PriceData): void {
     // Apply smoothing
     if (this.priceData.length > 0) {
@@ -1263,7 +1389,13 @@ export class GridGame extends BaseGame {
     }
   }
 
-  // Method to update multipliers from backend
+  /**
+   * Update multipliers from backend
+   * Intelligently updates only changed properties for performance
+   * Automatically removes old boxes and limits total box count
+   * 
+   * @param multipliers - Record of multiplier data keyed by contract ID
+   */
   public updateMultipliers(
     multipliers: Record<
       string,
@@ -1357,15 +1489,11 @@ export class GridGame extends BaseGame {
   }
 
   public markContractAsHit(contractId: string): void {
-    console.log('✅ Marking contract as HIT:', contractId);
-    console.log('📦 Current hitBoxes before:', Array.from(this.hitBoxes));
     this.hitBoxes.add(contractId);
-    console.log('📦 Current hitBoxes after:', Array.from(this.hitBoxes));
     
     // Update backend data status if contract exists
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'hit';
-      console.log('✅ Updated backend multiplier status to HIT');
       
       // Trigger hit animation (expanding green glow)
       this.squareAnimations.set(contractId, {
@@ -1373,10 +1501,6 @@ export class GridGame extends BaseGame {
         type: 'activate',
         startTime: performance.now(),
       });
-      console.log('🎬 Started HIT animation for:', contractId);
-    } else {
-      console.warn('⚠️ Contract not found in backend:', contractId);
-      console.log('📋 Available backend contracts:', Object.keys(this.backendMultipliers));
     }
     
     // Clear from highlighted/selected when hit
@@ -1388,15 +1512,11 @@ export class GridGame extends BaseGame {
   }
 
   public markContractAsMissed(contractId: string): void {
-    console.log('❌ Marking contract as MISSED:', contractId);
-    console.log('📦 Current missedBoxes before:', Array.from(this.missedBoxes));
     this.missedBoxes.add(contractId);
-    console.log('📦 Current missedBoxes after:', Array.from(this.missedBoxes));
     
     // Update backend data status if contract exists (for consistency)
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'missed';
-      console.log('❌ Updated backend multiplier status to MISSED');
       
       // Trigger missed animation (pulse effect)
       this.squareAnimations.set(contractId, {
@@ -1404,10 +1524,6 @@ export class GridGame extends BaseGame {
         type: 'activate',
         startTime: performance.now(),
       });
-      console.log('🎬 Started MISS animation for:', contractId);
-    } else {
-      console.warn('⚠️ Contract not found in backend:', contractId);
-      console.log('📋 Available backend contracts:', Object.keys(this.backendMultipliers));
     }
     
     // Clear from highlighted/selected when missed
@@ -1461,12 +1577,7 @@ export class GridGame extends BaseGame {
     const lastPoint = this.priceData[this.priceData.length - 1];
     const prevPoint = this.priceData[this.priceData.length - 2];
     
-    console.log('🔍 checkPriceCollisions called:', {
-      selectedSquares: Array.from(this.selectedSquareIds),
-      priceDataLength: this.priceData.length,
-      lastPrice: lastPoint.price,
-      smoothLineEndX: this.smoothLineEndX
-    });
+    // Reduced logging for performance
 
     // Convert to screen coordinates
     const lastWorldPos = this.world.getLinePosition(
@@ -1504,12 +1615,6 @@ export class GridGame extends BaseGame {
 
       // Check if price line segment intersects the box
       if (this.segmentIntersectsRect(p1, p2, rect)) {
-        console.log('✅ IMMEDIATE HIT detected:', {
-          contractId,
-          boxPriceRange: `${box.worldY.toFixed(2)} - ${(box.worldY + box.height).toFixed(2)}`,
-          currentPrice: lastPoint.price.toFixed(2)
-        });
-        
         // Mark as hit immediately and trigger animation
         this.markContractAsHit(contractId);
       }
@@ -1524,12 +1629,7 @@ export class GridGame extends BaseGame {
   protected checkBoxesPastNowLine(): void {
     if (this.smoothLineEndX <= 0) return;
 
-    console.log('🔍 checkBoxesPastNowLine called:', {
-      selectedSquares: Array.from(this.selectedSquareIds),
-      smoothLineEndX: this.smoothLineEndX,
-      hitBoxes: Array.from(this.hitBoxes),
-      missedBoxes: Array.from(this.missedBoxes)
-    });
+    // Reduced logging for performance
 
     // Only check SELECTED boxes that haven't been hit or missed yet
     this.selectedSquareIds.forEach(contractId => {
@@ -1557,12 +1657,6 @@ export class GridGame extends BaseGame {
       // Check if box's right edge has completely passed the NOW line
       if (boxRightEdge < this.smoothLineEndX) {
         // Box passed NOW line and wasn't hit - mark as MISSED
-        console.log('❌ Box passed NOW line without hit:', {
-          contractId,
-          boxRightEdge,
-          nowLineX: this.smoothLineEndX
-        });
-        
         // Mark as processed and missed
         this.processedBoxes.add(contractId);
         this.markContractAsMissed(contractId);
@@ -1598,6 +1692,16 @@ export class GridGame extends BaseGame {
     return Array.from(this.selectedSquareIds);
   }
 
+  /**
+   * Update configuration values without recreating the game instance
+   * Useful for updating heatmap visibility, min multiplier, and other settings
+   * 
+   * @param newConfig - Partial configuration to merge with existing config
+   */
+  public updateConfig(newConfig: Partial<GridGameConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+  }
+
 
   public getViewportBounds(): {
     minX: number;
@@ -1607,7 +1711,6 @@ export class GridGame extends BaseGame {
   } | null {
     // Calculate viewport bounds based on camera position and visible range
     if (!this.camera || this.visiblePriceRange === 0) {
-      console.log('🔍 getViewportBounds returning null:', { camera: !!this.camera, visiblePriceRange: this.visiblePriceRange });
       return null;
     }
 
@@ -1628,7 +1731,6 @@ export class GridGame extends BaseGame {
     const maxY = worldBounds.top + bufferY;
 
     const bounds = { minX, maxX, minY, maxY };
-    console.log('🔍 getViewportBounds returning:', bounds, 'camera:', this.camera);
     return bounds;
   }
 
@@ -1652,21 +1754,16 @@ export class GridGame extends BaseGame {
     // Get viewport bounds
     const viewport = this.getViewportBounds();
     if (!viewport) {
-      console.log('🔍 No viewport bounds available');
       return;
     }
 
     // Get existing boxes to understand the grid
     const existingBoxes = Object.values(this.backendMultipliers);
     if (existingBoxes.length === 0) {
-      console.log('🔍 No existing boxes to use as reference');
       return;
     }
 
-    console.log('🔍 Generating empty boxes with viewport:', viewport);
-    console.log('🔍 Canvas dimensions:', { width: this.width, height: this.height });
-    console.log('🔍 Camera position:', this.camera);
-    console.log('🔍 Existing boxes count:', existingBoxes.length);
+    // Reduced logging for performance
 
     // Use first box to determine standard dimensions
     const standardBox = existingBoxes[0];
@@ -1677,7 +1774,6 @@ export class GridGame extends BaseGame {
 
     // Clear existing empty boxes
     this.emptyBoxes = {};
-    console.log('🔍 Box dimensions:', { boxWidth, boxHeight });
 
     // Find the grid alignment by looking at existing box positions
     // Real boxes are grid-aligned, so we need to match their alignment
@@ -1689,7 +1785,6 @@ export class GridGame extends BaseGame {
       const referenceBox = existingBoxes[0];
       gridOffsetX = referenceBox.worldX % boxWidth;
       gridOffsetY = referenceBox.worldY % boxHeight;
-      console.log('🔍 Grid offset from reference box:', { gridOffsetX, gridOffsetY });
     }
 
     // Create a set of occupied positions for quick lookup
@@ -1718,10 +1813,6 @@ export class GridGame extends BaseGame {
     
     const gridRangeX = maxGridX - minGridX + 1;
     const gridRangeY = maxGridY - minGridY + 1;
-    
-    console.log('🔍 Aligned viewport:', { alignedMinX, alignedMaxX, alignedMinY, alignedMaxY });
-    console.log('🔍 Aligned grid bounds:', { minGridX, maxGridX, minGridY, maxGridY });
-    console.log('🔍 Grid ranges:', { gridRangeX, gridRangeY });
 
     // Fill all grid positions within viewport bounds
     let generatedCount = 0;
@@ -1752,15 +1843,7 @@ export class GridGame extends BaseGame {
         generatedCount++;
       }
     }
-    console.log('🔍 Generated', generatedCount, 'empty boxes');
-    console.log('🔍 Occupied positions count:', occupiedPositions.size);
-    console.log('🔍 Total potential positions:', gridRangeX * gridRangeY);
-    
-    console.log('🔍 Generated empty boxes count:', Object.keys(this.emptyBoxes).length);
-    if (Object.keys(this.emptyBoxes).length > 0) {
-      console.log('🔍 Sample empty box:', Object.values(this.emptyBoxes)[0]);
-      console.log('🔍 Reference real box:', existingBoxes[0]);
-    }
+    // Reduced logging for performance
   }
 
   /**
@@ -1770,13 +1853,11 @@ export class GridGame extends BaseGame {
   private updateEmptyBoxes(): void {
     // Only generate empty boxes for certain game types
     if (this.config.gameType === GameType.SKETCH || this.config.gameType === GameType.COBRA) {
-      console.log('🔍 Skipping empty boxes for game type:', this.config.gameType);
       return; // Skip for games where boxes are not visible
     }
 
     // Throttle empty box generation to avoid performance issues
-    if (this.frameCount % 5 === 0) { // Update every 5 frames for debugging
-      console.log('🔍 updateEmptyBoxes called, frame:', this.frameCount);
+    if (this.frameCount % 30 === 0) { // Update every 30 frames (0.5 seconds at 60fps)
       this.generateEmptyBoxes();
     }
   }

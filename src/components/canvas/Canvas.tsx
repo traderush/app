@@ -9,19 +9,36 @@ import { useGameSession } from './hooks/useGameSession';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useUIStore } from '@/stores/uiStore';
 import { useUserStore } from '@/stores/userStore';
+import { useConnectionStore } from '@/stores/connectionStore';
 
+/**
+ * Props for the Canvas component (Mock Backend Trading View)
+ * 
+ * @property externalControl - If true, component is controlled externally
+ * @property externalIsStarted - External control for started state
+ * @property onExternalStartChange - Callback when external start state changes
+ * @property externalTimeframe - Timeframe in milliseconds (500, 1000, 2000, 4000, 10000)
+ * @property onPositionsChange - Callback for position updates (positions, contracts, hitBoxes, missedBoxes)
+ * @property betAmount - Bet amount for trades (default 100 USDC)
+ * @property onPriceUpdate - Callback for live price updates
+ * @property onSelectionChange - Callback for selection changes (count, bestMultiplier, multipliers, avgPrice)
+ * @property showProbabilities - Whether to show probability heatmap overlay
+ * @property minMultiplier - Minimum multiplier threshold to display on chart
+ */
 interface CanvasProps {
   externalControl?: boolean;
   externalIsStarted?: boolean;
   onExternalStartChange?: (isStarted: boolean) => void;
-  externalTimeframe?: number; // Timeframe in ms (e.g., 500, 1000, 2000, 4000, 10000)
+  externalTimeframe?: number;
   onPositionsChange?: (positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => void;
-  betAmount?: number; // Bet amount for trades (default 100)
-  onPriceUpdate?: (price: number) => void; // Live price updates
-  onSelectionChange?: (count: number, best: number, multipliers: number[], averagePrice?: number | null) => void; // Immediate selection feedback
+  betAmount?: number;
+  onPriceUpdate?: (price: number) => void;
+  onSelectionChange?: (count: number, best: number, multipliers: number[], averagePrice?: number | null) => void;
+  showProbabilities?: boolean;
+  minMultiplier?: number;
 }
 
-export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange }: CanvasProps = {}) {
+export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange, showProbabilities = false, minMultiplier = 1.0 }: CanvasProps = {}) {
   // Convert external timeframe (ms) to TimeFrame enum
   const getTimeFrameFromMs = (ms?: number): TimeFrame => {
     switch (ms) {
@@ -70,6 +87,9 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
   
   // Get balance update function from user store
   const updateBalance = useUserStore((state) => state.updateBalance);
+  
+  // Get backend connection setter from store
+  const setBackendConnected = useConnectionStore((state) => state.setBackendConnected);
 
   const { isConnected, isConnecting, connect, disconnect, send, on, off } =
     useWebSocket({
@@ -84,7 +104,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
       enabled: isConnected,
     });
 
-  // Debug WebSocket connection status
+  // Debug WebSocket connection status and update backend connection status
   useEffect(() => {
     console.log('🔍 Canvas WebSocket status:', {
       isConnected,
@@ -93,7 +113,10 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
       contractsLength: contracts?.length || 0,
       positions: positions ? Array.from(positions.entries()) : []
     });
-  }, [isConnected, isJoined, positions, contracts]);
+    
+    // Update backend connection status in the global store
+    setBackendConnected(isConnected);
+  }, [isConnected, isJoined, positions, contracts, setBackendConnected]);
 
   // Sync userBalance from game session to Zustand store
   useEffect(() => {
@@ -523,6 +546,16 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     }
   }, [canvasMultipliers]);
 
+  // Update GridGame config when showProbabilities or minMultiplier change (live updates without restart)
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.updateConfig({
+        showProbabilities,
+        minMultiplier
+      });
+    }
+  }, [showProbabilities, minMultiplier]);
+
   // Initialize canvas game
   useEffect(() => {
     if (!canvasContainerRef.current || !isStarted || !configLoaded) {
@@ -656,6 +689,8 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
         lineEndSmoothing: 0.88,
         animationDuration: 800,
         maxDataPoints: 500,
+        showProbabilities: showProbabilities, // Pass heatmap toggle
+        minMultiplier: minMultiplier, // Pass min multiplier filter
       });
 
       // Set up event listeners
@@ -797,7 +832,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     return () => {
       // Don't destroy on every re-render, only on unmount
     };
-  }, [isStarted, configLoaded]); // Only re-create when starting/stopping or config changes
+  }, [isStarted, configLoaded, showProbabilities, minMultiplier]); // Only re-create when starting/stopping or config changes
 
   // Separate cleanup effect for unmount
   useEffect(() => {

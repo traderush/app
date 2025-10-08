@@ -3092,6 +3092,8 @@ export default function ClientView() {
                     onSelectionChange={handleMockBackendSelectionChange}
                     betAmount={betAmount}
                     onPriceUpdate={setMockBackendCurrentPrice}
+                    showProbabilities={showProbabilities}
+                    minMultiplier={minMultiplier}
                   />
                 </div>
               ) : (

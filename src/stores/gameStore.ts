@@ -175,7 +175,7 @@ export const useGameStore = create<GameState>()(
         if (!cell) return state;
 
         const isSelected = cell.state === 'selected';
-        const newState = isSelected ? 'empty' : 'selected';
+        const newState: 'selected' | 'empty' = isSelected ? 'empty' : 'selected';
         
         const updatedCells = state.gridCells.map((c) =>
           c.id === cellId
@@ -288,7 +288,7 @@ export const useGameStore = create<GameState>()(
       set((state) => {
         const updatedCells = state.gridCells.map((cell) =>
           cell.id === cellId
-            ? { ...cell, state: 'hit', hitTime: Date.now() }
+            ? { ...cell, state: 'hit' as const, hitTime: Date.now() }
             : cell
         );
 
@@ -327,7 +327,7 @@ export const useGameStore = create<GameState>()(
       set((state) => {
         const updatedCells = state.gridCells.map((cell) =>
           cell.id === cellId
-            ? { ...cell, state: 'missed' }
+            ? { ...cell, state: 'missed' as const }
             : cell
         );
 
@@ -419,13 +419,13 @@ export const useGameStore = create<GameState>()(
   })),
     {
       name: 'game-store',
-      storage: createPersistentStorage('game'),
+      storage: createPersistentStorage('game') as any,
       partialize: (state) => ({
         gameSettings: state.gameSettings,
         gameStats: state.gameStats,
         showGrid: state.showGrid,
         showStats: state.showStats,
-      }),
+      }) as any,
     }
   )
 );
