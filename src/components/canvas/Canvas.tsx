@@ -432,13 +432,12 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       // World Y is the actual price value (lower strike is the bottom of the box)
       const worldY = contract.lowerStrike;
 
-      // Calculate dimensions for SQUARE boxes
+      // Width is time step converted to world units
       const dataPointsPerTimeStep = Math.floor(timeStep / msPerDataPoint);
       const width = dataPointsPerTimeStep * pixelsPerPoint;
-      
-      // For square boxes: make height equal to width in world units
-      // Both width and height should be the same value in world space
-      const height = width; // Force square boxes by making height = width in world units
+
+      // Height is the price range (from backend contract)
+      const height = contract.upperStrike - contract.lowerStrike;
 
       multipliers[contract.contractId] = {
         value: contract.returnMultiplier,

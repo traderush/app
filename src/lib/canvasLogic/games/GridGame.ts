@@ -423,17 +423,8 @@ export class GridGame extends BaseGame {
     const viewportBottom = this.height - verticalMargin;
     const viewportHeight = viewportBottom - viewportTop;
 
-    // Calculate visible price range
-    // For square boxes, we need to match the pixel-per-unit scale for X and Y axes
-    // Width: 1 world unit = 1 pixel (directly)
-    // Height: Need priceScale such that boxHeight (dollars) renders as same pixels as boxWidth
-    
-    // Box width in world units: timeStep / 100 * 5 = timeStep / 20
-    // We want box height in pixels to equal box width in pixels
-    // If boxHeight (in $) × priceScale = boxWidth (in pixels)
-    // Then: priceScale = boxWidth / boxHeight = (timeStep / 20) / boxHeight
-    
-    // Use standard pricePerPixel for now - backend boxHeight values are calculated to match
+    // Calculate visible price range - use FIXED calculation for consistent square boxes
+    // Don't override based on backend box height as it causes rectangular distortion
     this.visiblePriceRange = viewportHeight * this.config.pricePerPixel;
 
     // Update world viewport
