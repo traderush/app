@@ -423,8 +423,8 @@ export class GridGame extends BaseGame {
     const viewportBottom = this.height - verticalMargin;
     const viewportHeight = viewportBottom - viewportTop;
 
-    // Calculate visible price range - use FIXED calculation for consistent square boxes
-    // Don't override based on backend box height as it causes rectangular distortion
+    // Calculate visible price range - use FIXED pricePerPixel for consistent scaling
+    // DO NOT use backend box height as it distorts the Y-axis and creates rectangles
     this.visiblePriceRange = viewportHeight * this.config.pricePerPixel;
 
     // Update world viewport

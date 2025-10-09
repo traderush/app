@@ -436,7 +436,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       const dataPointsPerTimeStep = Math.floor(timeStep / msPerDataPoint);
       const width = dataPointsPerTimeStep * pixelsPerPoint;
 
-      // Height is the price range (from backend contract)
+      // Height is the price range
       const height = contract.upperStrike - contract.lowerStrike;
 
       multipliers[contract.contractId] = {
