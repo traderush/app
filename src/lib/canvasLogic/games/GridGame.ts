@@ -107,6 +107,7 @@ export class GridGame extends BaseGame {
     height: number;
     isEmpty: boolean;
     isClickable: boolean;
+    value?: number; // Random multiplier for heatmap visualization
   }> = {}; // Generated empty boxes to fill viewport
 
   protected world: WorldCoordinateSystem;
@@ -423,9 +424,21 @@ export class GridGame extends BaseGame {
     const viewportBottom = this.height - verticalMargin;
     const viewportHeight = viewportBottom - viewportTop;
 
-    // Calculate visible price range - use FIXED pricePerPixel for consistent scaling
-    // DO NOT use backend box height as it distorts the Y-axis and creates rectangles
+    // Calculate visible price range
     this.visiblePriceRange = viewportHeight * this.config.pricePerPixel;
+
+    // If we have backend boxes, use their actual height
+    const boxValues = Object.values(this.backendMultipliers);
+    if (boxValues.length > 0 && boxValues[0]) {
+      const boxHeight = boxValues[0].height;
+      // Show more boxes for sketch and cobra games (30 boxes vs 10)
+      const boxesVisible =
+        this.config.gameType === GameType.SKETCH ||
+        this.config.gameType === GameType.COBRA
+          ? 30
+          : 10;
+      this.visiblePriceRange = boxHeight * boxesVisible;
+    }
 
     // Update world viewport
     this.world.updateViewport(viewportHeight, this.visiblePriceRange);
@@ -1859,15 +1872,19 @@ export class GridGame extends BaseGame {
         const worldX = gridX * boxWidth + gridOffsetX;
         const worldY = gridY * boxHeight + gridOffsetY;
         
-        // Create empty box
+        // Create empty box with random multiplier for heatmap visualization
         const emptyBoxId = `empty_${gridX}_${gridY}`;
+        // Generate random multiplier between 1.0x and 15.0x (same as backend logic)
+        const randomMultiplier = +(1.0 + Math.random() * 14.0).toFixed(1);
+        
         this.emptyBoxes[emptyBoxId] = {
           worldX,
           worldY,
           width: boxWidth,
           height: boxHeight,
           isEmpty: true,
-          isClickable: false
+          isClickable: false,
+          value: randomMultiplier, // Add multiplier value for heatmap display
         };
         generatedCount++;
       }
