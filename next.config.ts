@@ -19,7 +19,10 @@ const nextConfig: NextConfig = {
     return config;
   },
   // Configure Content Security Policy
+  // More permissive in development for hot reloading, strict in production
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
+    
     return [
       {
         source: '/(.*)',
@@ -28,11 +31,17 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live",
-              "style-src 'self' 'unsafe-inline'",
+              // Development: allow eval for hot reloading; Production: remove unsafe-eval
+              isDev 
+                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live"
+                : "script-src 'self' 'unsafe-inline' https://vercel.live",
+              // Allow styles from self, inline styles, and Google Fonts
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https: blob:",
-              "font-src 'self' data:",
-              "connect-src 'self' https: wss: ws://localhost:8080",
+              // Allow fonts from self, data URIs, and Google Fonts CDN
+              "font-src 'self' data: https://fonts.gstatic.com",
+              // Allow WebSocket connections for live updates and trading
+              "connect-src 'self' https: wss: ws://localhost:8080 ws://localhost:* https://*.binance.com wss://*.binance.com",
               "media-src 'self' data: blob:",
               "object-src 'none'",
               "base-uri 'self'",
