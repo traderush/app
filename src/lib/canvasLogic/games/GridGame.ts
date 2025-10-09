@@ -1530,15 +1530,61 @@ export class GridGame extends BaseGame {
       }
     }
 
-    // Limit total boxes to prevent performance issues (original 942b425 logic)
+    // CRITICAL: Aggressive cleanup to prevent performance degradation
+    // Clean up more frequently and keep fewer boxes to maintain 60fps
     const boxCount = Object.keys(this.backendMultipliers).length;
-    if (boxCount > 1000) {
+    if (boxCount > 500) {
       // Keep only the most recent boxes (by world X position)
+      // Reduced from 1000/800 to 500/400 for better performance
       const sortedBoxes = Object.entries(this.backendMultipliers)
         .sort(([, a], [, b]) => a.worldX - b.worldX) // Sort by world X position
-        .slice(-800); // Keep last 800 boxes
+        .slice(-400); // Keep last 400 boxes (reduced from 800)
 
       this.backendMultipliers = Object.fromEntries(sortedBoxes);
+      
+      // Also clear hit/missed boxes that are no longer in backend
+      const remainingIds = new Set(Object.keys(this.backendMultipliers));
+      const hitBoxesToRemove: string[] = [];
+      const missedBoxesToRemove: string[] = [];
+      
+      this.hitBoxes.forEach(id => {
+        if (!remainingIds.has(id)) {
+          hitBoxesToRemove.push(id);
+        }
+      });
+      
+      this.missedBoxes.forEach(id => {
+        if (!remainingIds.has(id)) {
+          missedBoxesToRemove.push(id);
+        }
+      });
+      
+      hitBoxesToRemove.forEach(id => this.hitBoxes.delete(id));
+      missedBoxesToRemove.forEach(id => this.missedBoxes.delete(id));
+      
+      // Clean up other data structures to prevent memory leaks
+      this.processedBoxes.clear(); // This can be cleared since we're removing old boxes
+      
+      // Clean up animations for removed boxes
+      const animationKeysToRemove: string[] = [];
+      this.squareAnimations.forEach((_, key) => {
+        if (!remainingIds.has(key)) {
+          animationKeysToRemove.push(key);
+        }
+      });
+      animationKeysToRemove.forEach(key => this.squareAnimations.delete(key));
+      
+      // Log cleanup for debugging
+      const now = Date.now();
+      if (now - this.lastDebugLog > 5000) {
+        console.log('🧹 Backend cleanup:', {
+          keptBoxes: 400,
+          removedFromHit: hitBoxesToRemove.length,
+          removedFromMissed: missedBoxesToRemove.length,
+          removedAnimations: animationKeysToRemove.length,
+        });
+        this.lastDebugLog = now;
+      }
     }
   }
 
@@ -1956,6 +2002,58 @@ export class GridGame extends BaseGame {
     // Throttle empty box generation to avoid performance issues
     if (this.frameCount % 30 === 0) { // Update every 30 frames (0.5 seconds at 60fps)
       this.generateEmptyBoxes();
+      
+      // CRITICAL: Clean up old empty boxes to prevent memory leaks
+      // Empty boxes accumulate over time and slow down rendering
+      this.cleanupOldEmptyBoxes();
+    }
+  }
+  
+  /**
+   * Remove empty boxes that are far off-screen to prevent memory leaks
+   * This prevents the emptyBoxes object from growing indefinitely
+   */
+  private cleanupOldEmptyBoxes(): void {
+    const viewport = this.getViewportBounds();
+    if (!viewport) return;
+    
+    // Keep a buffer beyond viewport to avoid re-generating boxes too often
+    const bufferMultiplier = 3; // Keep boxes 3x viewport width on each side
+    const viewportWidth = viewport.maxX - viewport.minX;
+    const viewportHeight = viewport.maxY - viewport.minY;
+    
+    const minX = viewport.minX - (viewportWidth * bufferMultiplier);
+    const maxX = viewport.maxX + (viewportWidth * bufferMultiplier);
+    const minY = viewport.minY - (viewportHeight * bufferMultiplier);
+    const maxY = viewport.maxY + (viewportHeight * bufferMultiplier);
+    
+    // Remove empty boxes that are far outside the buffered viewport
+    const emptyBoxIds = Object.keys(this.emptyBoxes);
+    let removedCount = 0;
+    
+    for (const boxId of emptyBoxIds) {
+      const box = this.emptyBoxes[boxId];
+      
+      // Check if box is far outside buffered viewport
+      if (
+        box.worldX + box.width < minX ||
+        box.worldX > maxX ||
+        box.worldY + box.height < minY ||
+        box.worldY > maxY
+      ) {
+        delete this.emptyBoxes[boxId];
+        removedCount++;
+      }
+    }
+    
+    // Log cleanup periodically for debugging
+    const now = Date.now();
+    if (removedCount > 0 && now - this.lastDebugLog > 5000) {
+      console.log('🧹 Cleaned up old empty boxes:', {
+        removed: removedCount,
+        remaining: Object.keys(this.emptyBoxes).length,
+      });
+      this.lastDebugLog = now;
     }
   }
 
