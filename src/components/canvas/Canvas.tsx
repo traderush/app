@@ -623,7 +623,9 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         showMultiplierOverlay: true,
         showDashedGrid: false,
         debugMode: false, // Disable debug mode - only show multipliers, no price ranges
-        pricePerPixel: 0.8, // Use default from GridGame - this affects Y axis range
+        // Calculate pricePerPixel to make square boxes: (timeStep / 20) / (viewportHeight / 10) = timeStep / (viewportHeight * 2)
+        // Simplified: pricePerPixel = (timeStep / 100) (assuming viewportHeight ≈ 400-500px)
+        pricePerPixel: timeStep / 10000, // Dynamic scaling for square boxes
         pixelsPerPoint: 5,
         verticalMarginRatio: 0.1,
         cameraOffsetRatio: 0.2,
