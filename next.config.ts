@@ -23,6 +23,32 @@ const nextConfig: NextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV === 'development';
     
+    // In development, use a very permissive CSP to avoid warnings
+    // In production, use a strict CSP for security
+    if (isDev) {
+      return [
+        {
+          source: '/(.*)',
+          headers: [
+            {
+              key: 'Content-Security-Policy',
+              value: [
+                "default-src 'self' 'unsafe-inline' 'unsafe-eval'",
+                "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live",
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                "img-src 'self' data: https: blob:",
+                "font-src 'self' data: https://fonts.gstatic.com",
+                "connect-src 'self' https: wss: ws: https://*.binance.com wss://*.binance.com",
+                "media-src 'self' data: blob:",
+                "worker-src 'self' blob:",
+              ].join('; ')
+            }
+          ]
+        }
+      ];
+    }
+    
+    // Production: Strict CSP
     return [
       {
         source: '/(.*)',
@@ -31,17 +57,11 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // Development: allow eval for hot reloading; Production: remove unsafe-eval
-              isDev 
-                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live"
-                : "script-src 'self' 'unsafe-inline' https://vercel.live",
-              // Allow styles from self, inline styles, and Google Fonts
+              "script-src 'self' 'unsafe-inline' https://vercel.live",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https: blob:",
-              // Allow fonts from self, data URIs, and Google Fonts CDN
               "font-src 'self' data: https://fonts.gstatic.com",
-              // Allow WebSocket connections for live updates and trading
-              "connect-src 'self' https: wss: ws://localhost:8080 ws://localhost:* https://*.binance.com wss://*.binance.com",
+              "connect-src 'self' https: wss: ws://localhost:8080 https://*.binance.com wss://*.binance.com",
               "media-src 'self' data: blob:",
               "object-src 'none'",
               "base-uri 'self'",
