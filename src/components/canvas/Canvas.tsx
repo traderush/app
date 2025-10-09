@@ -647,10 +647,18 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       // Handle selection changes (when boxes are selected, hit, or missed)
       const updateSelectionStats = () => {
         const selectedSquares = game.getSelectedSquares();
+        const hitBoxes = game.getHitBoxes();
+        const missedBoxes = game.getMissedBoxes();
+        
+        // Filter out hit and missed boxes - only count ACTIVE selections
+        const activeSelections = selectedSquares.filter(id => 
+          !hitBoxes.includes(id) && !missedBoxes.includes(id)
+        );
+        
         const multipliers: number[] = [];
         const prices: number[] = [];
         
-        selectedSquares.forEach(id => {
+        activeSelections.forEach(id => {
           const contract = contractsRef.current.find(c => c.contractId === id);
           if (contract) {
             multipliers.push(contract.returnMultiplier || 0);
@@ -663,15 +671,18 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
         
         console.log('📊 Canvas: Selection changed:', {
-          count: selectedSquares.length,
+          totalSelected: selectedSquares.length,
+          activeSelections: activeSelections.length,
+          hitBoxes: hitBoxes.length,
+          missedBoxes: missedBoxes.length,
           bestMultiplier: bestMult,
           multipliers,
           averagePrice: avgPrice
         });
         
-        // Emit to parent for immediate right panel update
+        // Emit to parent for immediate right panel update (only active selections)
         if (onSelectionChange) {
-          onSelectionChange(selectedSquares.length, bestMult, multipliers, avgPrice);
+          onSelectionChange(activeSelections.length, bestMult, multipliers, avgPrice);
         }
       };
 
