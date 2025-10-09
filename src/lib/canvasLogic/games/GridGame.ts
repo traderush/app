@@ -541,11 +541,6 @@ export class GridGame extends BaseGame {
 
     // Update empty boxes based on viewport changes
     this.updateEmptyBoxes();
-    
-    // Cleanup old hit/missed/processed boxes every 300 frames (~5 seconds at 60fps)
-    if (this.frameCount % 300 === 0) {
-      this.cleanupOldBoxes();
-    }
   }
 
   protected render(): void {
@@ -1436,18 +1431,11 @@ export class GridGame extends BaseGame {
     const newBoxIds = new Set(Object.keys(multipliers));
     const oldBoxIds = new Set(Object.keys(this.backendMultipliers));
 
-    // Remove boxes that no longer exist (but keep hit/missed boxes for visual persistence)
+    // Remove boxes that no longer exist (original 942b425 simple logic)
     for (const oldId of oldBoxIds) {
       if (!newBoxIds.has(oldId)) {
-        // DON'T delete if box has been hit or missed - keep it visible
-        const box = this.backendMultipliers[oldId];
-        const isResolved = box.status === 'hit' || box.status === 'missed' || 
-                          this.hitBoxes.has(oldId) || this.missedBoxes.has(oldId);
-        
-        if (!isResolved) {
         delete this.backendMultipliers[oldId];
         this.boxClickabilityCache.delete(oldId);
-        }
       }
     }
 
@@ -1472,39 +1460,15 @@ export class GridGame extends BaseGame {
       }
     }
 
-    // Limit total boxes for all games to prevent performance issues and memory leaks
+    // Limit total boxes to prevent performance issues (original 942b425 logic)
     const boxCount = Object.keys(this.backendMultipliers).length;
-    if (boxCount > 800) {
-      // Separate hit/missed boxes from regular boxes
-      const resolvedBoxes: [string, any][] = [];
-      const regularBoxes: [string, any][] = [];
-      
-      Object.entries(this.backendMultipliers).forEach(([id, box]) => {
-        if (box.status === 'hit' || box.status === 'missed' || 
-            this.hitBoxes.has(id) || this.missedBoxes.has(id)) {
-          resolvedBoxes.push([id, box]);
-        } else {
-          regularBoxes.push([id, box]);
-        }
-      });
-      
-      // Sort by world X position and keep most recent
-      regularBoxes.sort(([, a], [, b]) => a.worldX - b.worldX);
-      const keptRegularBoxes = regularBoxes.slice(-600); // Keep last 600 regular boxes
-      const keptResolvedBoxes = resolvedBoxes.slice(-100); // Keep last 100 resolved boxes for visibility
-      
-      // Combine and update
-      this.backendMultipliers = Object.fromEntries([...keptRegularBoxes, ...keptResolvedBoxes]);
-      
-      // Also clean up clickability cache for removed boxes
-      const remainingBoxIds = new Set([...keptRegularBoxes, ...keptResolvedBoxes].map(([id]) => id));
-      const cacheKeysToRemove: string[] = [];
-      this.boxClickabilityCache.forEach((_, key) => {
-        if (!remainingBoxIds.has(key)) {
-          cacheKeysToRemove.push(key);
-        }
-      });
-      cacheKeysToRemove.forEach(key => this.boxClickabilityCache.delete(key));
+    if (boxCount > 1000) {
+      // Keep only the most recent boxes (by world X position)
+      const sortedBoxes = Object.entries(this.backendMultipliers)
+        .sort(([, a], [, b]) => a.worldX - b.worldX) // Sort by world X position
+        .slice(-800); // Keep last 800 boxes
+
+      this.backendMultipliers = Object.fromEntries(sortedBoxes);
     }
   }
 
@@ -1919,57 +1883,8 @@ export class GridGame extends BaseGame {
     }
   }
 
-  /**
-   * Cleanup old boxes that are no longer visible to prevent memory leaks
-   * Removes boxes from hitBoxes, missedBoxes, and processedBoxes that are far off-screen
-   */
-  private cleanupOldBoxes(): void {
-    // Get current viewport bounds
-    const viewport = this.getViewportBounds();
-    if (!viewport) return;
-
-    // Calculate cleanup threshold (boxes that are way off-screen to the left)
-    const cleanupThresholdX = viewport.minX - 1000; // 1000 pixels buffer before cleanup
-
-    // Clean up hit boxes that are no longer in backend multipliers or far off-screen
-    const hitBoxesToRemove: string[] = [];
-    this.hitBoxes.forEach(contractId => {
-      const box = this.backendMultipliers[contractId];
-      if (!box || box.worldX < cleanupThresholdX) {
-        hitBoxesToRemove.push(contractId);
-      }
-    });
-    hitBoxesToRemove.forEach(id => this.hitBoxes.delete(id));
-
-    // Clean up missed boxes that are no longer in backend multipliers or far off-screen
-    const missedBoxesToRemove: string[] = [];
-    this.missedBoxes.forEach(contractId => {
-      const box = this.backendMultipliers[contractId];
-      if (!box || box.worldX < cleanupThresholdX) {
-        missedBoxesToRemove.push(contractId);
-      }
-    });
-    missedBoxesToRemove.forEach(id => this.missedBoxes.delete(id));
-
-    // Clean up processed boxes that are no longer in backend multipliers or far off-screen
-    const processedBoxesToRemove: string[] = [];
-    this.processedBoxes.forEach(contractId => {
-      const box = this.backendMultipliers[contractId];
-      if (!box || box.worldX < cleanupThresholdX) {
-        processedBoxesToRemove.push(contractId);
-      }
-    });
-    processedBoxesToRemove.forEach(id => this.processedBoxes.delete(id));
-
-    // Limit total animations to prevent memory issues
-    if (this.squareAnimations.size > 100) {
-      // Remove oldest animations (those with highest progress or oldest startTime)
-      const sortedAnimations = Array.from(this.squareAnimations.entries())
-        .sort(([, a], [, b]) => a.startTime - b.startTime)
-        .slice(50); // Keep only the 50 most recent
-      
-      this.squareAnimations.clear();
-      sortedAnimations.forEach(([id, anim]) => this.squareAnimations.set(id, anim));
-    }
-  }
+  // REMOVED: cleanupOldBoxes() function
+  // This was added as an optimization but causes boxes to disappear
+  // The original 942b425 implementation didn't have this
+  // Simple box limiting in updateMultipliers() is sufficient
 }
