@@ -432,12 +432,13 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       // World Y is the actual price value (lower strike is the bottom of the box)
       const worldY = contract.lowerStrike;
 
-      // Width is time step converted to world units
+      // Calculate dimensions for SQUARE boxes
       const dataPointsPerTimeStep = Math.floor(timeStep / msPerDataPoint);
       const width = dataPointsPerTimeStep * pixelsPerPoint;
-
-      // Height is the price range
-      const height = contract.upperStrike - contract.lowerStrike;
+      
+      // For square boxes: make height equal to width in world units
+      // Both width and height should be the same value in world space
+      const height = width; // Force square boxes by making height = width in world units
 
       multipliers[contract.contractId] = {
         value: contract.returnMultiplier,
@@ -623,9 +624,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         showMultiplierOverlay: true,
         showDashedGrid: false,
         debugMode: false, // Disable debug mode - only show multipliers, no price ranges
-        // Calculate pricePerPixel to make square boxes: (timeStep / 20) / (viewportHeight / 10) = timeStep / (viewportHeight * 2)
-        // Simplified: pricePerPixel = (timeStep / 100) (assuming viewportHeight ≈ 400-500px)
-        pricePerPixel: timeStep / 10000, // Dynamic scaling for square boxes
+        pricePerPixel: 0.8, // Use default from GridGame - this affects Y axis range
         pixelsPerPoint: 5,
         verticalMarginRatio: 0.1,
         cameraOffsetRatio: 0.2,
