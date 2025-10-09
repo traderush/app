@@ -112,6 +112,11 @@ export class GridGame extends BaseGame {
     isClickable: boolean;
     value?: number; // Random multiplier for heatmap visualization
   }> = {}; // Generated empty boxes to fill viewport
+  
+  // CRITICAL: Store grid offset once and never recalculate
+  // Prevents grid from shifting when old boxes are cleaned up after 150+ seconds
+  private gridOffsetX: number | null = null;
+  private gridOffsetY: number | null = null;
 
   protected world: WorldCoordinateSystem;
   protected eventSource: EventSource | null = null;
@@ -1853,17 +1858,25 @@ export class GridGame extends BaseGame {
     // Only add new empty boxes for newly visible areas
     // this.emptyBoxes = {}; // ❌ REMOVED - was causing grid to regenerate and move
 
-    // Find the grid alignment by looking at existing box positions
-    // Real boxes are grid-aligned, so we need to match their alignment
-    let gridOffsetX = 0;
-    let gridOffsetY = 0;
-
-    if (existingBoxes.length > 0) {
-      // Use the first box to determine grid offset
-      const referenceBox = existingBoxes[0];
-      gridOffsetX = referenceBox.worldX % boxWidth;
-      gridOffsetY = referenceBox.worldY % boxHeight;
+    // CRITICAL: Calculate grid offset ONCE and store it permanently
+    // If we recalculate it every time, the grid will shift when old boxes are cleaned up
+    // This was causing the grid to start moving/glitching after ~150 seconds
+    if (this.gridOffsetX === null || this.gridOffsetY === null) {
+      // First time - calculate and store grid offset from first backend box
+      if (existingBoxes.length > 0) {
+        const referenceBox = existingBoxes[0];
+        this.gridOffsetX = referenceBox.worldX % boxWidth;
+        this.gridOffsetY = referenceBox.worldY % boxHeight;
+      } else {
+        // No backend boxes yet - use zero offset
+        this.gridOffsetX = 0;
+        this.gridOffsetY = 0;
+      }
     }
+    
+    // Use the stored grid offset (never recalculate after first time)
+    const gridOffsetX = this.gridOffsetX;
+    const gridOffsetY = this.gridOffsetY;
 
     // Create a set of occupied positions for quick lookup
     const occupiedPositions = new Set<string>();
