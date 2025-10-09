@@ -353,75 +353,18 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   // Track data point count for accurate world coordinate calculation
   const [dataPointCount, setDataPointCount] = useState(0);
 
+  // Track initial world X position when grid is first created (stays fixed)
+  const initialWorldXRef = useRef<number | null>(null);
+
   // Convert contracts to canvas format with accurate coordinate mapping
   const canvasMultipliers = useMemo(() => {
     const multipliers: Record<string, any> = {};
 
-    // If no contracts, generate empty boxes to fill the screen
-    if (!contracts.length && configLoaded) {
-      const currentTimeMs = Date.now();
-      const pixelsPerPoint = 5;
-      const msPerDataPoint = 100;
-
-      // Calculate visible area
-      const visibleColumns = numXsquares || 50; // Use config or default
-      const visibleRows = numYsquares || 30;
-
-      // Generate empty boxes
-      for (let col = 0; col < visibleColumns; col++) {
-        for (let row = 0; row < visibleRows; row++) {
-          const boxId = `empty_${col}_${row}`;
-
-          // Calculate time for this column
-          const timeOffset = col * timeStep;
-          const boxStartTime = currentTimeMs + timeOffset;
-          const boxEndTime = boxStartTime + timeStep;
-
-          // Calculate price for this row
-          const maxPrice = basePrice + (visibleRows * priceStep) / 2;
-          const boxLowerPrice = maxPrice - (row + 1) * priceStep;
-          const boxUpperPrice = boxLowerPrice + priceStep;
-
-          // Calculate world coordinates
-          const dataPointsUntilStart = Math.floor(timeOffset / msPerDataPoint);
-          const currentWorldX =
-            Math.max(0, dataPointCount - 1) * pixelsPerPoint;
-          const worldX = currentWorldX + dataPointsUntilStart * pixelsPerPoint;
-          const worldY = boxLowerPrice;
-
-          // Width and height
-          const dataPointsPerTimeStep = Math.floor(timeStep / msPerDataPoint);
-          const width = dataPointsPerTimeStep * pixelsPerPoint;
-          const height = priceStep;
-
-          multipliers[boxId] = {
-            value: 0, // Empty box
-            x: col,
-            y: row,
-            worldX: worldX,
-            worldY: worldY,
-            width: width,
-            height: height,
-            totalBets: 0,
-            userBet: 0,
-            timestampRange: {
-              start: boxStartTime,
-              end: boxEndTime,
-            },
-            priceRange: {
-              min: boxLowerPrice,
-              max: boxUpperPrice,
-            },
-            isEmpty: true, // Mark as empty box
-            isClickable: false, // Empty boxes aren't clickable
-          };
-        }
-      }
-
-      return multipliers;
+    // If no contracts, DON'T generate empty boxes - let GridGame handle it
+    // This prevents dual grid collision (Canvas static grid vs GridGame world-space grid)
+    if (!contracts.length) {
+      return multipliers; // Return empty - GridGame will generate empty boxes to fill viewport
     }
-
-    if (!contracts.length) return multipliers;
 
     const currentTimeMs = Date.now();
     const pixelsPerPoint = 5; // From GridGame default config
