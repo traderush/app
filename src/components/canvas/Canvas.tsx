@@ -684,10 +684,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         pixelsPerPoint: 5,
         verticalMarginRatio: 0.1,
         cameraOffsetRatio: 0.2,
-        smoothingFactorX: 0.3, // Light smoothing for fluid movement without excessive lag
-        smoothingFactorY: 0.92,
+        smoothingFactorX: 0.95, // High smoothing for fluid camera movement (original value)
+        smoothingFactorY: 0.92, // Smooth Y-axis following (original value)
         lineEndSmoothing: 0.88,
-        animationDuration: 800,
+        animationDuration: 300, // Quick, responsive animations (original value)
         maxDataPoints: 500,
         showProbabilities: showProbabilities, // Pass heatmap toggle
         minMultiplier: minMultiplier, // Pass min multiplier filter

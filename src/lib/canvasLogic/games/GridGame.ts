@@ -161,10 +161,10 @@ export class GridGame extends BaseGame {
       pricePerPixel: 0.8,
       verticalMarginRatio: 0.1,
       cameraOffsetRatio: 0.2,
-      smoothingFactorX: 0.85, // More stable smoothing to prevent jitter
-      smoothingFactorY: 0.95,
+      smoothingFactorX: 0.95, // High smoothing for fluid camera movement
+      smoothingFactorY: 0.92, // Smooth Y-axis following
       lineEndSmoothing: 0.88,
-      animationDuration: 800,
+      animationDuration: 300, // Quick, responsive animations
       maxDataPoints: 500,
       showMultiplierOverlay: true,
       externalDataSource: false,
@@ -1444,8 +1444,8 @@ export class GridGame extends BaseGame {
                           this.hitBoxes.has(oldId) || this.missedBoxes.has(oldId);
         
         if (!isResolved) {
-          delete this.backendMultipliers[oldId];
-          this.boxClickabilityCache.delete(oldId);
+        delete this.backendMultipliers[oldId];
+        this.boxClickabilityCache.delete(oldId);
         }
       }
     }
