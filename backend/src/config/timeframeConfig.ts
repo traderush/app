@@ -63,7 +63,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 5,
     },
-    boxHeight: 0.02, // 500ms * 0.04 = 0.02 (creates square boxes)
+    boxHeight: 2.0, // Adjusted for square boxes at 0.5s timeframe
     contractGenerationOffset: 25000,
     contractExpiryBuffer: 50,
   },
@@ -80,7 +80,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 5,
     },
-    boxHeight: 0.04, // 1000ms * 0.04 = 0.04 (creates square boxes)
+    boxHeight: 4.0, // Adjusted for square boxes at 1s timeframe
     contractGenerationOffset: 25000,
     contractExpiryBuffer: 50,
   },
@@ -97,7 +97,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 8,
     },
-    boxHeight: 0.08, // 2000ms * 0.04 = 0.08 (creates square boxes)
+    boxHeight: 8.0, // Adjusted for square boxes at 2s timeframe
     contractGenerationOffset: 50000,
     contractExpiryBuffer: 100,
   },
@@ -114,7 +114,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 10,
     },
-    boxHeight: 0.16, // 4000ms * 0.04 = 0.16 (creates square boxes)
+    boxHeight: 16.0, // Adjusted for square boxes at 4s timeframe
     contractGenerationOffset: 100000,
     contractExpiryBuffer: 200,
   },
@@ -132,7 +132,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 15,
     },
-    boxHeight: 0.4, // 10000ms * 0.04 = 0.4 (creates square boxes)
+    boxHeight: 40.0, // Adjusted for square boxes at 10s timeframe
     contractGenerationOffset: 250000,
     contractExpiryBuffer: 500,
   },
