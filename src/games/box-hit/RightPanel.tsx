@@ -1,16 +1,33 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { TrendingUp, TrendingDown, Filter, ChevronRight, Edit3, ExternalLink } from 'lucide-react';
 import { useUIStore } from '@/stores';
 
 const ORANGE = '#FA5616';
 
-/** centralized trading colors */
+/** Centralized trading colors for consistent UI theming */
 const TRADING_COLORS = {
   positive: '#2fe3ac',  // Green for positive values (gains, up movements)
   negative: '#ec397a',  // Red for negative values (losses, down movements)
 } as const;
 
+/**
+ * Props for the RightPanel component
+ * 
+ * @property isTradingMode - Whether trading mode is currently active
+ * @property onTradingModeChange - Callback when trading mode changes
+ * @property selectedCount - Number of boxes currently selected
+ * @property bestMultiplier - Highest multiplier among selected boxes
+ * @property selectedMultipliers - Array of all multipliers for selected boxes
+ * @property currentBTCPrice - Current live BTC price
+ * @property averagePositionPrice - Average BTC price of selected box positions
+ * @property betAmount - Current bet amount in USDC
+ * @property onBetAmountChange - Callback when bet amount changes
+ * @property dailyHigh - 24-hour high price
+ * @property dailyLow - 24-hour low price
+ * @property activeTab - Currently active tab ('place' or 'copy')
+ * @property onActiveTabChange - Callback when active tab changes
+ */
 interface RightPanelProps {
   isTradingMode: boolean;
   onTradingModeChange: (tradingMode: boolean) => void;
@@ -459,4 +476,5 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
   );
 }
 
-export default RightPanel;
+// Memoize component to prevent unnecessary re-renders
+export default memo(RightPanel);

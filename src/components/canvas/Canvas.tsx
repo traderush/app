@@ -2,7 +2,7 @@
 
 import { GameType } from '@/types';
 import { TimeFrame, getTimeframeConfig } from '@/types/timeframe';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, memo } from 'react';
 import { GridGame } from '../../lib/canvasLogic/games/GridGame';
 import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
@@ -38,7 +38,7 @@ interface CanvasProps {
   minMultiplier?: number;
 }
 
-export default function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange, showProbabilities = false, minMultiplier = 1.0 }: CanvasProps = {}) {
+function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange, showProbabilities = false, minMultiplier = 1.0 }: CanvasProps = {}) {
   // Convert external timeframe (ms) to TimeFrame enum
   const getTimeFrameFromMs = (ms?: number): TimeFrame => {
     switch (ms) {
@@ -1189,3 +1189,7 @@ export default function Canvas({ externalControl = false, externalIsStarted = fa
     </div>
   );
 }
+
+// Memoize Canvas component to prevent unnecessary re-renders
+// Uses default shallow comparison for props
+export default memo(Canvas);
