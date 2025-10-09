@@ -815,8 +815,9 @@ export class GridGame extends BaseGame {
       }
 
       // Skip if box has no multiplier data or below min multiplier
-      // Note: Empty boxes CAN have multiplier values for heatmap visualization
-      if (!box.value || box.value === 0 || box.value < this.config.minMultiplier) {
+      // Note: Only show heatmap on boxes with actual multiplier values (backend boxes)
+      // Empty boxes (isEmpty: true) should NOT show heatmap - they're just grid placeholders
+      if (box.isEmpty || !box.value || box.value === 0 || box.value < this.config.minMultiplier) {
         return;
       }
 
@@ -1842,28 +1843,26 @@ export class GridGame extends BaseGame {
         // Create empty box ID
         const emptyBoxId = `empty_${gridX}_${gridY}`;
         
-        // CRITICAL: Only create if doesn't exist - preserves multiplier and prevents jerky movement
+        // CRITICAL: Only create if doesn't exist - prevents jerky movement
         // ⚠️ DO NOT regenerate existing empty boxes - causes grid to jump/move!
         if (!this.emptyBoxes[emptyBoxId]) {
-          // Calculate world coordinates with grid alignment
-          const worldX = gridX * boxWidth + gridOffsetX;
-          const worldY = gridY * boxHeight + gridOffsetY;
-          
-          // Generate random multiplier between 1.0x and 15.0x (for heatmap)
-          const randomMultiplier = +(1.0 + Math.random() * 14.0).toFixed(1);
-          
-          this.emptyBoxes[emptyBoxId] = {
-            worldX,
-            worldY,
-            width: boxWidth,
-            height: boxHeight,
-            isEmpty: true,
+        // Calculate world coordinates with grid alignment
+        const worldX = gridX * boxWidth + gridOffsetX;
+        const worldY = gridY * boxHeight + gridOffsetY;
+        
+        this.emptyBoxes[emptyBoxId] = {
+          worldX,
+          worldY,
+          width: boxWidth,
+          height: boxHeight,
+          isEmpty: true,
             isClickable: false,
-            value: randomMultiplier, // Stable multiplier for heatmap display
-          };
-          generatedCount++;
-        }
+            // NO value - empty boxes are just grid placeholders
+            // Heatmap only shows on backend boxes with actual multipliers
+        };
+        generatedCount++;
       }
+    }
     }
     // Reduced logging for performance
   }
