@@ -795,7 +795,7 @@ export class GridGame extends BaseGame {
           id,
           {
             ...box,
-            value: 0,
+            value: box.value || 0, // ✅ PRESERVE random multiplier for heatmap
             x: 0,
             y: 0,
             totalBets: 0,
@@ -905,7 +905,7 @@ export class GridGame extends BaseGame {
           id,
           {
             ...box,
-            value: 0,
+            value: box.value || 0, // ✅ PRESERVE random multiplier (don't override to 0)
             x: 0,
             y: 0,
             totalBets: 0,
@@ -1791,6 +1791,12 @@ export class GridGame extends BaseGame {
    * Analyzes the current viewport and generates empty boxes to fill empty spaces
    * Based on the algorithm: for any existing box at (X,Y) with dimensions (w,h),
    * check positions X+m*w, Y+n*h where m,n are integers for empty spaces
+   * 
+   * ⚠️ CRITICAL PERFORMANCE NOTE:
+   * - DO NOT clear this.emptyBoxes = {} - causes grid to regenerate and move jerkily
+   * - DO NOT regenerate existing empty boxes - preserves multipliers and coordinates
+   * - Only ADD new empty boxes for newly visible viewport areas
+   * - Grid must stay STATIC while NOW line moves - this is the core design!
    */
   private generateEmptyBoxes(): void {
     // Get viewport bounds
@@ -1814,8 +1820,9 @@ export class GridGame extends BaseGame {
     const boxWidth = standardBox.width;
     const boxHeight = standardBox.height;
 
-    // Clear existing empty boxes
-    this.emptyBoxes = {};
+    // CRITICAL: DON'T clear existing empty boxes - causes jerky movement!
+    // Only add new empty boxes for newly visible areas
+    // this.emptyBoxes = {}; // ❌ REMOVED - was causing grid to regenerate and move
 
     // Find the grid alignment by looking at existing box positions
     // Real boxes are grid-aligned, so we need to match their alignment
@@ -1862,31 +1869,35 @@ export class GridGame extends BaseGame {
       for (let gridY = minGridY; gridY <= maxGridY; gridY++) {
         const positionKey = `${gridX}_${gridY}`;
         
-        // Skip if position is already occupied by existing box
+        // Skip if position is already occupied by backend box
         if (occupiedPositions.has(positionKey)) {
-          // Don't log every skip to reduce noise
           continue;
         }
         
-        // Calculate world coordinates with grid alignment
-        const worldX = gridX * boxWidth + gridOffsetX;
-        const worldY = gridY * boxHeight + gridOffsetY;
-        
-        // Create empty box with random multiplier for heatmap visualization
+        // Create empty box ID
         const emptyBoxId = `empty_${gridX}_${gridY}`;
-        // Generate random multiplier between 1.0x and 15.0x (same as backend logic)
-        const randomMultiplier = +(1.0 + Math.random() * 14.0).toFixed(1);
         
-        this.emptyBoxes[emptyBoxId] = {
-          worldX,
-          worldY,
-          width: boxWidth,
-          height: boxHeight,
-          isEmpty: true,
-          isClickable: false,
-          value: randomMultiplier, // Add multiplier value for heatmap display
-        };
-        generatedCount++;
+        // CRITICAL: Only create if doesn't exist - preserves multiplier and prevents jerky movement
+        // ⚠️ DO NOT regenerate existing empty boxes - causes grid to jump/move!
+        if (!this.emptyBoxes[emptyBoxId]) {
+          // Calculate world coordinates with grid alignment
+          const worldX = gridX * boxWidth + gridOffsetX;
+          const worldY = gridY * boxHeight + gridOffsetY;
+          
+          // Generate random multiplier between 1.0x and 15.0x (for heatmap)
+          const randomMultiplier = +(1.0 + Math.random() * 14.0).toFixed(1);
+          
+          this.emptyBoxes[emptyBoxId] = {
+            worldX,
+            worldY,
+            width: boxWidth,
+            height: boxHeight,
+            isEmpty: true,
+            isClickable: false,
+            value: randomMultiplier, // Stable multiplier for heatmap display
+          };
+          generatedCount++;
+        }
       }
     }
     // Reduced logging for performance
