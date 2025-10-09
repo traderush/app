@@ -63,7 +63,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 5,
     },
-    boxHeight: 0.025, // Adjusted for square boxes with pricePerPixel scaling
+    boxHeight: 0.02, // 500ms/100*5 = 25px width, 25px*0.8 = 0.02 price height for squares
     contractGenerationOffset: 25000,
     contractExpiryBuffer: 50,
   },
@@ -80,7 +80,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 5,
     },
-    boxHeight: 0.05, // Adjusted for square boxes with pricePerPixel scaling
+    boxHeight: 0.04, // 1000ms/100*5 = 50px width, 50px*0.8 = 0.04 price height for squares
     contractGenerationOffset: 25000,
     contractExpiryBuffer: 50,
   },
@@ -97,7 +97,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 8,
     },
-    boxHeight: 0.1, // Adjusted for square boxes with pricePerPixel scaling
+    boxHeight: 0.08, // 2000ms/100*5 = 100px width, 100px*0.8 = 0.08 price height for squares
     contractGenerationOffset: 50000,
     contractExpiryBuffer: 100,
   },
@@ -114,7 +114,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 10,
     },
-    boxHeight: 0.2, // Adjusted for square boxes with pricePerPixel scaling
+    boxHeight: 0.16, // 4000ms/100*5 = 200px width, 200px*0.8 = 0.16 price height for squares
     contractGenerationOffset: 100000,
     contractExpiryBuffer: 200,
   },
@@ -132,7 +132,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       numColumns: 25,
       columnsBehind: 15,
     },
-    boxHeight: 0.5, // Adjusted for square boxes with pricePerPixel scaling
+    boxHeight: 0.4, // 10000ms/100*5 = 500px width, 500px*0.8 = 0.4 price height for squares
     contractGenerationOffset: 250000,
     contractExpiryBuffer: 500,
   },
