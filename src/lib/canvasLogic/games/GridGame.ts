@@ -814,8 +814,9 @@ export class GridGame extends BaseGame {
         return;
       }
 
-      // Skip if box is empty (no multiplier data) or below min multiplier
-      if (box.isEmpty || box.value === 0 || box.value < this.config.minMultiplier) {
+      // Skip if box has no multiplier data or below min multiplier
+      // Note: Empty boxes CAN have multiplier values for heatmap visualization
+      if (!box.value || box.value === 0 || box.value < this.config.minMultiplier) {
         return;
       }
 
