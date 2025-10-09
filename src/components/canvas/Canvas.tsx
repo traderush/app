@@ -691,7 +691,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         maxDataPoints: 500,
         showProbabilities: showProbabilities, // Pass heatmap toggle
         minMultiplier: minMultiplier, // Pass min multiplier filter
-        disableEmptyBoxGeneration: true, // Canvas.tsx provides all boxes, GridGame shouldn't generate its own
       });
 
       // Set up event listeners

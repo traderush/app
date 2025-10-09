@@ -59,7 +59,6 @@ export interface GridGameConfig extends GameConfig {
   gameType?: IronCondorGameType;
   showProbabilities?: boolean;
   minMultiplier?: number;
-  disableEmptyBoxGeneration?: boolean; // Disable GridGame's empty box generation (use when Canvas provides all boxes)
 }
 
 export class GridGame extends BaseGame {
@@ -175,7 +174,6 @@ export class GridGame extends BaseGame {
       gameType: GameType.GRID,
       showProbabilities: false,
       minMultiplier: 1.0,
-      disableEmptyBoxGeneration: false,
       ...config,
     };
 
@@ -1894,11 +1892,6 @@ export class GridGame extends BaseGame {
    * Should be called when camera position changes or viewport size changes
    */
   private updateEmptyBoxes(): void {
-    // Skip if empty box generation is disabled (Canvas.tsx provides all boxes)
-    if (this.config.disableEmptyBoxGeneration) {
-      return;
-    }
-    
     // Only generate empty boxes for certain game types
     if (this.config.gameType === GameType.SKETCH || this.config.gameType === GameType.COBRA) {
       return; // Skip for games where boxes are not visible
