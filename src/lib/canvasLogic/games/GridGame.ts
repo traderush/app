@@ -1530,17 +1530,34 @@ export class GridGame extends BaseGame {
       }
     }
 
-    // CRITICAL: Aggressive cleanup to prevent performance degradation
-    // Clean up more frequently and keep fewer boxes to maintain 60fps
+    // CRITICAL: Smart cleanup to prevent performance degradation
+    // Only remove boxes that are FAR BEHIND the NOW line (camera position)
+    // NEVER remove future boxes (right side of NOW line)
     const boxCount = Object.keys(this.backendMultipliers).length;
-    if (boxCount > 500) {
-      // Keep only the most recent boxes (by world X position)
-      // Reduced from 1000/800 to 500/400 for better performance
-      const sortedBoxes = Object.entries(this.backendMultipliers)
-        .sort(([, a], [, b]) => a.worldX - b.worldX) // Sort by world X position
-        .slice(-400); // Keep last 400 boxes (reduced from 800)
-
-      this.backendMultipliers = Object.fromEntries(sortedBoxes);
+    if (boxCount > 800) {
+      const currentWorldX = (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
+      
+      // Calculate how far behind NOW line we should keep boxes
+      // Keep boxes within 2 viewport widths behind NOW line
+      const viewportWidth = this.width / this.camera.x; // Approximate viewport width in world units
+      const keepBehindDistance = viewportWidth * 2;
+      const minWorldXToKeep = currentWorldX - keepBehindDistance;
+      
+      // Only remove boxes that are far behind the NOW line
+      const boxesToKeep: [string, any][] = [];
+      const boxesToRemove: string[] = [];
+      
+      Object.entries(this.backendMultipliers).forEach(([id, box]) => {
+        // Keep ALL boxes at or ahead of NOW line (right side)
+        // Keep boxes behind NOW line that are within viewport buffer
+        if (box.worldX >= minWorldXToKeep) {
+          boxesToKeep.push([id, box]);
+        } else {
+          boxesToRemove.push(id);
+        }
+      });
+      
+      this.backendMultipliers = Object.fromEntries(boxesToKeep);
       
       // Also clear hit/missed boxes that are no longer in backend
       const remainingIds = new Set(Object.keys(this.backendMultipliers));
@@ -1578,7 +1595,9 @@ export class GridGame extends BaseGame {
       const now = Date.now();
       if (now - this.lastDebugLog > 5000) {
         console.log('🧹 Backend cleanup:', {
-          keptBoxes: 400,
+          totalBefore: boxCount,
+          keptBoxes: boxesToKeep.length,
+          removedBoxes: boxesToRemove.length,
           removedFromHit: hitBoxesToRemove.length,
           removedFromMissed: missedBoxesToRemove.length,
           removedAnimations: animationKeysToRemove.length,
@@ -2010,37 +2029,40 @@ export class GridGame extends BaseGame {
   }
   
   /**
-   * Remove empty boxes that are far off-screen to prevent memory leaks
+   * Remove empty boxes that are FAR BEHIND the NOW line
+   * NEVER remove future boxes (right side of NOW line)
    * This prevents the emptyBoxes object from growing indefinitely
    */
   private cleanupOldEmptyBoxes(): void {
+    const currentWorldX = (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
     const viewport = this.getViewportBounds();
     if (!viewport) return;
     
-    // Keep a buffer beyond viewport to avoid re-generating boxes too often
-    const bufferMultiplier = 3; // Keep boxes 3x viewport width on each side
+    // Calculate how far behind NOW line we should keep empty boxes
+    // Keep boxes within 3 viewport widths behind NOW line
     const viewportWidth = viewport.maxX - viewport.minX;
     const viewportHeight = viewport.maxY - viewport.minY;
+    const keepBehindDistance = viewportWidth * 3;
+    const minWorldXToKeep = currentWorldX - keepBehindDistance;
     
-    const minX = viewport.minX - (viewportWidth * bufferMultiplier);
-    const maxX = viewport.maxX + (viewportWidth * bufferMultiplier);
-    const minY = viewport.minY - (viewportHeight * bufferMultiplier);
-    const maxY = viewport.maxY + (viewportHeight * bufferMultiplier);
+    // Vertical buffer for Y axis (keep boxes slightly above/below viewport)
+    const minY = viewport.minY - (viewportHeight * 2);
+    const maxY = viewport.maxY + (viewportHeight * 2);
     
-    // Remove empty boxes that are far outside the buffered viewport
+    // Remove empty boxes that are far behind NOW line or far outside Y viewport
     const emptyBoxIds = Object.keys(this.emptyBoxes);
     let removedCount = 0;
     
     for (const boxId of emptyBoxIds) {
       const box = this.emptyBoxes[boxId];
       
-      // Check if box is far outside buffered viewport
-      if (
-        box.worldX + box.width < minX ||
-        box.worldX > maxX ||
-        box.worldY + box.height < minY ||
-        box.worldY > maxY
-      ) {
+      // CRITICAL: Only remove boxes FAR BEHIND the NOW line (left side)
+      // NEVER remove boxes at or ahead of NOW line (right side)
+      // Also remove boxes that are way above or below viewport (Y axis)
+      const isFarBehindNowLine = box.worldX + box.width < minWorldXToKeep;
+      const isFarOutsideYViewport = box.worldY + box.height < minY || box.worldY > maxY;
+      
+      if (isFarBehindNowLine || isFarOutsideYViewport) {
         delete this.emptyBoxes[boxId];
         removedCount++;
       }
@@ -2052,6 +2074,8 @@ export class GridGame extends BaseGame {
       console.log('🧹 Cleaned up old empty boxes:', {
         removed: removedCount,
         remaining: Object.keys(this.emptyBoxes).length,
+        nowLineX: currentWorldX.toFixed(0),
+        minXKept: minWorldXToKeep.toFixed(0),
       });
       this.lastDebugLog = now;
     }
