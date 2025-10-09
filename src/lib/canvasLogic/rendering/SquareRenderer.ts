@@ -78,8 +78,9 @@ export class SquareRenderer {
 
     // Draw base background fill (this persists after animation completes)
     if (state === 'activated') {
-      // Hit state - permanent signature color overlay (matches regular box-hit canvas)
-      this.ctx.fillStyle = hexToRgba(signatureColor, 0.35);
+      // Hit state - MORE opaque signature color overlay (distinctly different from selected)
+      // Regular canvas uses 0.28, but we use 0.45 for clearer visual distinction
+      this.ctx.fillStyle = hexToRgba(signatureColor, 0.45);
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'missed') {
       // Missed state - permanent greyed out appearance
@@ -237,13 +238,13 @@ export class SquareRenderer {
       this.ctx.fillText(text, centerX, centerY + 4);
     }
 
-    // Draw "HIT" or "MISS" badge for outcome states
+    // Draw "HIT" or "MISS" badge for outcome states (matches regular box-hit canvas)
     // Reset globalAlpha to full opacity for badges
     if (state === 'activated') {
       this.ctx.save();
       this.ctx.globalAlpha = 1.0; // Full opacity for badge
-      this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)'; // Light grey for HIT
-      this.ctx.font = '11px sans-serif';
+      this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)'; // Bright light grey - clearly visible
+      this.ctx.font = 'bold 11px sans-serif'; // Bold for emphasis
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'bottom';
       this.ctx.fillText('HIT', x + actualWidth - 8, y + actualHeight - 8);
@@ -252,7 +253,7 @@ export class SquareRenderer {
       this.ctx.save();
       this.ctx.globalAlpha = 1.0; // Full opacity for badge
       this.ctx.fillStyle = 'rgba(100, 100, 100, 0.7)'; // Darker grey for MISS (more subtle)
-      this.ctx.font = '11px sans-serif';
+      this.ctx.font = 'bold 11px sans-serif'; // Bold for consistency
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'bottom';
       this.ctx.fillText('MISS', x + actualWidth - 8, y + actualHeight - 8);
