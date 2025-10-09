@@ -357,13 +357,20 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   const initialWorldXRef = useRef<number | null>(null);
 
   // Convert contracts to canvas format with accurate coordinate mapping
+  // Throttle debug logging to avoid console spam (max once per 2 seconds)
+  const lastCanvasDebugLog = useRef(0);
+  
   const canvasMultipliers = useMemo(() => {
     const multipliers: Record<string, any> = {};
 
     // If no contracts, DON'T generate empty boxes - let GridGame handle it
     // This prevents dual grid collision (Canvas static grid vs GridGame world-space grid)
     if (!contracts.length) {
-      console.log('🔍 Canvas: No contracts received from backend');
+      const now = Date.now();
+      if (now - lastCanvasDebugLog.current > 2000) {
+        console.log('🔍 Canvas: No contracts received from backend');
+        lastCanvasDebugLog.current = now;
+      }
       return multipliers; // Return empty - GridGame will generate empty boxes to fill viewport
     }
 
@@ -371,11 +378,14 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     const pixelsPerPoint = 5; // From GridGame default config
     const msPerDataPoint = 100; // Each data point represents 100ms
 
-    console.log('🔍 Canvas: Processing contracts', {
-      totalContracts: contracts.length,
-      currentTime: currentTimeMs,
-      dataPointCount: dataPointCount,
-    });
+    if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
+      console.log('🔍 Canvas: Processing contracts', {
+        totalContracts: contracts.length,
+        currentTime: currentTimeMs,
+        dataPointCount: dataPointCount,
+      });
+      lastCanvasDebugLog.current = currentTimeMs;
+    }
 
     // Include all contracts (active and recently expired) for visualization
     const visibleContracts = contracts.filter((contract) => {
@@ -398,11 +408,13 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       return false;
     });
 
-    console.log('🔍 Canvas: Filtered visible contracts', {
-      visibleCount: visibleContracts.length,
-      futureContracts: visibleContracts.filter(c => c.startTime > currentTimeMs).length,
-      pastContracts: visibleContracts.filter(c => c.endTime <= currentTimeMs).length,
-    });
+    if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
+      console.log('🔍 Canvas: Filtered visible contracts', {
+        visibleCount: visibleContracts.length,
+        futureContracts: visibleContracts.filter(c => c.startTime > currentTimeMs).length,
+        pastContracts: visibleContracts.filter(c => c.endTime <= currentTimeMs).length,
+      });
+    }
 
     let skippedOld = 0;
     let skippedFuture = 0;
@@ -490,14 +502,16 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       };
     });
 
-    console.log('🔍 Canvas: Final multipliers result', {
-      processed: processedCount,
-      skippedOld: skippedOld,
-      skippedFuture: skippedFuture,
-      totalMultipliers: Object.keys(multipliers).length,
-      futureMultipliers: Object.values(multipliers).filter((m: any) => m.isClickable).length,
-      pastMultipliers: Object.values(multipliers).filter((m: any) => m.status === 'passed').length,
-    });
+    if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
+      console.log('🔍 Canvas: Final multipliers result', {
+        processed: processedCount,
+        skippedOld: skippedOld,
+        skippedFuture: skippedFuture,
+        totalMultipliers: Object.keys(multipliers).length,
+        futureMultipliers: Object.values(multipliers).filter((m: any) => m.isClickable).length,
+        pastMultipliers: Object.values(multipliers).filter((m: any) => m.status === 'passed').length,
+      });
+    }
 
     return multipliers;
   }, [

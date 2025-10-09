@@ -84,6 +84,9 @@ export class GridGame extends BaseGame {
   // Bound event handlers for cleanup
   private boundHandleMouseDown: (e: MouseEvent) => void;
   private boundHandleMouseUp: (e: MouseEvent) => void;
+  
+  // Debug logging throttle
+  private lastDebugLog: number = 0;
 
   protected smoothLineEndX: number = 0;
   protected smoothLineEndY: number = 0;
@@ -783,6 +786,7 @@ export class GridGame extends BaseGame {
     }
     
     // Combine backend boxes with empty boxes for rendering
+    // NOTE: Empty boxes do NOT have multiplier values - heatmap only shows on backend boxes
     const allBoxes = {
       ...this.backendMultipliers,
       ...Object.fromEntries(
@@ -790,7 +794,7 @@ export class GridGame extends BaseGame {
           id,
           {
             ...box,
-            value: box.value || 0, // ✅ PRESERVE random multiplier for heatmap
+            value: 0, // Empty boxes have NO multiplier - heatmap won't render on them
             x: 0,
             y: 0,
             totalBets: 0,
@@ -811,12 +815,15 @@ export class GridGame extends BaseGame {
     let skippedMinMult = 0;
     let skippedOffscreen = 0;
 
-    console.log('🔍 GridGame: Heatmap rendering', {
-      backendBoxes: Object.keys(this.backendMultipliers).length,
-      emptyBoxes: Object.keys(this.emptyBoxes).length,
-      totalBoxes: Object.keys(allBoxes).length,
-      minMultiplier: this.config.minMultiplier,
-    });
+    const now = Date.now();
+    if (now - this.lastDebugLog > 2000) {
+      console.log('🔍 GridGame: Heatmap rendering', {
+        backendBoxes: Object.keys(this.backendMultipliers).length,
+        emptyBoxes: Object.keys(this.emptyBoxes).length,
+        totalBoxes: Object.keys(allBoxes).length,
+        minMultiplier: this.config.minMultiplier,
+      });
+    }
 
     Object.entries(allBoxes).forEach(([squareId, box]) => {
       // Skip if we have visible squares defined and this square is not in the list
@@ -911,18 +918,21 @@ export class GridGame extends BaseGame {
       this.ctx.fillRect(screenX + 0.5, screenY + 0.5, screenWidth - 1, screenHeight - 1);
     });
 
-    console.log('🔍 GridGame: Heatmap rendering complete', {
-      rendered: renderedCount,
-      skipped: {
-        visibility: skippedVisibility,
-        selected: skippedSelected,
-        empty: skippedEmpty,
-        noValue: skippedNoValue,
-        minMult: skippedMinMult,
-        offscreen: skippedOffscreen,
-        total: skippedVisibility + skippedSelected + skippedEmpty + skippedNoValue + skippedMinMult + skippedOffscreen,
-      }
-    });
+    if (now - this.lastDebugLog > 2000) {
+      console.log('🔍 GridGame: Heatmap rendering complete', {
+        rendered: renderedCount,
+        skipped: {
+          visibility: skippedVisibility,
+          selected: skippedSelected,
+          empty: skippedEmpty,
+          noValue: skippedNoValue,
+          minMult: skippedMinMult,
+          offscreen: skippedOffscreen,
+          total: skippedVisibility + skippedSelected + skippedEmpty + skippedNoValue + skippedMinMult + skippedOffscreen,
+        }
+      });
+      this.lastDebugLog = now;
+    }
   }
 
   private renderMultiplierOverlay(): void {
@@ -1473,10 +1483,14 @@ export class GridGame extends BaseGame {
       }
     >
   ): void {
-    console.log('🔍 GridGame: updateMultipliers called', {
-      newMultiplierCount: Object.keys(multipliers).length,
-      existingBoxCount: Object.keys(this.backendMultipliers).length,
-    });
+    const now = Date.now();
+    if (now - this.lastDebugLog > 2000) {
+      console.log('🔍 GridGame: updateMultipliers called', {
+        newMultiplierCount: Object.keys(multipliers).length,
+        existingBoxCount: Object.keys(this.backendMultipliers).length,
+      });
+      this.lastDebugLog = now;
+    }
 
     // Intelligently update boxes - only update changed properties
     const newBoxIds = new Set(Object.keys(multipliers));
