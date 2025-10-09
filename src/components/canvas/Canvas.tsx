@@ -363,12 +363,19 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     // If no contracts, DON'T generate empty boxes - let GridGame handle it
     // This prevents dual grid collision (Canvas static grid vs GridGame world-space grid)
     if (!contracts.length) {
+      console.log('🔍 Canvas: No contracts received from backend');
       return multipliers; // Return empty - GridGame will generate empty boxes to fill viewport
     }
 
     const currentTimeMs = Date.now();
     const pixelsPerPoint = 5; // From GridGame default config
     const msPerDataPoint = 100; // Each data point represents 100ms
+
+    console.log('🔍 Canvas: Processing contracts', {
+      totalContracts: contracts.length,
+      currentTime: currentTimeMs,
+      dataPointCount: dataPointCount,
+    });
 
     // Include all contracts (active and recently expired) for visualization
     const visibleContracts = contracts.filter((contract) => {
@@ -391,6 +398,16 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       return false;
     });
 
+    console.log('🔍 Canvas: Filtered visible contracts', {
+      visibleCount: visibleContracts.length,
+      futureContracts: visibleContracts.filter(c => c.startTime > currentTimeMs).length,
+      pastContracts: visibleContracts.filter(c => c.endTime <= currentTimeMs).length,
+    });
+
+    let skippedOld = 0;
+    let skippedFuture = 0;
+    let processedCount = 0;
+
     visibleContracts.forEach((contract) => {
       // Calculate grid position based on time
       const timeUntilStart = contract.startTime - currentTimeMs;
@@ -402,13 +419,17 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       // Skip very old contracts (beyond columnsBehind config)
       const tfConfig = getTimeframeConfig(selectedTimeframe);
       if (timeSinceEnd > timeStep * tfConfig.ironCondor.columnsBehind) {
+        skippedOld++;
         return;
       }
 
       // Also skip contracts that are too far in the future (more than numXsquares columns)
       if (col >= numXsquares) {
+        skippedFuture++;
         return;
       }
+
+      processedCount++;
 
       // Calculate row based on price
       const priceCenter = (contract.lowerStrike + contract.upperStrike) / 2;
@@ -467,6 +488,15 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
               : undefined,
         isClickable: contract.isActive && contract.startTime > currentTimeMs, // Only future active contracts are clickable
       };
+    });
+
+    console.log('🔍 Canvas: Final multipliers result', {
+      processed: processedCount,
+      skippedOld: skippedOld,
+      skippedFuture: skippedFuture,
+      totalMultipliers: Object.keys(multipliers).length,
+      futureMultipliers: Object.values(multipliers).filter((m: any) => m.isClickable).length,
+      pastMultipliers: Object.values(multipliers).filter((m: any) => m.status === 'passed').length,
     });
 
     return multipliers;

@@ -803,21 +803,49 @@ export class GridGame extends BaseGame {
       )
     };
 
+    let renderedCount = 0;
+    let skippedVisibility = 0;
+    let skippedSelected = 0;
+    let skippedEmpty = 0;
+    let skippedNoValue = 0;
+    let skippedMinMult = 0;
+    let skippedOffscreen = 0;
+
+    console.log('🔍 GridGame: Heatmap rendering', {
+      backendBoxes: Object.keys(this.backendMultipliers).length,
+      emptyBoxes: Object.keys(this.emptyBoxes).length,
+      totalBoxes: Object.keys(allBoxes).length,
+      minMultiplier: this.config.minMultiplier,
+    });
+
     Object.entries(allBoxes).forEach(([squareId, box]) => {
       // Skip if we have visible squares defined and this square is not in the list
       if (this.visibleSquares.size > 0 && !this.visibleSquares.has(squareId)) {
+        skippedVisibility++;
         return;
       }
 
       // Skip if box is selected (heatmap only shows on unselected boxes)
       if (this.selectedSquareIds.has(squareId)) {
+        skippedSelected++;
         return;
       }
 
       // Skip if box has no multiplier data or below min multiplier
       // Note: Only show heatmap on boxes with actual multiplier values (backend boxes)
       // Empty boxes (isEmpty: true) should NOT show heatmap - they're just grid placeholders
-      if (box.isEmpty || !box.value || box.value === 0 || box.value < this.config.minMultiplier) {
+      if (box.isEmpty) {
+        skippedEmpty++;
+        return;
+      }
+      
+      if (!box.value || box.value === 0) {
+        skippedNoValue++;
+        return;
+      }
+      
+      if (box.value < this.config.minMultiplier) {
+        skippedMinMult++;
         return;
       }
 
@@ -843,8 +871,11 @@ export class GridGame extends BaseGame {
         screenY > this.height ||
         screenY + screenHeight < 0
       ) {
+        skippedOffscreen++;
         return;
       }
+
+      renderedCount++;
 
       // Calculate probability based on multiplier
       // Lower multipliers = higher probability (green)
@@ -878,6 +909,19 @@ export class GridGame extends BaseGame {
       // Draw heatmap overlay only on unselected boxes
       this.ctx.fillStyle = heatmapColor;
       this.ctx.fillRect(screenX + 0.5, screenY + 0.5, screenWidth - 1, screenHeight - 1);
+    });
+
+    console.log('🔍 GridGame: Heatmap rendering complete', {
+      rendered: renderedCount,
+      skipped: {
+        visibility: skippedVisibility,
+        selected: skippedSelected,
+        empty: skippedEmpty,
+        noValue: skippedNoValue,
+        minMult: skippedMinMult,
+        offscreen: skippedOffscreen,
+        total: skippedVisibility + skippedSelected + skippedEmpty + skippedNoValue + skippedMinMult + skippedOffscreen,
+      }
     });
   }
 
@@ -1429,6 +1473,11 @@ export class GridGame extends BaseGame {
       }
     >
   ): void {
+    console.log('🔍 GridGame: updateMultipliers called', {
+      newMultiplierCount: Object.keys(multipliers).length,
+      existingBoxCount: Object.keys(this.backendMultipliers).length,
+    });
+
     // Intelligently update boxes - only update changed properties
     const newBoxIds = new Set(Object.keys(multipliers));
     const oldBoxIds = new Set(Object.keys(this.backendMultipliers));
