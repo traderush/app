@@ -1435,11 +1435,18 @@ export class GridGame extends BaseGame {
     const newBoxIds = new Set(Object.keys(multipliers));
     const oldBoxIds = new Set(Object.keys(this.backendMultipliers));
 
-    // Remove boxes that no longer exist
+    // Remove boxes that no longer exist (but keep hit/missed boxes for visual persistence)
     for (const oldId of oldBoxIds) {
       if (!newBoxIds.has(oldId)) {
-        delete this.backendMultipliers[oldId];
-        this.boxClickabilityCache.delete(oldId);
+        // DON'T delete if box has been hit or missed - keep it visible
+        const box = this.backendMultipliers[oldId];
+        const isResolved = box.status === 'hit' || box.status === 'missed' || 
+                          this.hitBoxes.has(oldId) || this.missedBoxes.has(oldId);
+        
+        if (!isResolved) {
+          delete this.backendMultipliers[oldId];
+          this.boxClickabilityCache.delete(oldId);
+        }
       }
     }
 
@@ -1466,16 +1473,30 @@ export class GridGame extends BaseGame {
 
     // Limit total boxes for all games to prevent performance issues and memory leaks
     const boxCount = Object.keys(this.backendMultipliers).length;
-    if (boxCount > 500) {
-      // Keep only the most recent boxes (by world X position)
-      const sortedBoxes = Object.entries(this.backendMultipliers)
-        .sort(([, a], [, b]) => a.worldX - b.worldX) // Sort by world X position
-        .slice(-400); // Keep last 400 boxes to prevent FPS degradation
-
-      this.backendMultipliers = Object.fromEntries(sortedBoxes);
+    if (boxCount > 800) {
+      // Separate hit/missed boxes from regular boxes
+      const resolvedBoxes: [string, any][] = [];
+      const regularBoxes: [string, any][] = [];
+      
+      Object.entries(this.backendMultipliers).forEach(([id, box]) => {
+        if (box.status === 'hit' || box.status === 'missed' || 
+            this.hitBoxes.has(id) || this.missedBoxes.has(id)) {
+          resolvedBoxes.push([id, box]);
+        } else {
+          regularBoxes.push([id, box]);
+        }
+      });
+      
+      // Sort by world X position and keep most recent
+      regularBoxes.sort(([, a], [, b]) => a.worldX - b.worldX);
+      const keptRegularBoxes = regularBoxes.slice(-600); // Keep last 600 regular boxes
+      const keptResolvedBoxes = resolvedBoxes.slice(-100); // Keep last 100 resolved boxes for visibility
+      
+      // Combine and update
+      this.backendMultipliers = Object.fromEntries([...keptRegularBoxes, ...keptResolvedBoxes]);
       
       // Also clean up clickability cache for removed boxes
-      const remainingBoxIds = new Set(sortedBoxes.map(([id]) => id));
+      const remainingBoxIds = new Set([...keptRegularBoxes, ...keptResolvedBoxes].map(([id]) => id));
       const cacheKeysToRemove: string[] = [];
       this.boxClickabilityCache.forEach((_, key) => {
         if (!remainingBoxIds.has(key)) {
@@ -1515,7 +1536,7 @@ export class GridGame extends BaseGame {
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'hit';
       
-      // Trigger hit animation (expanding green glow)
+      // Trigger hit animation
       this.squareAnimations.set(contractId, {
         progress: 0,
         type: 'activate',
@@ -1523,9 +1544,9 @@ export class GridGame extends BaseGame {
       });
     }
     
-    // Clear from highlighted/selected when hit
+    // Clear from highlighted (but keep in selectedSquareIds so box stays visible)
     this.highlightedSquareIds.delete(contractId);
-    this.selectedSquareIds.delete(contractId);
+    // DON'T remove from selectedSquareIds - let the render state handle the visual change
     
     // Emit selection change event to update right panel
     this.emit('selectionChanged', {});
@@ -1538,7 +1559,7 @@ export class GridGame extends BaseGame {
     if (this.backendMultipliers[contractId]) {
       this.backendMultipliers[contractId].status = 'missed';
       
-      // Trigger missed animation (pulse effect)
+      // Trigger missed animation
       this.squareAnimations.set(contractId, {
         progress: 0,
         type: 'activate',
@@ -1546,9 +1567,9 @@ export class GridGame extends BaseGame {
       });
     }
     
-    // Clear from highlighted/selected when missed
+    // Clear from highlighted (but keep in selectedSquareIds so box stays visible)
     this.highlightedSquareIds.delete(contractId);
-    this.selectedSquareIds.delete(contractId);
+    // DON'T remove from selectedSquareIds - let the render state handle the visual change
     
     // Emit selection change event to update right panel
     this.emit('selectionChanged', {});
