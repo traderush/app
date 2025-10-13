@@ -718,6 +718,27 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
             setAvailableTrackedSelections(prevPool => prevPool.filter((_, index) => index !== 0));
           }
         });
+
+        // Also generate tracked players independently for boxes near NOW line (higher probability)
+        const boxesNearNowLine = Object.keys(allBoxes).filter(boxId => {
+          const box = allBoxes[boxId];
+          if (!box || newSelections[boxId]) return false; // Already has selections or box doesn't exist
+          
+          // Only consider boxes that are in front of NOW line and within reasonable distance
+          const distanceFromNow = box.worldX - currentWorldX;
+          return distanceFromNow > 0 && distanceFromNow < 400;
+        });
+        
+        // Assign tracked players to boxes near NOW line (8% chance per frame - higher than player counts)
+        boxesNearNowLine.forEach(boxId => {
+          if (availableTrackedSelections.length > 0 && Math.random() < 0.08) {
+            const randomSelections = availableTrackedSelections[Math.floor(Math.random() * availableTrackedSelections.length)];
+            newSelections[boxId] = randomSelections.slice(0, Math.min(3, randomSelections.length));
+            
+            // Remove from available pool
+            setAvailableTrackedSelections(prevPool => prevPool.filter((_, index) => index !== 0));
+          }
+        });
         
         return newSelections;
       });
