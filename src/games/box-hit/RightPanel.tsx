@@ -25,7 +25,7 @@ const TRADING_COLORS = {
  * @property onBetAmountChange - Callback when bet amount changes
  * @property dailyHigh - 24-hour high price
  * @property dailyLow - 24-hour low price
- * @property activeTab - Currently active tab ('place' or 'copy')
+ * @property activeTab - Currently active tab ('copy' - Mock Backend mode)
  * @property onActiveTabChange - Callback when active tab changes
  */
 interface RightPanelProps {
@@ -46,7 +46,7 @@ interface RightPanelProps {
 
 function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange, dailyHigh, dailyLow, activeTab: externalActiveTab, onActiveTabChange }: RightPanelProps) {
 
-  const [internalActiveTab, setInternalActiveTab] = useState<'place' | 'copy'>('place');
+  const [internalActiveTab, setInternalActiveTab] = useState<'place' | 'copy'>('copy');
   const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
   const setActiveTab = (tab: 'place' | 'copy') => {
     if (onActiveTabChange) {
@@ -155,16 +155,6 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
           {/* Navigation Tabs */}
           <div className="flex border-b border-zinc-800 mb-3">
             <button
-              onClick={() => setActiveTab('place')}
-              className={`pb-2 px-3 text-sm font-medium transition-colors ${
-                activeTab === 'place' 
-                  ? 'text-white border-b-2 border-white' 
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              Place Trade
-            </button>
-            <button
               onClick={() => setActiveTab('copy')}
               className={`pb-2 px-3 text-sm font-medium transition-colors ${
                 activeTab === 'copy' 
@@ -173,6 +163,13 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
               }`}
             >
               Mock Backend
+            </button>
+            <button
+              disabled
+              className="pb-2 px-3 text-sm font-medium transition-colors text-zinc-600 cursor-not-allowed opacity-50"
+              title="Test Mode coming soon"
+            >
+              Test Mode
             </button>
           </div>
 
