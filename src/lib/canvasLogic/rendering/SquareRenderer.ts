@@ -23,6 +23,7 @@ export interface SquareRenderOptions {
   isLost?: boolean; // Indicates if this contract was lost (passed without being hit)
   contractId?: string; // Contract ID to display in top left corner
   opacity?: number; // Overall opacity for fade effect (0-1)
+  showProbabilities?: boolean; // Whether heatmap is enabled (affects text brightness)
 }
 
 export class SquareRenderer {
@@ -53,6 +54,7 @@ export class SquareRenderer {
       isLost,
       contractId,
       opacity = 1.0,
+      showProbabilities = false,
     } = options;
     const squareConfig = this.theme.square[state];
 
@@ -226,6 +228,11 @@ export class SquareRenderer {
         textColor = 'rgba(255, 170, 0, 0.9)'; // Orange text for pending confirmation
       } else if (state === 'hovered') {
         textColor = 'rgba(255, 255, 255, 0.25)'; // Brighter on hover
+      }
+      
+      // Make text more visible when heatmap is enabled (like normal box-hit canvas)
+      if (showProbabilities && state === 'default') {
+        textColor = `rgba(255,255,255,${0.8 * opacity})`; // Much brighter text for heatmap visibility
       }
       
       this.ctx.fillStyle = textColor;

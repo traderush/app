@@ -1117,6 +1117,7 @@ export class GridGame extends BaseGame {
         state: state || 'default',
         animation,
         opacity,
+        showProbabilities: this.config.showProbabilities, // Pass heatmap setting for text brightness
         // Never show price ranges or timestamp ranges - only show multipliers
         timestampRange: undefined,
         priceRange: undefined,
