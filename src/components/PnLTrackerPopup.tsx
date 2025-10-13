@@ -77,6 +77,19 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    console.log('📊 PnL Tracker updating with data:', {
+      balance,
+      stats: {
+        totalProfit: stats.totalProfit,
+        totalTrades: stats.totalTrades,
+        totalWins: stats.totalWins,
+        totalLosses: stats.totalLosses,
+        winRate: stats.winRate
+      },
+      tradeHistoryLength: tradeHistory.length,
+      balanceHistoryLength: balanceHistory.length
+    });
+
     // Calculate today's PnL from today's trades
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -88,6 +101,12 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       if (trade.result === 'loss') return sum - trade.amount;
       return sum;
     }, 0);
+
+    console.log('📊 Today PnL calculation:', {
+      todayTradesCount: todayTrades.length,
+      todayTrades: todayTrades.map(t => ({ id: t.id, result: t.result, amount: t.amount, payout: t.payout })),
+      todayPnL
+    });
 
     // Calculate best win and worst loss
     const wins = tradeHistory.filter(trade => trade.result === 'win' && trade.payout);

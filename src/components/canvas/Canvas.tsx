@@ -89,6 +89,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   
   // Get balance update function from user store
   const updateBalance = useUserStore((state) => state.updateBalance);
+  const addTrade = useUserStore((state) => state.addTrade);
   
   // Get backend connection setter from store
   const setBackendConnected = useConnectionStore((state) => state.setBackendConnected);

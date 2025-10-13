@@ -167,6 +167,12 @@ export const useUserStore = create<UserState>()(
             result: 'pending',
           };
           
+          console.log('➕ userStore.addTrade called:', {
+            tradeData,
+            newTrade,
+            activeTradesCount: state.activeTrades.length
+          });
+          
           return {
             activeTrades: [...state.activeTrades, newTrade],
           };
@@ -189,8 +195,14 @@ export const useUserStore = create<UserState>()(
       
       settleTrade: (tradeId, result, payout = 0) =>
         set((state) => {
+          console.log('🔄 userStore.settleTrade called:', { tradeId, result, payout });
+          console.log('📋 Current activeTrades:', state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId, amount: t.amount, result: t.result })));
+          
           const trade = state.activeTrades.find((t) => t.id === tradeId);
-          if (!trade) return state;
+          if (!trade) {
+            console.warn('⚠️ Trade not found in activeTrades:', tradeId);
+            return state;
+          }
           
           const settledTrade: Trade = {
             ...trade,

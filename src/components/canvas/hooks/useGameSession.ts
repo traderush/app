@@ -34,6 +34,7 @@ export function useGameSession({
   // Get userStore functions
   const settleTrade = useUserStore((state) => state.settleTrade);
   const updateBalance = useUserStore((state) => state.updateBalance);
+  const addTrade = useUserStore((state) => state.addTrade);
 
   // Track initialization to prevent duplicate joins
   const initRef = useRef(false);
@@ -59,6 +60,18 @@ export function useGameSession({
       
       if (wsRef.current && isJoined) {
         console.log('✅ Sending place_trade message:', { contractId, amount });
+        
+        // Add trade to userStore immediately when placed
+        const tradeId = `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        addTrade({
+          id: tradeId,
+          contractId: contractId,
+          amount: amount,
+          placedAt: new Date(),
+        });
+        
+        console.log('➕ Trade added to userStore:', { tradeId, contractId, amount });
+        
         wsRef.current.send({
           type: 'place_trade',
           payload: { contractId, amount },
