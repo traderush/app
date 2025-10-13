@@ -163,11 +163,16 @@ export const useGameStore = create<GameState>()(
     setGridCells: (cells) => set({ gridCells: cells }),
     
     updateCell: (cellId, updates) =>
-      set((state) => ({
-        gridCells: state.gridCells.map((cell) =>
-          cell.id === cellId ? { ...cell, ...updates } : cell
-        ),
-      })),
+      set((state) => {
+        // Optimized: Use direct array indexing instead of map
+        const cellIndex = state.gridCells.findIndex(cell => cell.id === cellId);
+        if (cellIndex === -1) return state;
+
+        const updatedCells = [...state.gridCells];
+        updatedCells[cellIndex] = { ...updatedCells[cellIndex], ...updates };
+        
+        return { gridCells: updatedCells };
+      }),
 
     toggleCellSelection: (cellId) =>
       set((state) => {
@@ -214,20 +219,30 @@ export const useGameStore = create<GameState>()(
       }),
 
     clearSelection: () =>
-      set((state) => ({
-        gridCells: state.gridCells.map((cell) => ({
-          ...cell,
-          state: 'empty',
-          selectionTime: undefined,
-        })),
-        selectedCells: [],
-        gameSettings: {
-          ...state.gameSettings,
-          selectedCount: 0,
-          selectedMultipliers: [],
-          bestMultiplier: 0,
-        },
-      })),
+      set((state) => {
+        // Optimized: Use direct array mutation instead of map
+        const updatedCells = [...state.gridCells];
+        for (let i = 0; i < updatedCells.length; i++) {
+          if (updatedCells[i].state === 'selected') {
+            updatedCells[i] = {
+              ...updatedCells[i],
+              state: 'empty',
+              selectionTime: undefined,
+            };
+          }
+        }
+        
+        return {
+          gridCells: updatedCells,
+          selectedCells: [],
+          gameSettings: {
+            ...state.gameSettings,
+            selectedCount: 0,
+            selectedMultipliers: [],
+            bestMultiplier: 0,
+          },
+        };
+      }),
 
     // Position Management
     addPosition: (positionData) =>
@@ -393,25 +408,33 @@ export const useGameStore = create<GameState>()(
       }),
 
     resetGame: () =>
-      set((state) => ({
-        gridCells: state.gridCells.map((cell) => ({
-          ...cell,
-          state: 'empty',
-          selectionTime: undefined,
-          crossedTime: undefined,
-          hitTime: undefined,
-        })),
-        activePositions: [],
-        selectedCells: [],
-        gameSettings: {
-          ...state.gameSettings,
-          selectedCount: 0,
-          selectedMultipliers: [],
-          bestMultiplier: 0,
-        },
-        isGameActive: false,
-        isGamePaused: false,
-      })),
+      set((state) => {
+        // Optimized: Use direct array mutation instead of map
+        const updatedCells = [...state.gridCells];
+        for (let i = 0; i < updatedCells.length; i++) {
+          updatedCells[i] = {
+            ...updatedCells[i],
+            state: 'empty',
+            selectionTime: undefined,
+            crossedTime: undefined,
+            hitTime: undefined,
+          };
+        }
+        
+        return {
+          gridCells: updatedCells,
+          activePositions: [],
+          selectedCells: [],
+          gameSettings: {
+            ...state.gameSettings,
+            selectedCount: 0,
+            selectedMultipliers: [],
+            bestMultiplier: 0,
+          },
+          isGameActive: false,
+          isGamePaused: false,
+        };
+      }),
 
     // Computed Values
     getSelectedCells: () => {
