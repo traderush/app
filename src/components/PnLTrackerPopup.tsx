@@ -111,17 +111,9 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       }
     }
 
-    // Calculate total PnL from all settled trades
-    const allSettledTrades = tradeHistory.filter(trade => trade.result && trade.result !== 'pending');
-    const totalPnL = allSettledTrades.reduce((sum, trade) => {
-      if (trade.result === 'win' && trade.payout) return sum + (trade.payout - trade.amount);
-      if (trade.result === 'loss') return sum - trade.amount;
-      return sum;
-    }, 0);
-
     setPnlData({
       balance: balance,
-      totalPnL: totalPnL, // Use calculated total PnL instead of stats.totalProfit
+      totalPnL: stats.totalProfit, // Now using stats.totalProfit which is calculated correctly
       todayPnL: todayPnL,
       winRate: stats.winRate,
       totalTrades: stats.totalTrades,

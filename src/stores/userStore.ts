@@ -203,6 +203,49 @@ export const useUserStore = create<UserState>()(
           const balanceChange = result === 'win' ? payout : -trade.amount;
           const newBalance = state.balance + balanceChange;
           
+          // Calculate updated stats after settling trade
+          const allTrades = [...state.tradeHistory, settledTrade];
+          const settledTrades = allTrades.filter((t) => t.result && t.result !== 'pending');
+          
+          const totalTrades = settledTrades.length;
+          const totalWins = settledTrades.filter((t) => t.result === 'win').length;
+          const totalLosses = settledTrades.filter((t) => t.result === 'loss').length;
+          const winRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : 0;
+          
+          const totalVolume = settledTrades.reduce((sum, t) => sum + t.amount, 0);
+          const totalProfit = settledTrades.reduce((sum, t) => {
+            if (t.result === 'win' && t.payout) return sum + (t.payout - t.amount);
+            if (t.result === 'loss') return sum - t.amount;
+            return sum;
+          }, 0);
+          
+          // Calculate best streak
+          let currentStreak = 0;
+          let bestStreak = 0;
+          let streakType: 'win' | 'loss' | null = null;
+          
+          settledTrades.forEach((trade) => {
+            if (trade.result === 'win') {
+              if (streakType === 'win') {
+                currentStreak++;
+              } else {
+                currentStreak = 1;
+                streakType = 'win';
+              }
+            } else if (trade.result === 'loss') {
+              if (streakType === 'loss') {
+                currentStreak++;
+              } else {
+                currentStreak = 1;
+                streakType = 'loss';
+              }
+            }
+            
+            if (streakType === 'win') {
+              bestStreak = Math.max(bestStreak, currentStreak);
+            }
+          });
+          
           return {
             activeTrades: state.activeTrades.filter((t) => t.id !== tradeId),
             tradeHistory: [settledTrade, ...state.tradeHistory].slice(0, 1000), // Keep last 1000 trades
@@ -211,6 +254,16 @@ export const useUserStore = create<UserState>()(
               ...state.balanceHistory,
               { timestamp: Date.now(), balance: newBalance, change: balanceChange },
             ].slice(-100),
+            stats: {
+              totalTrades,
+              totalWins,
+              totalLosses,
+              winRate,
+              totalVolume,
+              totalProfit,
+              bestStreak,
+              currentStreak: streakType === 'win' ? currentStreak : 0,
+            },
           };
         }),
       
