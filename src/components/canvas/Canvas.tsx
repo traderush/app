@@ -23,6 +23,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
  * @property onPriceUpdate - Callback for live price updates
  * @property onSelectionChange - Callback for selection changes (count, bestMultiplier, multipliers, avgPrice)
  * @property showProbabilities - Whether to show probability heatmap overlay
+ * @property showOtherPlayers - Whether to show other players' selections
  * @property minMultiplier - Minimum multiplier threshold to display on chart
  */
 interface CanvasProps {
@@ -35,10 +36,11 @@ interface CanvasProps {
   onPriceUpdate?: (price: number) => void;
   onSelectionChange?: (count: number, best: number, multipliers: number[], averagePrice?: number | null) => void;
   showProbabilities?: boolean;
+  showOtherPlayers?: boolean;
   minMultiplier?: number;
 }
 
-function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange, showProbabilities = false, minMultiplier = 1.0 }: CanvasProps = {}) {
+function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange, showProbabilities = false, showOtherPlayers = false, minMultiplier = 1.0 }: CanvasProps = {}) {
   // Convert external timeframe (ms) to TimeFrame enum
   const getTimeFrameFromMs = (ms?: number): TimeFrame => {
     switch (ms) {
@@ -356,6 +358,16 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   // Track initial world X position when grid is first created (stays fixed)
   const initialWorldXRef = useRef<number | null>(null);
 
+  // Other players functionality - FLUID SYSTEM (from normal box-hit canvas)
+  const [randomPlayerCounts, setRandomPlayerCounts] = useState<{[key: string]: number}>({});
+  const [trackedPlayerSelections, setTrackedPlayerSelections] = useState<{[key: string]: Array<{id: string, name: string, avatar: string, type: string}>}>({});
+  const [loadedImages, setLoadedImages] = useState<{[key: string]: HTMLImageElement}>({});
+  const lastGenerationTimeRef = useRef<number>(0);
+  
+  // Fixed pool of other player selections that get recycled
+  const [availablePlayerCounts, setAvailablePlayerCounts] = useState<number[]>([]);
+  const [availableTrackedSelections, setAvailableTrackedSelections] = useState<Array<{id: string, name: string, avatar: string, type: string}>[]>([]);
+
   // Convert contracts to canvas format with accurate coordinate mapping
   // Throttle debug logging to avoid console spam (max once per 2 seconds)
   const lastCanvasDebugLog = useRef(0);
@@ -530,8 +542,13 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     if (gameRef.current) {
       // Always update, even with empty object to clear old boxes
       gameRef.current.updateMultipliers(canvasMultipliers);
+      
+      // Update other player data if enabled
+      if (showOtherPlayers) {
+        gameRef.current.setOtherPlayerData(randomPlayerCounts, trackedPlayerSelections, loadedImages);
+      }
     }
-  }, [canvasMultipliers]);
+  }, [canvasMultipliers, showOtherPlayers, randomPlayerCounts, trackedPlayerSelections, loadedImages]);
 
   // Update GridGame config when showProbabilities or minMultiplier change (live updates without restart)
   useEffect(() => {
@@ -542,6 +559,98 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       });
     }
   }, [showProbabilities, minMultiplier]);
+
+  // Other players generation logic (from normal box-hit canvas)
+  useEffect(() => {
+    if (!showOtherPlayers) return;
+
+    const initializePlayerPool = () => {
+      // Initialize available player counts pool
+      const playerCounts = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15];
+      setAvailablePlayerCounts(playerCounts);
+
+      // Initialize available tracked selections pool
+      const trackedSelections = [
+        [{ id: 'player1', name: 'CryptoWhale', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'whale' }],
+        [{ id: 'player2', name: 'TradingPro', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'pro' }],
+        [{ id: 'player3', name: 'DeFiMaster', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'master' }],
+        [{ id: 'player4', name: 'MoonTrader', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'trader' }],
+        [{ id: 'player5', name: 'DiamondHands', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'hodler' }],
+        [{ id: 'player6', name: 'BullRun', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'bull' }],
+        [{ id: 'player7', name: 'HODLer', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'hodler' }],
+        [{ id: 'player8', name: 'CryptoKing', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'king' }]
+      ];
+      setAvailableTrackedSelections(trackedSelections);
+
+      // Preload images
+      trackedSelections.flat().forEach(player => {
+        if (!loadedImages[player.avatar]) {
+          const img = new Image();
+          img.onload = () => {
+            setLoadedImages(prev => ({ ...prev, [player.avatar]: img }));
+          };
+          img.src = player.avatar;
+        }
+      });
+    };
+
+    initializePlayerPool();
+  }, [showOtherPlayers, loadedImages]);
+
+  // Generate other player selections for multiplier boxes
+  useEffect(() => {
+    if (!showOtherPlayers || !gameRef.current) return;
+
+    const generateOtherPlayers = () => {
+      const now = Date.now();
+      
+      // Only generate every 2 seconds to avoid performance issues
+      if (now - lastGenerationTimeRef.current < 2000) return;
+      lastGenerationTimeRef.current = now;
+
+      const newRandomPlayerCounts: {[key: string]: number} = {};
+      const newTrackedPlayerSelections: {[key: string]: Array<{id: string, name: string, avatar: string, type: string}>} = {};
+
+      // Get all multiplier boxes from the game
+      const allBoxes = gameRef.current.getBackendMultipliers();
+      
+      Object.keys(allBoxes).forEach(boxId => {
+        const box = allBoxes[boxId];
+        
+        // Only add other players to boxes that are ahead of NOW line (future boxes)
+        const currentWorldX = gameRef.current?.getCurrentWorldX() || 0;
+        if (box.worldX + box.width > currentWorldX) {
+          // Random chance to have other players on this box (30% chance)
+          if (Math.random() < 0.3) {
+            // Get random player count from pool
+            const randomCount = availablePlayerCounts[Math.floor(Math.random() * availablePlayerCounts.length)];
+            newRandomPlayerCounts[boxId] = randomCount;
+
+            // Get random tracked selections from pool
+            const randomSelections = availableTrackedSelections[Math.floor(Math.random() * availableTrackedSelections.length)];
+            newTrackedPlayerSelections[boxId] = randomSelections.slice(0, Math.min(3, randomSelections.length));
+          }
+        }
+      });
+
+      setRandomPlayerCounts(newRandomPlayerCounts);
+      setTrackedPlayerSelections(newTrackedPlayerSelections);
+    };
+
+    const interval = setInterval(generateOtherPlayers, 2000);
+    return () => clearInterval(interval);
+  }, [showOtherPlayers, availablePlayerCounts, availableTrackedSelections]);
+
+  // Update GridGame config when showProbabilities, showOtherPlayers or minMultiplier change (live updates without restart)
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.updateConfig({
+        showProbabilities,
+        showOtherPlayers,
+        minMultiplier
+      });
+    }
+  }, [showProbabilities, showOtherPlayers, minMultiplier]);
 
   // Initialize canvas game
   useEffect(() => {
@@ -677,6 +786,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         animationDuration: 300, // Quick, responsive animations (original value)
         maxDataPoints: 500,
         showProbabilities: showProbabilities, // Pass heatmap toggle
+        showOtherPlayers: showOtherPlayers, // Pass other players toggle
         minMultiplier: minMultiplier, // Pass min multiplier filter
       });
 

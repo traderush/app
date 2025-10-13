@@ -38,6 +38,7 @@ export interface SquareAnimation {
  * @property debugMode - Whether to show debug info overlays
  * @property gameType - Game type for rendering adjustments
  * @property showProbabilities - Whether to show probability heatmap overlay
+ * @property showOtherPlayers - Whether to show other players' selections
  * @property minMultiplier - Minimum multiplier threshold to display
  */
 export interface GridGameConfig extends GameConfig {
@@ -58,6 +59,7 @@ export interface GridGameConfig extends GameConfig {
   debugMode?: boolean;
   gameType?: IronCondorGameType;
   showProbabilities?: boolean;
+  showOtherPlayers?: boolean;
   minMultiplier?: number;
 }
 
@@ -117,6 +119,11 @@ export class GridGame extends BaseGame {
   // Prevents grid from shifting when old boxes are cleaned up after 150+ seconds
   private gridOffsetX: number | null = null;
   private gridOffsetY: number | null = null;
+
+  // Other players data
+  private otherPlayerCounts: {[key: string]: number} = {};
+  private otherPlayerSelections: {[key: string]: Array<{id: string, name: string, avatar: string, type: string}>} = {};
+  private otherPlayerImages: {[key: string]: HTMLImageElement} = {};
 
   protected world: WorldCoordinateSystem;
   protected eventSource: EventSource | null = null;
@@ -182,6 +189,7 @@ export class GridGame extends BaseGame {
       debugMode: false,
       gameType: GameType.GRID,
       showProbabilities: false,
+      showOtherPlayers: false,
       minMultiplier: 1.0,
       ...config,
     };
@@ -1113,6 +1121,77 @@ export class GridGame extends BaseGame {
         contractId: undefined,
       });
 
+      // Render other players if enabled
+      if (this.config.showOtherPlayers) {
+        this.renderOtherPlayers(squareId, topLeft, screenWidth, screenHeight, opacity);
+      }
+
+    });
+  }
+
+  private renderOtherPlayers(
+    squareId: string, 
+    topLeft: { x: number; y: number }, 
+    screenWidth: number, 
+    screenHeight: number, 
+    opacity: number
+  ): void {
+    const playerCount = this.otherPlayerCounts[squareId];
+    const trackedPlayers = this.otherPlayerSelections[squareId];
+    
+    if (!playerCount || !trackedPlayers) return;
+
+    const rectSize = Math.min(screenWidth * 0.8, screenHeight * 0.8, 20); // Max 20px
+    const overlapAmount = 3; // Overlap between avatars
+    const startX = topLeft.x + 2; // 2px from left edge
+    const rectY = topLeft.y + 2; // 2px from top edge
+
+    // Apply fade opacity for other player elements
+    const otherPlayerOpacity = opacity * 0.8; // Slightly more transparent than boxes
+
+    // Draw player count box first (rightmost, will be behind others)
+    const numberBoxX = startX + (trackedPlayers.length * (rectSize - overlapAmount));
+    
+    // Rectangle background (match grid cell background) with fade
+    this.ctx.fillStyle = `rgba(14,14,14,${otherPlayerOpacity})`;
+    this.ctx.beginPath();
+    this.ctx.roundRect(numberBoxX, rectY, rectSize, rectSize, 4);
+    this.ctx.fill();
+    
+    // Rectangle border (match grid cell border styling) with fade
+    this.ctx.strokeStyle = `rgba(43,43,43,${otherPlayerOpacity})`;
+    this.ctx.lineWidth = 0.6;
+    this.ctx.stroke();
+    
+    // Draw player count text
+    this.ctx.fillStyle = `rgba(255,255,255,${otherPlayerOpacity})`;
+    this.ctx.font = '10px monospace';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(
+      playerCount.toString(),
+      numberBoxX + rectSize / 2,
+      rectY + rectSize / 2
+    );
+
+    // Draw tracked player avatars
+    trackedPlayers.forEach((player, index) => {
+      const avatarX = startX + (index * (rectSize - overlapAmount));
+      const image = this.otherPlayerImages[player.avatar];
+      
+      if (image) {
+        // Draw avatar image
+        this.ctx.save();
+        this.ctx.globalAlpha = otherPlayerOpacity;
+        this.ctx.drawImage(image, avatarX, rectY, rectSize, rectSize);
+        this.ctx.restore();
+      } else {
+        // Fallback: draw colored circle
+        this.ctx.fillStyle = `rgba(100,100,100,${otherPlayerOpacity})`;
+        this.ctx.beginPath();
+        this.ctx.arc(avatarX + rectSize / 2, rectY + rectSize / 2, rectSize / 2, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
     });
   }
 
@@ -1896,6 +1975,24 @@ export class GridGame extends BaseGame {
    */
   public updateConfig(newConfig: Partial<GridGameConfig>): void {
     this.config = { ...this.config, ...newConfig };
+  }
+
+  public setOtherPlayerData(
+    playerCounts: {[key: string]: number}, 
+    playerSelections: {[key: string]: Array<{id: string, name: string, avatar: string, type: string}>},
+    playerImages: {[key: string]: HTMLImageElement}
+  ): void {
+    this.otherPlayerCounts = playerCounts;
+    this.otherPlayerSelections = playerSelections;
+    this.otherPlayerImages = playerImages;
+  }
+
+  public getBackendMultipliers(): Record<string, any> {
+    return this.backendMultipliers;
+  }
+
+  public getCurrentWorldX(): number {
+    return (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
   }
 
 
