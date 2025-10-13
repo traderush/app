@@ -1123,7 +1123,7 @@ export class GridGame extends BaseGame {
 
       // Render other players if enabled
       if (this.config.showOtherPlayers) {
-        this.renderOtherPlayers(squareId, topLeft, screenWidth, screenHeight, opacity);
+        this.renderOtherPlayers(squareId, topLeft, screenWidth, screenHeight, opacity, isSelected);
       }
 
     });
@@ -1134,7 +1134,8 @@ export class GridGame extends BaseGame {
     topLeft: { x: number; y: number }, 
     screenWidth: number, 
     screenHeight: number, 
-    opacity: number
+    opacity: number,
+    isSelected: boolean = false
   ): void {
     const playerCount = this.otherPlayerCounts[squareId];
     const trackedPlayers = this.otherPlayerSelections[squareId];
@@ -1173,12 +1174,23 @@ export class GridGame extends BaseGame {
         this.ctx.fill();
         
         // Rectangle border (match grid cell border styling) with fade
-        this.ctx.strokeStyle = `rgba(43,43,43,${otherPlayerOpacity})`;
-        this.ctx.lineWidth = 0.6;
+        let borderColor = '#2b2b2b';
+        let borderWidth = 0.6;
+        if (isSelected) {
+          borderColor = this.theme.colors?.primary || '#3b82f6';
+          borderWidth = 1;
+        }
+        this.ctx.strokeStyle = `rgba(${borderColor === '#2b2b2b' ? '43,43,43' : borderColor.replace('#', '').match(/.{2}/g)?.map(hex => parseInt(hex, 16)).join(',')},${otherPlayerOpacity})`;
+        this.ctx.lineWidth = borderWidth;
         this.ctx.stroke();
         
         // Player count text (match grid cell text styling) with fade
-        const textOpacity = 0.12 * otherPlayerOpacity;
+        let textColor = 'rgba(255,255,255,0.12)';
+        if (isSelected) {
+          textColor = `rgba(255,255,255,${opacity})`;
+        }
+        // Apply fade to text color
+        const textOpacity = textColor.includes('0.12') ? 0.12 * otherPlayerOpacity : parseFloat(textColor.split(',')[3].replace(')', '')) * otherPlayerOpacity;
         this.ctx.fillStyle = `rgba(255,255,255,${textOpacity})`;
         this.ctx.font = '14px sans-serif';
         this.ctx.textAlign = 'center';
@@ -1198,8 +1210,14 @@ export class GridGame extends BaseGame {
         this.ctx.fill();
         
         // Draw box border (match grid cell border styling) with fade
-        this.ctx.strokeStyle = `rgba(43,43,43,${otherPlayerOpacity})`;
-        this.ctx.lineWidth = 0.6;
+        let borderColor = '#2b2b2b';
+        let borderWidth = 0.6;
+        if (isSelected) {
+          borderColor = this.theme.colors?.primary || '#3b82f6';
+          borderWidth = 1;
+        }
+        this.ctx.strokeStyle = `rgba(${borderColor === '#2b2b2b' ? '43,43,43' : borderColor.replace('#', '').match(/.{2}/g)?.map(hex => parseInt(hex, 16)).join(',')},${otherPlayerOpacity})`;
+        this.ctx.lineWidth = borderWidth;
         this.ctx.stroke();
         
         // Draw profile image if loaded, otherwise fallback to letter
@@ -1215,7 +1233,12 @@ export class GridGame extends BaseGame {
           this.ctx.restore();
         } else {
           // Fallback to first letter if image not loaded yet (match grid cell text styling) with fade
-          const textOpacity = 0.12 * otherPlayerOpacity;
+          let textColor = 'rgba(255,255,255,0.12)';
+          if (isSelected) {
+            textColor = `rgba(255,255,255,${opacity})`;
+          }
+          // Apply fade to text color
+          const textOpacity = textColor.includes('0.12') ? 0.12 * otherPlayerOpacity : parseFloat(textColor.split(',')[3].replace(')', '')) * otherPlayerOpacity;
           this.ctx.fillStyle = `rgba(255,255,255,${textOpacity})`;
           this.ctx.font = '14px sans-serif';
           this.ctx.textAlign = 'center';
