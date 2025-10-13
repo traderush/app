@@ -1139,69 +1139,70 @@ export class GridGame extends BaseGame {
     const playerCount = this.otherPlayerCounts[squareId];
     const trackedPlayers = this.otherPlayerSelections[squareId];
     
-    // Debug logging
-    if (playerCount && trackedPlayers) {
-      console.log('🎨 Rendering other players for box:', {
-        squareId,
-        playerCount,
-        trackedPlayers: trackedPlayers.length,
-        showOtherPlayers: this.config.showOtherPlayers
-      });
-    }
     
     if (!playerCount || !trackedPlayers) return;
 
-    const rectSize = Math.min(screenWidth * 0.8, screenHeight * 0.8, 20); // Max 20px
-    const overlapAmount = 3; // Overlap between avatars
-    const startX = topLeft.x + 2; // 2px from left edge
-    const rectY = topLeft.y + 2; // 2px from top edge
+    // Match the exact style from normal box-hit canvas
+    const rectSize = Math.min(screenWidth * 0.7, screenHeight * 0.7, 18); // Slightly smaller
+    const overlapAmount = 2; // Less overlap
+    const startX = topLeft.x + 1; // 1px from left edge
+    const rectY = topLeft.y + 1; // 1px from top edge
 
     // Apply fade opacity for other player elements
-    const otherPlayerOpacity = opacity * 0.8; // Slightly more transparent than boxes
+    const otherPlayerOpacity = opacity * 0.8;
 
-    // Draw player count box first (rightmost, will be behind others)
-    const numberBoxX = startX + (trackedPlayers.length * (rectSize - overlapAmount));
-    
-    // Rectangle background (match grid cell background) with fade
-    this.ctx.fillStyle = `rgba(14,14,14,${otherPlayerOpacity})`;
-    this.ctx.beginPath();
-    this.ctx.roundRect(numberBoxX, rectY, rectSize, rectSize, 4);
-    this.ctx.fill();
-    
-    // Rectangle border (match grid cell border styling) with fade
-    this.ctx.strokeStyle = `rgba(43,43,43,${otherPlayerOpacity})`;
-    this.ctx.lineWidth = 0.6;
-    this.ctx.stroke();
-    
-    // Draw player count text
-    this.ctx.fillStyle = `rgba(255,255,255,${otherPlayerOpacity})`;
-    this.ctx.font = '10px monospace';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(
-      playerCount.toString(),
-      numberBoxX + rectSize / 2,
-      rectY + rectSize / 2
-    );
-
-    // Draw tracked player avatars
-    trackedPlayers.forEach((player, index) => {
-      const avatarX = startX + (index * (rectSize - overlapAmount));
-      const image = this.otherPlayerImages[player.avatar];
+    // Render player count box (bottom right) - exact match to normal canvas
+    if (playerCount > 0) {
+      const countBoxSize = 14; // Smaller box
+      const countBoxX = topLeft.x + screenWidth - countBoxSize - 1;
+      const countBoxY = topLeft.y + screenHeight - countBoxSize - 1;
       
-      if (image) {
-        // Draw avatar image
-        this.ctx.save();
-        this.ctx.globalAlpha = otherPlayerOpacity;
-        this.ctx.drawImage(image, avatarX, rectY, rectSize, rectSize);
-        this.ctx.restore();
-      } else {
-        // Fallback: draw colored circle
-        this.ctx.fillStyle = `rgba(100,100,100,${otherPlayerOpacity})`;
-        this.ctx.beginPath();
-        this.ctx.arc(avatarX + rectSize / 2, rectY + rectSize / 2, rectSize / 2, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
+      this.ctx.save();
+      this.ctx.globalAlpha = otherPlayerOpacity * 0.9;
+      
+      // Orange background with rounded corners (matching normal canvas)
+      this.ctx.fillStyle = 'rgba(250, 86, 22, 0.9)';
+      this.ctx.beginPath();
+      this.ctx.roundRect(countBoxX, countBoxY, countBoxSize, countBoxSize, 2);
+      this.ctx.fill();
+      
+      // White text
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = 'bold 9px Arial'; // Bold font
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText(
+        playerCount.toString(),
+        countBoxX + countBoxSize / 2,
+        countBoxY + countBoxSize / 2
+      );
+      this.ctx.restore();
+    }
+
+    // Render tracked player avatars (top left, overlapping) - exact match
+    trackedPlayers.slice(0, 3).forEach((player, index) => {
+      const image = this.otherPlayerImages[player.avatar];
+      if (!image) return;
+
+      const avatarX = startX + (index * (rectSize - overlapAmount));
+      const avatarY = rectY;
+
+      this.ctx.save();
+      this.ctx.globalAlpha = otherPlayerOpacity * 0.75; // Slightly more transparent
+      
+      // Draw rounded avatar (matching normal canvas style)
+      this.ctx.beginPath();
+      this.ctx.roundRect(avatarX, avatarY, rectSize, rectSize, 3);
+      this.ctx.clip();
+      
+      this.ctx.drawImage(
+        image,
+        avatarX,
+        avatarY,
+        rectSize,
+        rectSize
+      );
+      this.ctx.restore();
     });
   }
 
@@ -1996,14 +1997,6 @@ export class GridGame extends BaseGame {
     this.otherPlayerSelections = playerSelections;
     this.otherPlayerImages = playerImages;
 
-    // Debug logging
-    if (Object.keys(playerCounts).length > 0) {
-      console.log('🎯 GridGame received other player data:', {
-        playerCounts: Object.keys(playerCounts).length,
-        playerSelections: Object.keys(playerSelections).length,
-        playerImages: Object.keys(playerImages).length
-      });
-    }
   }
 
   public getBackendMultipliers(): Record<string, any> {

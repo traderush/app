@@ -597,58 +597,111 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     initializePlayerPool();
   }, [showOtherPlayers, loadedImages]);
 
-  // Generate other player selections for multiplier boxes
+  // Fluid other player assignment - matches normal box-hit canvas behavior
   useEffect(() => {
     if (!showOtherPlayers || !gameRef.current) return;
 
-    const generateOtherPlayers = () => {
-      const now = Date.now();
-      
-      // Only generate every 2 seconds to avoid performance issues
-      if (now - lastGenerationTimeRef.current < 2000) return;
-      lastGenerationTimeRef.current = now;
-
-      const newRandomPlayerCounts: {[key: string]: number} = {};
-      const newTrackedPlayerSelections: {[key: string]: Array<{id: string, name: string, avatar: string, type: string}>} = {};
-
-      // Get all multiplier boxes from the game
-      const allBoxes = gameRef.current.getBackendMultipliers();
-      
-      Object.keys(allBoxes).forEach(boxId => {
-        const box = allBoxes[boxId];
+    const assignPlayerCountsFluidly = () => {
+      setRandomPlayerCounts(prev => {
+        const newCounts = { ...prev };
         
-        // Only add other players to boxes that are ahead of NOW line (future boxes)
+        // Get all multiplier boxes from the game
+        const allBoxes = gameRef.current?.getBackendMultipliers() || {};
         const currentWorldX = gameRef.current?.getCurrentWorldX() || 0;
-        if (box.worldX + box.width > currentWorldX) {
-          // Random chance to have other players on this box (30% chance)
-          if (Math.random() < 0.3) {
-            // Get random player count from pool
-            const randomCount = availablePlayerCounts[Math.floor(Math.random() * availablePlayerCounts.length)];
-            newRandomPlayerCounts[boxId] = randomCount;
-
-            // Get random tracked selections from pool
-            const randomSelections = availableTrackedSelections[Math.floor(Math.random() * availableTrackedSelections.length)];
-            newTrackedPlayerSelections[boxId] = randomSelections.slice(0, Math.min(3, randomSelections.length));
+        
+        // Remove counts from boxes that have passed the NOW line (cleanup)
+        Object.keys(newCounts).forEach(boxId => {
+          const box = allBoxes[boxId];
+          if (box) {
+            // Remove if box has passed NOW line (behind NOW line)
+            if (box.worldX + box.width < currentWorldX) {
+              const count = newCounts[boxId];
+              setAvailablePlayerCounts(prevPool => [...prevPool, count]);
+              delete newCounts[boxId];
+            }
+          } else {
+            // Box doesn't exist anymore, remove the count
+            const count = newCounts[boxId];
+            setAvailablePlayerCounts(prevPool => [...prevPool, count]);
+            delete newCounts[boxId];
           }
-        }
-      });
-
-      setRandomPlayerCounts(newRandomPlayerCounts);
-      setTrackedPlayerSelections(newTrackedPlayerSelections);
-
-      // Debug logging
-      if (Object.keys(newRandomPlayerCounts).length > 0) {
-        console.log('🎮 Other players generated:', {
-          playerCounts: Object.keys(newRandomPlayerCounts).length,
-          sample: Object.keys(newRandomPlayerCounts).slice(0, 3),
-          totalBoxes: Object.keys(allBoxes).length
         });
-      }
+        
+        // Find boxes that are ahead of NOW line but don't have player counts yet
+        const boxesNearNowLine = Object.keys(allBoxes).filter(boxId => {
+          const box = allBoxes[boxId];
+          if (!box || newCounts[boxId]) return false; // Already has a count or box doesn't exist
+          
+          // Only consider boxes that are in front of NOW line and within reasonable distance
+          const distanceFromNow = box.worldX - currentWorldX;
+          return distanceFromNow > 0 && distanceFromNow < 1000; // Within 1000 world units
+        });
+        
+        // Assign available counts to boxes near NOW line (8% chance per frame)
+        boxesNearNowLine.forEach(boxId => {
+          if (availablePlayerCounts.length > 0 && Math.random() < 0.08) {
+            const randomIndex = Math.floor(Math.random() * availablePlayerCounts.length);
+            const playerCount = availablePlayerCounts[randomIndex];
+            
+            newCounts[boxId] = playerCount;
+            
+            // Remove from available pool
+            setAvailablePlayerCounts(prevPool => prevPool.filter((_, index) => index !== randomIndex));
+          }
+        });
+        
+        return newCounts;
+      });
     };
 
-    const interval = setInterval(generateOtherPlayers, 2000);
+    const assignTrackedPlayersFluidly = () => {
+      setTrackedPlayerSelections(prev => {
+        const newSelections = { ...prev };
+        
+        // Get all multiplier boxes from the game
+        const allBoxes = gameRef.current?.getBackendMultipliers() || {};
+        const currentWorldX = gameRef.current?.getCurrentWorldX() || 0;
+        
+        // Remove selections from boxes that have passed the NOW line (cleanup)
+        Object.keys(newSelections).forEach(boxId => {
+          const box = allBoxes[boxId];
+          if (box) {
+            // Remove if box has passed NOW line (behind NOW line)
+            if (box.worldX + box.width < currentWorldX) {
+              const selections = newSelections[boxId];
+              setAvailableTrackedSelections(prevPool => [...prevPool, selections]);
+              delete newSelections[boxId];
+            }
+          } else {
+            // Box doesn't exist anymore, remove the selections
+            const selections = newSelections[boxId];
+            setAvailableTrackedSelections(prevPool => [...prevPool, selections]);
+            delete newSelections[boxId];
+          }
+        });
+        
+        // Find boxes that have player counts but no tracked selections
+        Object.keys(randomPlayerCounts).forEach(boxId => {
+          if (!newSelections[boxId] && availableTrackedSelections.length > 0) {
+            const randomSelections = availableTrackedSelections[Math.floor(Math.random() * availableTrackedSelections.length)];
+            newSelections[boxId] = randomSelections.slice(0, Math.min(3, randomSelections.length));
+            
+            // Remove from available pool
+            setAvailableTrackedSelections(prevPool => prevPool.filter((_, index) => index !== 0));
+          }
+        });
+        
+        return newSelections;
+      });
+    };
+
+    const interval = setInterval(() => {
+      assignPlayerCountsFluidly();
+      assignTrackedPlayersFluidly();
+    }, 100); // Update every 100ms for fluid behavior
+
     return () => clearInterval(interval);
-  }, [showOtherPlayers, availablePlayerCounts, availableTrackedSelections]);
+  }, [showOtherPlayers, availablePlayerCounts, availableTrackedSelections, randomPlayerCounts]);
 
   // Update GridGame config when showProbabilities, showOtherPlayers or minMultiplier change (live updates without restart)
   useEffect(() => {
