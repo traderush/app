@@ -2816,15 +2816,15 @@ export default function ClientView() {
               {/* Asset Selector Dropdown - Show but disable functionality in mock backend mode */}
               <div className="relative asset-dropdown">
                 <div 
-                  className={`flex items-center gap-2 ${activeTab === 'copy' ? 'cursor-default opacity-50' : 'cursor-pointer hover:opacity-80 transition-opacity'}`}
-                  onClick={() => activeTab !== 'copy' && setAssetDropdownOpen(!isAssetDropdownOpen)}
-                  title={activeTab === 'copy' ? 'Asset selection not available in mock backend mode' : 'Select asset'}
+                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
+                  title="Select asset"
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
                     {activeTab === 'copy' ? 'BTC' : assetData[selectedAsset].symbol}
                   </div>
                   <svg 
-                    className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen && activeTab !== 'copy' ? 'rotate-180' : ''}`} 
+                    className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -2833,8 +2833,8 @@ export default function ClientView() {
                   </svg>
                 </div>
                 
-                {/* Dropdown Menu - Only show in normal mode */}
-                {isAssetDropdownOpen && activeTab !== 'copy' && (
+                {/* Dropdown Menu - Show in both modes but disable options in mock backend */}
+                {isAssetDropdownOpen && (
                   <div 
                     className="absolute top-full left-0 mt-2 border border-zinc-700/50 rounded-lg shadow-2xl z-50" 
                     style={{ 
@@ -2847,18 +2847,28 @@ export default function ClientView() {
                     {Object.entries(assetData).map(([key, asset]) => (
                       <div
                         key={key}
-                        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
-                          selectedAsset === key ? 'bg-zinc-800/50' : ''
+                        className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
+                          activeTab === 'copy' 
+                            ? 'cursor-default opacity-50' 
+                            : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
                         }`}
                         onClick={() => {
-                          setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL');
-                          setAssetDropdownOpen(false);
+                          if (activeTab !== 'copy') {
+                            setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL');
+                            setAssetDropdownOpen(false);
+                          }
                         }}
+                        title={activeTab === 'copy' ? 'Asset selection not available in mock backend mode' : `Select ${asset.name}`}
                       >
                         {/* Star icon for favorites - clickable */}
                         <button
-                          onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL', e)}
-                          className="flex-shrink-0 p-0.5 hover:bg-zinc-700/50 rounded transition-colors"
+                          onClick={(e) => activeTab !== 'copy' && toggleFavorite(key as 'BTC' | 'ETH' | 'SOL', e)}
+                          className={`flex-shrink-0 p-0.5 rounded transition-colors ${
+                            activeTab === 'copy' 
+                              ? 'cursor-default opacity-50' 
+                              : 'cursor-pointer hover:bg-zinc-700/50'
+                          }`}
+                          disabled={activeTab === 'copy'}
                         >
                           <svg 
                             className={`w-3.5 h-3.5 transition-colors ${
