@@ -24,6 +24,7 @@ export interface SquareRenderOptions {
   contractId?: string; // Contract ID to display in top left corner
   opacity?: number; // Overall opacity for fade effect (0-1)
   showProbabilities?: boolean; // Whether heatmap is enabled (affects text brightness)
+  showUnifiedGrid?: boolean; // Whether unified grid is enabled (skip individual borders)
 }
 
 export class SquareRenderer {
@@ -55,6 +56,7 @@ export class SquareRenderer {
       contractId,
       opacity = 1.0,
       showProbabilities = false,
+      showUnifiedGrid = false,
     } = options;
     const squareConfig = this.theme.square[state];
 
@@ -181,9 +183,9 @@ export class SquareRenderer {
       );
     }
     
-    // Draw borders for non-animating states
-    if (!(animation && animation.progress < 1)) {
-      // Draw border for non-animating states
+    // Draw borders for non-animating states (skip if unified grid is enabled)
+    if (!(animation && animation.progress < 1) && !showUnifiedGrid) {
+      // Draw border for non-animating states (only when unified grid is disabled)
       let borderColor = '#2b2b2b';
       let borderWidth = 0.6;
       

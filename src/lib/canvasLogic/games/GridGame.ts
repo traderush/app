@@ -178,7 +178,7 @@ export class GridGame extends BaseGame {
       showMultiplierOverlay: true,
       externalDataSource: false,
       visibleSquares: [],
-      showDashedGrid: false,
+      showDashedGrid: true, // Enable unified grid system for better performance
       debugMode: false,
       gameType: GameType.GRID,
       showProbabilities: false,
@@ -1118,6 +1118,7 @@ export class GridGame extends BaseGame {
         animation,
         opacity,
         showProbabilities: this.config.showProbabilities, // Pass heatmap setting for text brightness
+        showUnifiedGrid: this.config.showDashedGrid, // Pass unified grid setting to skip individual borders
         // Never show price ranges or timestamp ranges - only show multipliers
         timestampRange: undefined,
         priceRange: undefined,
