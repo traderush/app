@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X, Pencil } from 'lucide-react';
+import { useUserStore } from '@/stores/userStore';
 
 interface PnLTrackerPopupProps {
   isOpen: boolean;
@@ -29,21 +30,29 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   onCustomizeClose,
   customization
 }) => {
+  // Get live data from userStore
+  const balance = useUserStore((state) => state.balance);
+  const stats = useUserStore((state) => state.stats);
+  const tradeHistory = useUserStore((state) => state.tradeHistory);
+  const balanceHistory = useUserStore((state) => state.balanceHistory);
+  
+  // Calculate live PnL data
   const [pnlData, setPnlData] = useState({
-    balance: 1250.75,
-    totalPnL: 1250.75,
-    todayPnL: 125.50,
-    winRate: 68.5,
-    totalTrades: 47,
-    winningTrades: 32,
-    losingTrades: 15,
-    bestWin: 450.25,
-    worstLoss: -125.75,
-    currentStreak: 3,
-    longestWinStreak: 8,
-    longestLossStreak: 4
+    balance: balance,
+    totalPnL: stats.totalProfit,
+    todayPnL: 0, // Will calculate from today's trades
+    winRate: stats.winRate,
+    totalTrades: stats.totalTrades,
+    winningTrades: stats.totalWins,
+    losingTrades: stats.totalLosses,
+    bestWin: 0,
+    worstLoss: 0,
+    currentStreak: stats.currentStreak,
+    longestWinStreak: stats.bestStreak,
+    longestLossStreak: 0
   });
 
+  // Calculate recent trades from tradeHistory
   const [recentTrades, setRecentTrades] = useState<Array<{
     id: string;
     timestamp: Date;
@@ -63,43 +72,71 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Simulate PnL data updates
+  // Update PnL data from live userStore data
   useEffect(() => {
     if (!isOpen) return;
 
-    const interval = setInterval(() => {
-      setPnlData(prev => ({
-        ...prev,
-        balance: prev.balance + (Math.random() - 0.4) * 2,
-        totalPnL: prev.totalPnL + (Math.random() - 0.4) * 2,
-        todayPnL: prev.todayPnL + (Math.random() - 0.4) * 1,
-        totalTrades: prev.totalTrades + Math.floor(Math.random() * 2),
-        winningTrades: prev.winningTrades + (Math.random() > 0.6 ? 1 : 0),
-        losingTrades: prev.losingTrades + (Math.random() > 0.7 ? 1 : 0),
-        winRate: Math.max(0, Math.min(100, prev.winRate + (Math.random() - 0.5) * 2)),
-        bestWin: Math.max(prev.bestWin, Math.random() * 50),
-        worstLoss: Math.min(prev.worstLoss, -Math.random() * 30),
-        currentStreak: Math.floor(Math.random() * 10) - 5,
-        longestWinStreak: Math.max(prev.longestWinStreak, Math.floor(Math.random() * 15)),
-        longestLossStreak: Math.max(prev.longestLossStreak, Math.floor(Math.random() * 10))
-      }));
+    // Calculate today's PnL from today's trades
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTrades = tradeHistory.filter(trade => 
+      trade.settledAt && new Date(trade.settledAt) >= today
+    );
+    const todayPnL = todayTrades.reduce((sum, trade) => {
+      if (trade.result === 'win' && trade.payout) return sum + (trade.payout - trade.amount);
+      if (trade.result === 'loss') return sum - trade.amount;
+      return sum;
+    }, 0);
 
-      // Add recent trade
-      if (Math.random() > 0.8) {
-        const newTrade = {
-          id: Date.now().toString(),
-          timestamp: new Date(),
-          multiplier: Math.random() * 10 + 1,
-          pnl: (Math.random() - 0.4) * 20,
-          type: Math.random() > 0.5 ? 'win' as const : 'loss' as const
-        };
-        
-        setRecentTrades(prev => [newTrade, ...prev.slice(0, 9)]);
+    // Calculate best win and worst loss
+    const wins = tradeHistory.filter(trade => trade.result === 'win' && trade.payout);
+    const losses = tradeHistory.filter(trade => trade.result === 'loss');
+    const bestWin = wins.length > 0 ? Math.max(...wins.map(trade => trade.payout! - trade.amount)) : 0;
+    const worstLoss = losses.length > 0 ? Math.min(...losses.map(trade => -trade.amount)) : 0;
+
+    // Calculate longest loss streak
+    let longestLossStreak = 0;
+    let currentLossStreak = 0;
+    const sortedTrades = [...tradeHistory].sort((a, b) => 
+      new Date(b.settledAt || 0).getTime() - new Date(a.settledAt || 0).getTime()
+    );
+    
+    for (const trade of sortedTrades) {
+      if (trade.result === 'loss') {
+        currentLossStreak++;
+        longestLossStreak = Math.max(longestLossStreak, currentLossStreak);
+      } else {
+        currentLossStreak = 0;
       }
-    }, 2000);
+    }
 
-    return () => clearInterval(interval);
-  }, [isOpen]);
+    setPnlData({
+      balance: balance,
+      totalPnL: stats.totalProfit,
+      todayPnL: todayPnL,
+      winRate: stats.winRate,
+      totalTrades: stats.totalTrades,
+      winningTrades: stats.totalWins,
+      losingTrades: stats.totalLosses,
+      bestWin: bestWin,
+      worstLoss: worstLoss,
+      currentStreak: stats.currentStreak,
+      longestWinStreak: stats.bestStreak,
+      longestLossStreak: longestLossStreak
+    });
+
+    // Update recent trades from tradeHistory
+    const recentTradeData = tradeHistory.slice(0, 10).map(trade => ({
+      id: trade.id,
+      timestamp: trade.settledAt || trade.placedAt,
+      multiplier: trade.payout && trade.result === 'win' ? trade.payout / trade.amount : 1,
+      pnl: trade.result === 'win' && trade.payout ? trade.payout - trade.amount : 
+           trade.result === 'loss' ? -trade.amount : 0,
+      type: trade.result === 'win' ? 'win' as const : 'loss' as const
+    }));
+    
+    setRecentTrades(recentTradeData);
+  }, [isOpen, balance, stats, tradeHistory, balanceHistory]);
 
   // Handle dragging and resizing
   const handleMouseDown = (e: React.MouseEvent) => {
