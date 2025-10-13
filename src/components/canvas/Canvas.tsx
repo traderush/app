@@ -565,8 +565,8 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     if (!showOtherPlayers) return;
 
     const initializePlayerPool = () => {
-      // Initialize available player counts pool
-      const playerCounts = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15];
+      // Initialize available player counts pool - reduced for less aggressive generation
+      const playerCounts = [1, 2, 3, 4, 5];
       setAvailablePlayerCounts(playerCounts);
 
       // Initialize available tracked selections pool - each selection contains 1-3 players like normal canvas
@@ -662,12 +662,12 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
           
           // Only consider boxes that are in front of NOW line and within reasonable distance
           const distanceFromNow = box.worldX - currentWorldX;
-          return distanceFromNow > 0 && distanceFromNow < 1000; // Within 1000 world units
+          return distanceFromNow > 0 && distanceFromNow < 400; // Reduced to 400 world units for less aggressive generation
         });
         
-        // Assign available counts to boxes near NOW line (8% chance per frame)
+        // Assign available counts to boxes near NOW line (3% chance per frame - reduced for less aggressive generation)
         boxesNearNowLine.forEach(boxId => {
-          if (availablePlayerCounts.length > 0 && Math.random() < 0.08) {
+          if (availablePlayerCounts.length > 0 && Math.random() < 0.03) {
             const randomIndex = Math.floor(Math.random() * availablePlayerCounts.length);
             const playerCount = availablePlayerCounts[randomIndex];
             
@@ -726,7 +726,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     const interval = setInterval(() => {
       assignPlayerCountsFluidly();
       assignTrackedPlayersFluidly();
-    }, 100); // Update every 100ms for fluid behavior
+    }, 200); // Update every 200ms for less aggressive generation
 
     return () => clearInterval(interval);
   }, [showOtherPlayers, availablePlayerCounts, availableTrackedSelections, randomPlayerCounts]);
