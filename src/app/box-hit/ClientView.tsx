@@ -2857,16 +2857,24 @@ export default function ClientView() {
                         key={key}
                         className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
                           activeTab === 'copy' 
-                            ? `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''} opacity-50` 
+                            ? key === 'DEMO' 
+                              ? `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
+                              : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''} opacity-50`
                             : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
                         }`}
                         onClick={() => {
-                          if (activeTab !== 'copy') {
+                          if (activeTab !== 'copy' || key === 'DEMO') {
                             setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO');
                             setAssetDropdownOpen(false);
                           }
                         }}
-                        title={activeTab === 'copy' ? 'Asset selection not available in mock backend mode' : `Select ${asset.name}`}
+                        title={
+                          activeTab === 'copy' 
+                            ? key === 'DEMO' 
+                              ? `Select ${asset.name}` 
+                              : 'Asset selection not available in mock backend mode'
+                            : `Select ${asset.name}`
+                        }
                       >
                         {/* Star icon for favorites - clickable */}
                         <button
