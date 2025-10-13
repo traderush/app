@@ -1142,68 +1142,88 @@ export class GridGame extends BaseGame {
     
     if (!playerCount || !trackedPlayers) return;
 
-    // Match the exact style from normal box-hit canvas
-    const rectSize = Math.min(screenWidth * 0.7, screenHeight * 0.7, 18); // Slightly smaller
-    const overlapAmount = 2; // Less overlap
-    const startX = topLeft.x + 1; // 1px from left edge
-    const rectY = topLeft.y + 1; // 1px from top edge
-
-    // Apply fade opacity for other player elements
-    const otherPlayerOpacity = opacity * 0.8;
-
-    // Render player count box (bottom right) - exact match to normal canvas
-    if (playerCount > 0) {
-      const countBoxSize = 14; // Smaller box
-      const countBoxX = topLeft.x + screenWidth - countBoxSize - 1;
-      const countBoxY = topLeft.y + screenHeight - countBoxSize - 1;
+    // EXACT match to normal box-hit canvas styling
+    const rectSize = 18; // Exact same size as normal canvas
+    const overlapAmount = 2; // Exact same overlap
+    const rectY = topLeft.y + 4; // 4px from top edge (exact match)
+    
+    // Calculate total elements in stack (tracked players + number box)
+    const hasPlayerCount = playerCount > 0 ? 1 : 0;
+    const totalElements = trackedPlayers.length + hasPlayerCount;
+    
+    if (totalElements > 0) {
+      // Calculate total stack width for positioning
+      const stackWidth = (totalElements * rectSize) - ((totalElements - 1) * overlapAmount);
+      const startX = topLeft.x + screenWidth - stackWidth - 4; // Start from right edge, accounting for stack width
       
-      this.ctx.save();
-      this.ctx.globalAlpha = otherPlayerOpacity * 0.9;
+      // Apply fade opacity for other player elements (same as grid cells)
+      const otherPlayerOpacity = opacity;
       
-      // Orange background with rounded corners (matching normal canvas)
-      this.ctx.fillStyle = 'rgba(250, 86, 22, 0.9)';
-      this.ctx.beginPath();
-      this.ctx.roundRect(countBoxX, countBoxY, countBoxSize, countBoxSize, 2);
-      this.ctx.fill();
+      // Draw elements so leftmost appears on top (draw rightmost first, leftmost last)
       
-      // White text
-      this.ctx.fillStyle = 'white';
-      this.ctx.font = 'bold 9px Arial'; // Bold font
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
-      this.ctx.fillText(
-        playerCount.toString(),
-        countBoxX + countBoxSize / 2,
-        countBoxY + countBoxSize / 2
-      );
-      this.ctx.restore();
+      // 1. Draw number box first (rightmost, will be behind others) - EXACT match
+      if (playerCount > 0) {
+        const playerCountValue = Math.max(playerCount, trackedPlayers.length);
+        const numberBoxX = startX + (trackedPlayers.length * (rectSize - overlapAmount));
+        
+        // Rectangle background (match grid cell background) with fade
+        this.ctx.fillStyle = `rgba(14,14,14,${otherPlayerOpacity})`;
+        this.ctx.beginPath();
+        this.ctx.roundRect(numberBoxX, rectY, rectSize, rectSize, 4);
+        this.ctx.fill();
+        
+        // Rectangle border (match grid cell border styling) with fade
+        this.ctx.strokeStyle = `rgba(43,43,43,${otherPlayerOpacity})`;
+        this.ctx.lineWidth = 0.6;
+        this.ctx.stroke();
+        
+        // Player count text (match grid cell text styling) with fade
+        const textOpacity = 0.12 * otherPlayerOpacity;
+        this.ctx.fillStyle = `rgba(255,255,255,${textOpacity})`;
+        this.ctx.font = '14px sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(playerCountValue.toString(), numberBoxX + rectSize / 2, rectY + rectSize / 2);
+      }
+      
+      // 2. Draw tracked player boxes from right to left (so leftmost appears on top) - EXACT match
+      for (let i = trackedPlayers.length - 1; i >= 0; i--) {
+        const player = trackedPlayers[i];
+        const boxX = startX + (i * (rectSize - overlapAmount));
+        
+        // Draw rectangular box background (match grid cell background) with fade
+        this.ctx.fillStyle = `rgba(14,14,14,${otherPlayerOpacity})`;
+        this.ctx.beginPath();
+        this.ctx.roundRect(boxX, rectY, rectSize, rectSize, 4);
+        this.ctx.fill();
+        
+        // Draw box border (match grid cell border styling) with fade
+        this.ctx.strokeStyle = `rgba(43,43,43,${otherPlayerOpacity})`;
+        this.ctx.lineWidth = 0.6;
+        this.ctx.stroke();
+        
+        // Draw profile image if loaded, otherwise fallback to letter
+        const img = this.otherPlayerImages[player.avatar];
+        if (img) {
+          // Draw the preloaded image inside the box with fade
+          this.ctx.save();
+          this.ctx.globalAlpha = otherPlayerOpacity;
+          this.ctx.beginPath();
+          this.ctx.roundRect(boxX + 1, rectY + 1, rectSize - 2, rectSize - 2, 3);
+          this.ctx.clip();
+          this.ctx.drawImage(img, boxX + 1, rectY + 1, rectSize - 2, rectSize - 2);
+          this.ctx.restore();
+        } else {
+          // Fallback to first letter if image not loaded yet (match grid cell text styling) with fade
+          const textOpacity = 0.12 * otherPlayerOpacity;
+          this.ctx.fillStyle = `rgba(255,255,255,${textOpacity})`;
+          this.ctx.font = '14px sans-serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(player.name.charAt(0).toUpperCase(), boxX + rectSize / 2, rectY + rectSize / 2);
+        }
+      }
     }
-
-    // Render tracked player avatars (top left, overlapping) - exact match
-    trackedPlayers.slice(0, 3).forEach((player, index) => {
-      const image = this.otherPlayerImages[player.avatar];
-      if (!image) return;
-
-      const avatarX = startX + (index * (rectSize - overlapAmount));
-      const avatarY = rectY;
-
-      this.ctx.save();
-      this.ctx.globalAlpha = otherPlayerOpacity * 0.75; // Slightly more transparent
-      
-      // Draw rounded avatar (matching normal canvas style)
-      this.ctx.beginPath();
-      this.ctx.roundRect(avatarX, avatarY, rectSize, rectSize, 3);
-      this.ctx.clip();
-      
-      this.ctx.drawImage(
-        image,
-        avatarX,
-        avatarY,
-        rectSize,
-        rectSize
-      );
-      this.ctx.restore();
-    });
   }
 
   private renderXAxis(): void {
