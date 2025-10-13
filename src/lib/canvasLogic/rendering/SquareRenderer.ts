@@ -183,9 +183,14 @@ export class SquareRenderer {
       );
     }
     
-    // Draw borders for non-animating states (skip if unified grid is enabled)
-    if (!(animation && animation.progress < 1) && !showUnifiedGrid) {
-      // Draw border for non-animating states (only when unified grid is disabled)
+    // Draw borders for special states (always draw for selected, activated, missed, highlighted, hovered)
+    // Skip only default state borders when unified grid is enabled
+    const isSpecialState = state === 'selected' || state === 'activated' || state === 'missed' || 
+                          state === 'highlighted' || state === 'hovered';
+    const shouldDrawBorder = !(animation && animation.progress < 1) && 
+                           (isSpecialState || !showUnifiedGrid);
+    
+    if (shouldDrawBorder) {
       let borderColor = '#2b2b2b';
       let borderWidth = 0.6;
       
