@@ -2064,7 +2064,7 @@ export default function ClientView() {
   
   // Zustand setter functions
   const setIsTradingMode = (mode: boolean) => updateGameSettings({ isTradingMode: mode });
-  const setSelectedAsset = (asset: 'BTC' | 'ETH' | 'SOL') => updateGameSettings({ selectedAsset: asset });
+  const setSelectedAsset = (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => updateGameSettings({ selectedAsset: asset });
   const setShowProbabilities = (show: boolean) => updateGameSettings({ showProbabilities: show });
   const setShowOtherPlayers = (show: boolean) => updateGameSettings({ showOtherPlayers: show });
   const setMinMultiplier = (mult: number) => updateGameSettings({ minMultiplier: mult });
@@ -2103,7 +2103,7 @@ export default function ClientView() {
   // Audio context initialization is now handled by SoundManager
   
   // Toggle favorite asset (now uses Zustand store)
-  const toggleFavorite = (asset: 'BTC' | 'ETH' | 'SOL', event: React.MouseEvent) => {
+  const toggleFavorite = (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO', event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent dropdown from closing
     toggleFavoriteAsset(asset);
   };
@@ -2134,6 +2134,14 @@ export default function ClientView() {
 
   // Asset data with live prices and 24h stats from Binance API
   const assetData = {
+    DEMO: {
+      name: 'Demo Asset',
+      symbol: 'DEMO',
+      icon: 'https://framerusercontent.com/images/dWPrOABO15xb2dkrxTZj3Z6cAU.png?width=256&height=256',
+      price: 100.00, // Fixed demo price
+      change24h: 2.50,
+      volume24h: '45.20B'
+    },
     BTC: {
       name: 'Bitcoin',
       symbol: 'BTC',
@@ -2807,8 +2815,8 @@ export default function ClientView() {
               {/* Asset Icon */}
               <div className="rounded-lg overflow-hidden" style={{ width: '28px', height: '28px' }}>
                 <img 
-                  src={activeTab === 'copy' ? assetData.BTC.icon : assetData[selectedAsset].icon} 
-                  alt={activeTab === 'copy' ? 'Bitcoin' : assetData[selectedAsset].name} 
+                  src={activeTab === 'copy' ? assetData.DEMO.icon : assetData[selectedAsset].icon} 
+                  alt={activeTab === 'copy' ? 'Demo Asset' : assetData[selectedAsset].name} 
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -2821,7 +2829,7 @@ export default function ClientView() {
                   title="Select asset"
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
-                    {activeTab === 'copy' ? 'BTC' : assetData[selectedAsset].symbol}
+                    {activeTab === 'copy' ? 'DEMO' : assetData[selectedAsset].symbol}
                   </div>
                   <svg 
                     className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
@@ -2849,12 +2857,12 @@ export default function ClientView() {
                         key={key}
                         className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
                           activeTab === 'copy' 
-                            ? 'cursor-default opacity-50' 
+                            ? `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''} opacity-50` 
                             : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
                         }`}
                         onClick={() => {
                           if (activeTab !== 'copy') {
-                            setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL');
+                            setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO');
                             setAssetDropdownOpen(false);
                           }
                         }}
@@ -2862,24 +2870,24 @@ export default function ClientView() {
                       >
                         {/* Star icon for favorites - clickable */}
                         <button
-                          onClick={(e) => activeTab !== 'copy' && toggleFavorite(key as 'BTC' | 'ETH' | 'SOL', e)}
+                          onClick={(e) => activeTab !== 'copy' && toggleFavorite(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO', e)}
                           className={`flex-shrink-0 p-0.5 rounded transition-colors ${
                             activeTab === 'copy' 
-                              ? 'cursor-default opacity-50' 
+                              ? 'cursor-pointer hover:bg-zinc-700/50 opacity-50' 
                               : 'cursor-pointer hover:bg-zinc-700/50'
                           }`}
                           disabled={activeTab === 'copy'}
                         >
                           <svg 
                             className={`w-3.5 h-3.5 transition-colors ${
-                              favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL') 
+                              favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') 
                                 ? 'text-yellow-400 fill-current' 
                                 : 'text-zinc-500 fill-none'
                             }`} 
                             fill="currentColor" 
                             viewBox="0 0 24 24"
                             stroke="currentColor"
-                            strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL') ? 0 : 1.5}
+                            strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') ? 0 : 1.5}
                           >
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                           </svg>
