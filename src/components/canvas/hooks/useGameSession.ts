@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useUserStore } from '@/stores/userStore';
 
 interface UseGameSessionProps {
   gameMode: 'box_hit' | 'towers';
@@ -29,6 +30,10 @@ export function useGameSession({
   const [contracts, setContracts] = useState<any[]>([]);
   const [userBalance, setUserBalance] = useState(0);
   const [positions, setPositions] = useState<Map<string, any>>(new Map());
+
+  // Get userStore functions
+  const settleTrade = useUserStore((state) => state.settleTrade);
+  const updateBalance = useUserStore((state) => state.updateBalance);
 
   // Track initialization to prevent duplicate joins
   const initRef = useRef(false);
@@ -192,19 +197,61 @@ export function useGameSession({
 
     const handleTradeResult = (msg: any) => {
       if (!mounted) return;
-      console.log('Trade result:', msg);
+      console.log('🎯 Trade result received:', msg);
+      
+      // Extract data from message
+      const payload = msg.payload || msg;
+      const tradeId = payload.tradeId;
+      const contractId = payload.contractId;
+      const won = payload.won;
+      const payout = payload.payout || 0;
+      const profit = payload.profit || 0;
+      const balance = payload.balance;
+      
+      console.log('🎯 Processing trade result:', {
+        tradeId,
+        contractId,
+        won,
+        payout,
+        profit,
+        balance
+      });
+      
+      // Find the position to get the original amount
+      const position = positions.get(tradeId);
+      if (position) {
+        const amount = position.amount;
+        
+        // Settle the trade in userStore (this will update stats and PnL)
+        settleTrade(tradeId, won ? 'win' : 'loss', payout);
+        
+        console.log('✅ Trade settled in userStore:', {
+          tradeId,
+          amount,
+          result: won ? 'win' : 'loss',
+          payout,
+          profit
+        });
+      } else {
+        console.warn('⚠️ Position not found for tradeId:', tradeId);
+      }
+      
+      // Update positions state
       setPositions((prev) => {
         const newPositions = new Map(prev);
-        const position = newPositions.get(msg.tradeId);
+        const position = newPositions.get(tradeId);
         if (position) {
-          position.result = msg.result;
+          position.result = won ? 'win' : 'loss';
+          position.payout = payout;
+          position.settledAt = new Date();
         }
         return newPositions;
       });
-      if (msg.payload && typeof msg.payload.balance === 'number') {
-        setUserBalance(msg.payload.balance);
-      } else if (typeof msg.balance === 'number') {
-        setUserBalance(msg.balance);
+      
+      // Update balance
+      if (typeof balance === 'number') {
+        setUserBalance(balance);
+        updateBalance(balance);
       }
     };
 
