@@ -635,6 +635,15 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
       setRandomPlayerCounts(newRandomPlayerCounts);
       setTrackedPlayerSelections(newTrackedPlayerSelections);
+
+      // Debug logging
+      if (Object.keys(newRandomPlayerCounts).length > 0) {
+        console.log('🎮 Other players generated:', {
+          playerCounts: Object.keys(newRandomPlayerCounts).length,
+          sample: Object.keys(newRandomPlayerCounts).slice(0, 3),
+          totalBoxes: Object.keys(allBoxes).length
+        });
+      }
     };
 
     const interval = setInterval(generateOtherPlayers, 2000);

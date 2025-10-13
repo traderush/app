@@ -3093,6 +3093,7 @@ export default function ClientView() {
                     betAmount={betAmount}
                     onPriceUpdate={setMockBackendCurrentPrice}
                     showProbabilities={showProbabilities}
+                    showOtherPlayers={showOtherPlayers}
                     minMultiplier={minMultiplier}
                   />
                 </div>

@@ -1139,6 +1139,16 @@ export class GridGame extends BaseGame {
     const playerCount = this.otherPlayerCounts[squareId];
     const trackedPlayers = this.otherPlayerSelections[squareId];
     
+    // Debug logging
+    if (playerCount && trackedPlayers) {
+      console.log('🎨 Rendering other players for box:', {
+        squareId,
+        playerCount,
+        trackedPlayers: trackedPlayers.length,
+        showOtherPlayers: this.config.showOtherPlayers
+      });
+    }
+    
     if (!playerCount || !trackedPlayers) return;
 
     const rectSize = Math.min(screenWidth * 0.8, screenHeight * 0.8, 20); // Max 20px
@@ -1985,6 +1995,15 @@ export class GridGame extends BaseGame {
     this.otherPlayerCounts = playerCounts;
     this.otherPlayerSelections = playerSelections;
     this.otherPlayerImages = playerImages;
+
+    // Debug logging
+    if (Object.keys(playerCounts).length > 0) {
+      console.log('🎯 GridGame received other player data:', {
+        playerCounts: Object.keys(playerCounts).length,
+        playerSelections: Object.keys(playerSelections).length,
+        playerImages: Object.keys(playerImages).length
+      });
+    }
   }
 
   public getBackendMultipliers(): Record<string, any> {
