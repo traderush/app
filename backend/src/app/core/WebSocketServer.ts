@@ -42,7 +42,7 @@ export class WebSocketServer {
       host: 'localhost',
       maxConnections: 10000,
       heartbeatInterval: 30000, // 30 seconds
-      connectionTimeout: 60000, // 60 seconds
+      connectionTimeout: 300000, // 5 minutes (was too aggressive at 60 seconds)
       ...config
     };
     this.connectionManager = connectionManager;
@@ -139,7 +139,10 @@ export class WebSocketServer {
     // Add connection to ConnectionManager
     this.connectionManager.addConnection(connectionId, ws);
 
-    logger.info('WebSocket connection opened', { connectionId });
+    logger.info('WebSocket connection opened', { 
+      connectionId,
+      totalConnections: this.connectionManager.getConnectionCount()
+    });
 
     // Don't send initial heartbeat immediately - wait for auth
   }
@@ -161,7 +164,7 @@ export class WebSocketServer {
       // Validate message format
       const validatedMessage = validateClientMessage(data) as ClientMessage;
 
-      // Update last activity
+      // Update last activity for all messages (not just authenticated ones)
       if (connectionId && this.connectionManager.hasConnection(connectionId)) {
         this.connectionManager.updateActivity(connectionId);
       }
@@ -230,18 +233,22 @@ export class WebSocketServer {
         const ws = this.connectionManager.getWebSocket(conn.connectionId);
         if (!ws) continue;
 
-        // Check if connection is stale
-        if (now - conn.lastHeartbeat > this.config.connectionTimeout) {
+        // Check if connection is stale (only for authenticated connections)
+        if (conn.userId && now - conn.lastHeartbeat > this.config.connectionTimeout) {
           logger.warn('Closing stale connection', {
             connectionId: conn.connectionId,
-            userId: conn.userId
+            userId: conn.userId,
+            lastHeartbeat: new Date(conn.lastHeartbeat).toISOString(),
+            timeoutMs: this.config.connectionTimeout
           });
           ws.close(1000, 'Connection timeout');
           continue;
         }
 
-        // Send heartbeat
-        this.sendHeartbeat(ws);
+        // Send heartbeat (only to authenticated connections)
+        if (conn.userId) {
+          this.sendHeartbeat(ws);
+        }
       }
     }, this.config.heartbeatInterval);
   }

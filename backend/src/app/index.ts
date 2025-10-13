@@ -34,6 +34,7 @@ export class TradeRushApp {
   private leaderboardService: LeaderboardService;
   private gameEngineManager: GameEngineManager;
   private streamingService: StreamingService;
+  private intervals: NodeJS.Timeout[] = []; // Track intervals for cleanup
 
   constructor(
     private config: {
@@ -157,6 +158,10 @@ export class TradeRushApp {
     try {
       logger.info('Stopping TradeRush app...');
 
+      // Clear all intervals first
+      this.intervals.forEach(interval => clearInterval(interval));
+      this.intervals = [];
+
       // Stop streaming service
       this.streamingService.stop();
 
@@ -178,26 +183,44 @@ export class TradeRushApp {
    */
   private startPeriodicTasks(): void {
     // Clean up stale connections every minute
-    setInterval(() => {
-      const removed = this.connectionManager.cleanupStale();
-      if (removed > 0) {
-        logger.info('Cleaned up stale connections', { removed });
-      }
-    }, 60000);
+    this.intervals.push(
+      setInterval(() => {
+        const removed = this.connectionManager.cleanupStale();
+        if (removed > 0) {
+          logger.info('Cleaned up stale connections', { removed });
+        }
+      }, 60000)
+    );
 
     // Clean up expired sessions every 5 minutes
-    setInterval(() => {
-      const cleaned = this.sessionManager.cleanupExpiredSessions();
-      if (cleaned > 0) {
-        logger.info('Cleaned up expired sessions', { cleaned });
-      }
-    }, 300000);
+    this.intervals.push(
+      setInterval(() => {
+        const cleaned = this.sessionManager.cleanupExpiredSessions();
+        if (cleaned > 0) {
+          logger.info('Cleaned up expired sessions', { cleaned });
+        }
+      }, 300000)
+    );
 
     // Log statistics every minute
-    setInterval(() => {
-      const stats = this.getStats();
-      logger.info('Application statistics', stats);
-    }, 60000);
+    this.intervals.push(
+      setInterval(() => {
+        const stats = this.getStats();
+        logger.info('Application statistics', {
+          ...stats,
+          connectionManagerDebug: {
+            totalConnections: stats.connections.totalConnections,
+            totalUsers: stats.connections.totalUsers,
+            allConnections: this.connectionManager.getAllConnections().map(conn => ({
+              connectionId: conn.connectionId,
+              userId: conn.userId,
+              lastHeartbeat: new Date(conn.lastHeartbeat).toISOString(),
+              connectedAt: new Date(conn.connectedAt).toISOString()
+            }))
+          }
+        });
+      }, 60000)
+    );
   }
 
   /**

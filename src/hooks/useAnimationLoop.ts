@@ -66,9 +66,26 @@ export const useAnimationLoop = (
     lastTimeRef.current = 0;
   }, []);
 
+  // Handle page visibility changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stop();
+      } else if (autoStart) {
+        start();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [autoStart, start, stop]);
+
   // Auto-start if configured
   useEffect(() => {
-    if (autoStart) {
+    if (autoStart && !document.hidden) {
       start();
     }
 

@@ -45,7 +45,11 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
+    let isRunning = true;
+
     const animate = () => {
+      if (!isRunning) return;
+      
       // Clear canvas
       ctx.clearRect(0, 0, width, height);
       
@@ -56,11 +60,30 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    // Start animation
-    animationFrameRef.current = requestAnimationFrame(animate);
+    // Handle page visibility changes to pause/resume animation
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isRunning = false;
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+      } else {
+        isRunning = true;
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Start animation only if page is visible
+    if (!document.hidden) {
+      animationFrameRef.current = requestAnimationFrame(animate);
+    }
 
     // Cleanup
     return () => {
+      isRunning = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }

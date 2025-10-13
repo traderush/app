@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useGameIntegration } from '@/hooks/useGameIntegration';
-import { useUIStore } from '@/stores';
+import { useUIStore, useSignatureColor } from '@/stores';
 
 interface GameCanvasProps {
   rows?: number;
@@ -134,8 +134,8 @@ export function GameCanvas({
           break;
       }
 
-      // Highlight hovered cell
-      if (hoveredCell && hoveredCell.x === cell.x && hoveredCell.y === cell.y) {
+      // Highlight hovered cell (hoveredCell is a string cellId in the store)
+      if (hoveredCell === cell.id) {
         fillColor = `${effectiveSignatureColor}40`;
         borderColor = effectiveSignatureColor;
       }
@@ -205,7 +205,8 @@ export function GameCanvas({
     const cellY = Math.floor(y / cellHeight);
 
     if (cellX >= 0 && cellX < cols && cellY >= 0 && cellY < rows) {
-      setHoveredCell({ x: cellX, y: cellY });
+      const cellId = `cell_${cellY}_${cellX}`;
+      setHoveredCell(cellId);
     } else {
       setHoveredCell(null);
     }

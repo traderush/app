@@ -286,25 +286,36 @@ export const useGameStore = create<GameState>()(
     // Complex Actions
     hitCell: (cellId) =>
       set((state) => {
-        const updatedCells = state.gridCells.map((cell) =>
-          cell.id === cellId
-            ? { ...cell, state: 'hit' as const, hitTime: Date.now() }
-            : cell
-        );
+        // Optimized: Use direct array mutation for better performance
+        const cellIndex = state.gridCells.findIndex(cell => cell.id === cellId);
+        if (cellIndex === -1) return state;
 
-        // Update positions that include this cell
-        const updatedPositions = state.activePositions.map((pos) => {
+        const updatedCells = [...state.gridCells];
+        updatedCells[cellIndex] = { 
+          ...updatedCells[cellIndex], 
+          state: 'hit' as const, 
+          hitTime: Date.now() 
+        };
+
+        // Optimized: Only process positions that contain this cell
+        const updatedPositions = [...state.activePositions];
+        let hitPositionsCount = 0;
+        let totalWinnings = 0;
+
+        for (let i = 0; i < updatedPositions.length; i++) {
+          const pos = updatedPositions[i];
           if (pos.cellIds.includes(cellId) && !pos.hitTime) {
-            return { ...pos, hitTime: Date.now(), isActive: false };
+            updatedPositions[i] = { 
+              ...pos, 
+              hitTime: Date.now(), 
+              isActive: false 
+            };
+            hitPositionsCount++;
+            totalWinnings += pos.potentialPayout;
           }
-          return pos;
-        });
+        }
 
-        // Update stats
-        const hitPositions = updatedPositions.filter((pos) => pos.hitTime);
-        const newWins = state.gameStats.totalWins + hitPositions.length;
-        const totalWinnings = state.gameStats.totalWinnings + 
-          hitPositions.reduce((sum, pos) => sum + pos.potentialPayout, 0);
+        const newWins = state.gameStats.totalWins + hitPositionsCount;
 
         return {
           gridCells: updatedCells,
@@ -312,7 +323,7 @@ export const useGameStore = create<GameState>()(
           gameStats: {
             ...state.gameStats,
             totalWins: newWins,
-            totalWinnings,
+            totalWinnings: state.gameStats.totalWinnings + totalWinnings,
             winRate: newWins / state.gameStats.totalBets || 0,
             currentStreak: state.gameStats.currentStreak + 1,
             longestWinStreak: Math.max(
@@ -325,25 +336,35 @@ export const useGameStore = create<GameState>()(
 
     missCell: (cellId) =>
       set((state) => {
-        const updatedCells = state.gridCells.map((cell) =>
-          cell.id === cellId
-            ? { ...cell, state: 'missed' as const }
-            : cell
-        );
+        // Optimized: Use direct array mutation for better performance
+        const cellIndex = state.gridCells.findIndex(cell => cell.id === cellId);
+        if (cellIndex === -1) return state;
 
-        // Update positions that include this cell
-        const updatedPositions = state.activePositions.map((pos) => {
+        const updatedCells = [...state.gridCells];
+        updatedCells[cellIndex] = { 
+          ...updatedCells[cellIndex], 
+          state: 'missed' as const 
+        };
+
+        // Optimized: Only process positions that contain this cell
+        const updatedPositions = [...state.activePositions];
+        let missedPositionsCount = 0;
+        let totalLossAmount = 0;
+
+        for (let i = 0; i < updatedPositions.length; i++) {
+          const pos = updatedPositions[i];
           if (pos.cellIds.includes(cellId) && !pos.missTime) {
-            return { ...pos, missTime: Date.now(), isActive: false };
+            updatedPositions[i] = { 
+              ...pos, 
+              missTime: Date.now(), 
+              isActive: false 
+            };
+            missedPositionsCount++;
+            totalLossAmount += pos.betAmount;
           }
-          return pos;
-        });
+        }
 
-        // Update stats
-        const missedPositions = updatedPositions.filter((pos) => pos.missTime);
-        const newLossCount = state.gameStats.totalLosses + missedPositions.length;
-        const newLossAmount = state.gameStats.totalLossAmount + 
-          missedPositions.reduce((sum, pos) => sum + pos.betAmount, 0);
+        const newLossCount = state.gameStats.totalLosses + missedPositionsCount;
 
         return {
           gridCells: updatedCells,
@@ -351,7 +372,7 @@ export const useGameStore = create<GameState>()(
           gameStats: {
             ...state.gameStats,
             totalLosses: newLossCount,
-            totalLossAmount: newLossAmount,
+            totalLossAmount: state.gameStats.totalLossAmount + totalLossAmount,
             winRate: state.gameStats.totalWins / state.gameStats.totalBets || 0,
             currentStreak: 0,
             longestLossStreak: Math.max(

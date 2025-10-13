@@ -88,6 +88,9 @@ interface PriceState {
   getPriceRange: (timeframe: number) => { min: number; max: number };
   getAveragePrice: (timeframe: number) => number;
   isPriceIncreasing: (timeframe: number) => boolean;
+  
+  // Cleanup
+  cleanup: () => void;
 }
 
 const initialConfig: PriceDataConfig = {
@@ -111,11 +114,13 @@ const initialStats: PriceStats = {
   lastUpdate: Date.now(),
 };
 
-let simulationInterval: NodeJS.Timeout | null = null;
-let wsConnections: Record<string, WebSocket> = {};
-
 export const usePriceStore = create<PriceState>()(
-  subscribeWithSelector((set, get) => ({
+  subscribeWithSelector((set, get) => {
+    // Move module-level variables into store state to prevent memory leaks
+    let simulationInterval: NodeJS.Timeout | null = null;
+    let wsConnections: Record<string, WebSocket> = {};
+
+    return {
     // Initial State
     priceData: [],
     config: initialConfig,
@@ -478,5 +483,19 @@ export const usePriceStore = create<PriceState>()(
       const last = history[history.length - 1].p;
       return last > first;
     },
-  }))
+
+    // Cleanup method to properly close all connections
+    cleanup: () => {
+      // Close all WebSocket connections
+      Object.values(wsConnections).forEach((ws) => ws.close());
+      wsConnections = {};
+
+      // Stop simulation
+      if (simulationInterval) {
+        clearInterval(simulationInterval);
+        simulationInterval = null;
+      }
+    },
+    };
+  })
 );
