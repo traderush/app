@@ -2813,25 +2813,24 @@ export default function ClientView() {
                 />
               </div>
               
-              {/* Asset Selector Dropdown - Hide in mock backend mode */}
+              {/* Asset Selector Dropdown - Show but disable functionality in mock backend mode */}
               <div className="relative asset-dropdown">
                 <div 
-                  className={`flex items-center gap-2 ${activeTab === 'copy' ? '' : 'cursor-pointer hover:opacity-80 transition-opacity'}`}
+                  className={`flex items-center gap-2 ${activeTab === 'copy' ? 'cursor-default opacity-50' : 'cursor-pointer hover:opacity-80 transition-opacity'}`}
                   onClick={() => activeTab !== 'copy' && setAssetDropdownOpen(!isAssetDropdownOpen)}
+                  title={activeTab === 'copy' ? 'Asset selection not available in mock backend mode' : 'Select asset'}
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
                     {activeTab === 'copy' ? 'BTC' : assetData[selectedAsset].symbol}
                   </div>
-                  {activeTab !== 'copy' && (
                   <svg 
-                    className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
+                    className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen && activeTab !== 'copy' ? 'rotate-180' : ''}`} 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
-                  )}
                 </div>
                 
                 {/* Dropdown Menu - Only show in normal mode */}
