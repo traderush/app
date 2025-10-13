@@ -6,6 +6,7 @@ import PositionsTable from '@/games/box-hit/PositionsTable';
 import CustomSlider from '@/components/CustomSlider';
 import { playSelectionSound, playHitSound, cleanupSoundManager } from '@/lib/sound/SoundManager';
 import { useGameStore, usePriceStore, useConnectionStore, useUIStore } from '@/stores';
+import { useUserStore } from '@/stores/userStore';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { logger } from '@/utils/logger';
 import Canvas from '@/components/canvas/Canvas';
@@ -2079,6 +2080,27 @@ export default function ClientView() {
   const toggleFavoriteAsset = useUIStore((state) => state.toggleFavoriteAsset);
   const setAssetDropdownOpen = useUIStore((state) => state.setAssetDropdownOpen);
   
+  // UserStore integration for mock backend PnL tracking
+  const addTrade = useUserStore((state) => state.addTrade);
+  const settleTrade = useUserStore((state) => state.settleTrade);
+  
+  // Get individual values to avoid object recreation on every render
+  const balance = useUserStore((state) => state.balance);
+  const activeTradesCount = useUserStore((state) => state.activeTrades.length);
+  const tradeHistoryCount = useUserStore((state) => state.tradeHistory.length);
+  const totalProfit = useUserStore((state) => state.stats.totalProfit);
+  
+  // Debug userStore state changes (only when values actually change)
+  useEffect(() => {
+    console.log('📊 Mock Backend - UserStore state changed:', {
+      balance,
+      activeTradesCount,
+      tradeHistoryCount,
+      totalProfit
+    });
+  }, [balance, activeTradesCount, tradeHistoryCount, totalProfit]);
+  
+  
   // Local state for UI-specific data (not part of game logic)
   const [selectedCount, setSelectedCount] = useState(0);
   const [bestMultiplier, setBestMultiplier] = useState(0);
@@ -2251,6 +2273,9 @@ export default function ClientView() {
     setMockBackendSelectedAveragePrice(averagePrice ?? null);
   }, []);
   
+  // Keep track of previous positions using a ref to avoid infinite loops
+  const previousPositionsRef = useRef<Map<string, any>>(new Map());
+  
   // Handle mock backend positions and contracts update
   // Keep this callback stable (no dependencies) to ensure Canvas always calls it properly
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => {
@@ -2261,11 +2286,73 @@ export default function ClientView() {
       missedBoxes,
       contractsCount: contracts.length
     });
+    
+    // Track new positions in userStore
+    const previousPositions = previousPositionsRef.current;
+    
+    // Find new positions that weren't in the previous state
+    positions.forEach((position, positionId) => {
+      if (!previousPositions.has(positionId)) {
+        console.log('➕ New position detected, adding trade to userStore:', {
+          positionId,
+          contractId: position.contractId,
+          amount: betAmount
+        });
+        
+        // Add trade to userStore
+        const tradeId = `trade_${position.contractId}`;
+        addTrade({
+          id: tradeId,
+          contractId: position.contractId,
+          amount: betAmount,
+          placedAt: new Date(),
+        });
+      }
+    });
+    
+    // Track hit positions (settle as wins)
+    hitBoxes.forEach((contractId) => {
+      // Find the position for this contract
+      const position = Array.from(positions.values()).find(p => p.contractId === contractId);
+      if (position) {
+        const contract = contracts.find(c => c.contractId === contractId);
+        if (contract) {
+          const payout = betAmount * (contract.returnMultiplier || 1);
+          
+          console.log('✅ Position hit, settling trade as win:', {
+            contractId,
+            amount: betAmount,
+            payout,
+            multiplier: contract.returnMultiplier
+          });
+          
+          // Find the trade ID by contractId (since we use contractId as the key)
+          const tradeId = `trade_${contractId}`;
+          settleTrade(tradeId, 'win', payout);
+        }
+      }
+    });
+    
+    // Track missed positions (settle as losses)
+    missedBoxes.forEach((contractId) => {
+      console.log('❌ Position missed, settling trade as loss:', {
+        contractId,
+        amount: betAmount
+      });
+      
+      // Find the trade ID by contractId (since we use contractId as the key)
+      const tradeId = `trade_${contractId}`;
+      settleTrade(tradeId, 'loss', 0);
+    });
+    
     setMockBackendPositions(positions);
     setMockBackendContracts(contracts);
     setMockBackendHitBoxes(hitBoxes);
     setMockBackendMissedBoxes(missedBoxes);
-  }, []);
+    
+    // Update the ref for next comparison
+    previousPositionsRef.current = new Map(positions);
+  }, [betAmount, addTrade, settleTrade]);
   
   // Derive position stats from mock backend positions (now pre-filtered to only active positions)
   const mockBackendMultipliers = useMemo(() => {

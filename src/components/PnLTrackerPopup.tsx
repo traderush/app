@@ -104,8 +104,19 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
 
     console.log('📊 Today PnL calculation:', {
       todayTradesCount: todayTrades.length,
-      todayTrades: todayTrades.map(t => ({ id: t.id, result: t.result, amount: t.amount, payout: t.payout })),
-      todayPnL
+      todayTrades: todayTrades.map(t => ({ 
+        id: t.id, 
+        result: t.result, 
+        amount: t.amount, 
+        payout: t.payout,
+        profit: t.result === 'win' ? (t.payout || 0) - t.amount : -t.amount
+      })),
+      todayPnL,
+      calculationBreakdown: todayTrades.map(t => {
+        if (t.result === 'win' && t.payout) return `${t.payout} - ${t.amount} = ${t.payout - t.amount}`;
+        if (t.result === 'loss') return `-${t.amount}`;
+        return '0 (pending)';
+      })
     });
 
     // Calculate best win and worst loss
@@ -428,7 +439,7 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
               <div 
                 className="mb-1"
                 style={{ 
-                  color: customization?.balanceTextColor || '#ffffff',
+                  color: customization?.generalTextColor || '#ffffff',
                   fontWeight: 500,
                   fontSize: `${fontSizes.valueSize}px`,
                   lineHeight: 1

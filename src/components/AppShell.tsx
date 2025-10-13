@@ -68,9 +68,9 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
     backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
     backgroundOpacity: 100,
     backgroundBlur: 0,
-    generalTextColor: '#ffffff',
-    balanceTextColor: '#ffffff',
-    pnlTextColor: '#2fe3ac'
+    generalTextColor: '#ffffff', // Balance and general text
+    balanceTextColor: '#ec397a', // Loss color (trading red)
+    pnlTextColor: '#2fe3ac' // Profit color (trading green)
   });
 
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
@@ -334,9 +334,9 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Text Colors</span>
                   </div>
                   
-                  {/* General Text Color */}
+                  {/* Balance Text Color */}
                   <div className="flex items-center justify-between p-1">
-                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Main</span>
+                    <span className="text-zinc-200" style={{fontSize: '12px'}}>Balance</span>
                     <input
                       type="color"
                       value={pnLCustomization.generalTextColor}
@@ -345,7 +345,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     />
                   </div>
 
-                  {/* Balance Text Color */}
+                  {/* Loss Text Color */}
                   <div className="flex items-center justify-between p-1">
                     <span className="text-zinc-200" style={{fontSize: '12px'}}>Loss</span>
                     <input
@@ -376,9 +376,9 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                         backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
                         backgroundOpacity: 100,
                         backgroundBlur: 0,
-                        generalTextColor: '#ffffff',
-                        balanceTextColor: '#ffffff',
-                        pnlTextColor: '#2fe3ac'
+                        generalTextColor: '#ffffff', // Balance and general text
+                        balanceTextColor: '#ec397a', // Loss color (trading red)
+                        pnlTextColor: '#2fe3ac' // Profit color (trading green)
                       });
                     }}
                     className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors" style={{fontSize: '12px'}}

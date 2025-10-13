@@ -16,7 +16,7 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   style
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number | undefined>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   const canvasStyle = useMemo(() => ({
     width: `${width}px`,

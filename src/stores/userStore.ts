@@ -63,7 +63,7 @@ interface UserState {
   resetBalance: () => void;
   
   // Actions - Trades
-  addTrade: (trade: Omit<Trade, 'id'>) => void;
+  addTrade: (trade: Omit<Trade, 'id'> & { id?: string }) => void;
   updateTrade: (tradeId: string, updates: Partial<Trade>) => void;
   removeTrade: (tradeId: string) => void;
   settleTrade: (tradeId: string, result: 'win' | 'loss', payout?: number) => void;
@@ -163,7 +163,7 @@ export const useUserStore = create<UserState>()(
         set((state) => {
           const newTrade: Trade = {
             ...tradeData,
-            id: tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             result: 'pending',
           };
           
@@ -230,6 +230,23 @@ export const useUserStore = create<UserState>()(
             if (t.result === 'loss') return sum - t.amount;
             return sum;
           }, 0);
+          
+          console.log('📊 userStore.settleTrade - Profit calculation:', {
+            settledTradesCount: settledTrades.length,
+            tradeBreakdown: settledTrades.map(t => ({
+              id: t.id,
+              result: t.result,
+              amount: t.amount,
+              payout: t.payout,
+              profit: t.result === 'win' ? (t.payout || 0) - t.amount : -t.amount
+            })),
+            totalProfit,
+            calculationBreakdown: settledTrades.map(t => {
+              if (t.result === 'win' && t.payout) return `${t.payout} - ${t.amount} = ${t.payout - t.amount}`;
+              if (t.result === 'loss') return `-${t.amount}`;
+              return '0';
+            })
+          });
           
           // Calculate best streak
           let currentStreak = 0;
