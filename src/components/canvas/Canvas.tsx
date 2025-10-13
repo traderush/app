@@ -665,7 +665,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         externalDataSource: true, // We'll provide price data from WebSocket
         multipliers: [],
         showMultiplierOverlay: true,
-        showDashedGrid: true, // Enable unified grid system for better performance
+        showDashedGrid: false, // Disable background grid lines
         debugMode: false, // Disable debug mode - only show multipliers, no price ranges
         pricePerPixel: 0.8, // Use default from GridGame - this affects Y axis range
         pixelsPerPoint: 5,
