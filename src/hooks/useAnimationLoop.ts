@@ -67,12 +67,25 @@ export const useAnimationLoop = (
   }, []);
 
   // Handle page visibility changes
+  // For trading games: pause visual rendering but data continues updating
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        // Pause visual rendering only - data updates continue in background
         stop();
       } else if (autoStart) {
+        // Resume and immediately catch up with current state
         start();
+        // Force immediate callback execution to catch up with missed updates
+        if (isRunningRef.current) {
+          const timestamp = performance.now();
+          const frame: AnimationFrame = {
+            timestamp,
+            deltaTime: 0, // Immediate catch-up
+            frameCount: frameCountRef.current++
+          };
+          callback(frame);
+        }
       }
     };
 
@@ -81,7 +94,7 @@ export const useAnimationLoop = (
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [autoStart, start, stop]);
+  }, [autoStart, start, stop, callback]);
 
   // Auto-start if configured
   useEffect(() => {

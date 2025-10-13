@@ -16,7 +16,7 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   style
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>();
 
   const canvasStyle = useMemo(() => ({
     width: `${width}px`,
@@ -60,18 +60,22 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    // Handle page visibility changes to pause/resume animation
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        isRunning = false;
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-      } else {
-        isRunning = true;
-        animationFrameRef.current = requestAnimationFrame(animate);
+  // Handle page visibility changes to pause/resume animation
+  // Note: For trading games, we only pause visual rendering, not data updates
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      // Pause only visual rendering, data continues updating
+      isRunning = false;
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
-    };
+    } else {
+      // Resume visual rendering and catch up with current data state
+      isRunning = true;
+      // Force immediate render to catch up with any missed updates
+      animate();
+    }
+  };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
