@@ -123,7 +123,7 @@ const initialGameSettings: GameSettings = {
   showOtherPlayers: true,
   isTradingMode: false,
   zoomLevel: 1.0,
-  showProbabilities: false,
+  showProbabilities: true,
   selectedAsset: 'BTC',
   timeframe: 2000, // Default 2s timeframe
 };

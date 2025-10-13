@@ -567,14 +567,14 @@ export class GridGame extends BaseGame {
     // Check for boxes that have passed the NOW line without being hit (MISS detection)
     this.checkBoxesPastNowLine();
 
-    // Draw probabilities heatmap overlay first (background)
-    if (this.config.showProbabilities) {
-      this.renderProbabilitiesHeatmap();
-    }
-
-    // Draw multiplier overlay
+    // Draw multiplier overlay first (grid boxes)
     if (this.config.showMultiplierOverlay) {
       this.renderMultiplierOverlay();
+    }
+
+    // Draw probabilities heatmap overlay on top (so it's visible)
+    if (this.config.showProbabilities) {
+      this.renderProbabilitiesHeatmap();
     }
 
     if (data.length < 2) {
@@ -1887,6 +1887,38 @@ export class GridGame extends BaseGame {
   }
 
   /**
+   * Generate basic empty boxes for mock backend when no backend contracts exist
+   */
+  private generateBasicEmptyBoxes(viewport: { minX: number; maxX: number; minY: number; maxY: number }): void {
+    const boxWidth = 25; // Default box width
+    const boxHeight = 10; // Default box height
+    
+    // Generate empty boxes in a simple grid pattern
+    const startX = Math.floor(viewport.minX / boxWidth) * boxWidth;
+    const startY = Math.floor(viewport.minY / boxHeight) * boxHeight;
+    const endX = Math.ceil(viewport.maxX / boxWidth) * boxWidth + boxWidth;
+    const endY = Math.ceil(viewport.maxY / boxHeight) * boxHeight + boxHeight;
+    
+    for (let worldX = startX; worldX <= endX; worldX += boxWidth) {
+      for (let worldY = startY; worldY <= endY; worldY += boxHeight) {
+        const emptyBoxId = `empty_${worldX}_${worldY}`;
+        
+        if (!this.emptyBoxes[emptyBoxId]) {
+          this.emptyBoxes[emptyBoxId] = {
+            worldX,
+            worldY,
+            width: boxWidth,
+            height: boxHeight,
+            isEmpty: true,
+            isClickable: false,
+            value: 0, // Will be generated in heatmap rendering
+          };
+        }
+      }
+    }
+  }
+
+  /**
    * Analyzes the current viewport and generates empty boxes to fill empty spaces
    * Based on the algorithm: for any existing box at (X,Y) with dimensions (w,h),
    * check positions X+m*w, Y+n*h where m,n are integers for empty spaces
@@ -1907,6 +1939,8 @@ export class GridGame extends BaseGame {
     // Get existing boxes to understand the grid
     const existingBoxes = Object.values(this.backendMultipliers);
     if (existingBoxes.length === 0) {
+      // Generate basic empty boxes for mock backend when no contracts exist
+      this.generateBasicEmptyBoxes(viewport);
       return;
     }
 
