@@ -1136,9 +1136,11 @@ export class GridGame extends BaseGame {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, axisY - 5, this.width, this.height - (axisY - 5));
 
-    // Set up styling
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    // Set up styling - make more visible when heatmap is enabled
+    const axisOpacity = this.config.showProbabilities ? 0.6 : 0.3;
+    const textOpacity = this.config.showProbabilities ? 0.9 : 0.6;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${axisOpacity})`;
+    ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -1275,7 +1277,10 @@ export class GridGame extends BaseGame {
     // Draw price label every $0.10
     this.ctx.font = '11px Arial';
     this.ctx.textAlign = 'left';
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    
+    // Make Y-axis labels more visible when heatmap is enabled
+    const labelOpacity = this.config.showProbabilities ? 0.9 : 0.6;
+    this.ctx.fillStyle = `rgba(255, 255, 255, ${labelOpacity})`;
 
     for (let price = startPrice; price <= maxPrice; price += priceIncrement) {
       // Round to avoid floating point errors
@@ -1343,7 +1348,10 @@ export class GridGame extends BaseGame {
     const buffer = gridSize * 2; // Buffer for grid lines
 
     this.ctx.save();
-    this.ctx.strokeStyle = 'rgba(180, 180, 180, 0.15)';
+    
+    // Make grid lines more visible when heatmap is enabled (like normal box-hit canvas)
+    const gridOpacity = this.config.showProbabilities ? 0.4 : 0.15;
+    this.ctx.strokeStyle = `rgba(180, 180, 180, ${gridOpacity})`;
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
 
