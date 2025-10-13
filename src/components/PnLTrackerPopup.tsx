@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Pencil } from 'lucide-react';
+import { X, Pencil, RotateCcw } from 'lucide-react';
 import { useUserStore } from '@/stores/userStore';
 
 interface PnLTrackerPopupProps {
@@ -35,6 +35,7 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   const stats = useUserStore((state) => state.stats);
   const tradeHistory = useUserStore((state) => state.tradeHistory);
   const balanceHistory = useUserStore((state) => state.balanceHistory);
+  const resetStats = useUserStore((state) => state.resetStats);
   
   // Calculate live PnL data
   const [pnlData, setPnlData] = useState({
@@ -110,9 +111,17 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       }
     }
 
+    // Calculate total PnL from all settled trades
+    const allSettledTrades = tradeHistory.filter(trade => trade.result && trade.result !== 'pending');
+    const totalPnL = allSettledTrades.reduce((sum, trade) => {
+      if (trade.result === 'win' && trade.payout) return sum + (trade.payout - trade.amount);
+      if (trade.result === 'loss') return sum - trade.amount;
+      return sum;
+    }, 0);
+
     setPnlData({
       balance: balance,
-      totalPnL: stats.totalProfit,
+      totalPnL: totalPnL, // Use calculated total PnL instead of stats.totalProfit
       todayPnL: todayPnL,
       winRate: stats.winRate,
       totalTrades: stats.totalTrades,
@@ -458,6 +467,29 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
             {/* Controls - Only visible on hover, positioned absolutely */}
             {isHovered && (
               <div className="absolute top-1 right-1 flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    resetStats();
+                    setPnlData(prev => ({
+                      ...prev,
+                      totalPnL: 0,
+                      todayPnL: 0,
+                      totalTrades: 0,
+                      winningTrades: 0,
+                      losingTrades: 0,
+                      bestWin: 0,
+                      worstLoss: 0,
+                      currentStreak: 0,
+                      longestWinStreak: 0,
+                      longestLossStreak: 0
+                    }));
+                    setRecentTrades([]);
+                  }}
+                  className="p-1.5 hover:bg-white/10 rounded mr-1"
+                  title="Reset PnL Stats"
+                >
+                  <RotateCcw size={14} style={{ color: customization?.generalTextColor || '#ffffff' }} />
+                </button>
                 <button
                   onClick={onCustomizeOpen}
                   className="p-1.5 hover:bg-white/10 rounded"
