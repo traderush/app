@@ -217,23 +217,41 @@ export function useGameSession({
         balance
       });
       
-      // Find the position to get the original amount
-      const position = positions.get(tradeId);
+      // Find the position by contractId since tradeId might not match
+      let position = positions.get(tradeId);
+      if (!position) {
+        // Try to find by contractId if tradeId doesn't match
+        console.log('🔍 TradeId not found, searching by contractId:', contractId);
+        for (const [posTradeId, pos] of positions.entries()) {
+          if (pos.contractId === contractId) {
+            position = pos;
+            console.log('✅ Found position by contractId:', { posTradeId, contractId });
+            break;
+          }
+        }
+      }
+      
       if (position) {
         const amount = position.amount;
         
+        // Use the original tradeId from the position, not the settlement tradeId
+        const originalTradeId = position.tradeId || tradeId;
+        
         // Settle the trade in userStore (this will update stats and PnL)
-        settleTrade(tradeId, won ? 'win' : 'loss', payout);
+        settleTrade(originalTradeId, won ? 'win' : 'loss', payout);
         
         console.log('✅ Trade settled in userStore:', {
-          tradeId,
+          originalTradeId,
+          settlementTradeId: tradeId,
+          contractId,
           amount,
           result: won ? 'win' : 'loss',
           payout,
           profit
         });
       } else {
-        console.warn('⚠️ Position not found for tradeId:', tradeId);
+        console.warn('⚠️ Position not found for tradeId or contractId:', { tradeId, contractId });
+        console.log('📋 Available positions:', Array.from(positions.entries()));
       }
       
       // Update positions state
