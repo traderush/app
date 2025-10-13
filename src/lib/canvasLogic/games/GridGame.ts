@@ -559,6 +559,9 @@ export class GridGame extends BaseGame {
       this.renderDashedGrid();
     }
 
+    // Draw unified border grid for multiplier boxes (performance optimization)
+    this.renderUnifiedBorderGrid();
+
     const data = [...this.priceData];
 
     // Check for immediate price collisions with selected boxes (HIT detection)
@@ -1118,7 +1121,7 @@ export class GridGame extends BaseGame {
         animation,
         opacity,
         showProbabilities: this.config.showProbabilities, // Pass heatmap setting for text brightness
-        showUnifiedGrid: this.config.showDashedGrid, // Pass unified grid setting to skip individual borders
+        showUnifiedGrid: true, // Enable unified grid optimization to skip individual borders
         // Never show price ranges or timestamp ranges - only show multipliers
         timestampRange: undefined,
         priceRange: undefined,
@@ -1371,6 +1374,63 @@ export class GridGame extends BaseGame {
       this.ctx.lineTo(this.width, y);
         this.ctx.stroke();
     }
+
+    this.ctx.restore();
+  }
+
+  private renderUnifiedBorderGrid(): void {
+    // Draw unified border grid for multiplier boxes to optimize performance
+    // This replaces individual box borders with a single grid system
+    
+    this.ctx.save();
+    this.ctx.strokeStyle = '#2b2b2b'; // Default border color
+    this.ctx.lineWidth = 0.6;
+    this.ctx.setLineDash([]);
+
+    // Get all unique positions from multiplier boxes to create grid lines
+    const allBoxes = {
+      ...this.backendMultipliers,
+      ...this.emptyBoxes
+    };
+
+    const uniqueXPositions = new Set<number>();
+    const uniqueYPositions = new Set<number>();
+
+    // Collect all unique X and Y positions
+    Object.values(allBoxes).forEach(box => {
+      const topLeft = this.world.worldToScreen(box.worldX, box.worldY + box.height);
+      const bottomRight = this.world.worldToScreen(box.worldX + box.width, box.worldY);
+      
+      // Only add positions that are on screen
+      if (topLeft.x >= 0 && topLeft.x <= this.width) {
+        uniqueXPositions.add(Math.round(topLeft.x));
+      }
+      if (bottomRight.x >= 0 && bottomRight.x <= this.width) {
+        uniqueXPositions.add(Math.round(bottomRight.x));
+      }
+      if (topLeft.y >= 0 && topLeft.y <= this.height) {
+        uniqueYPositions.add(Math.round(topLeft.y));
+      }
+      if (bottomRight.y >= 0 && bottomRight.y <= this.height) {
+        uniqueYPositions.add(Math.round(bottomRight.y));
+      }
+    });
+
+    // Draw vertical grid lines
+    uniqueXPositions.forEach(x => {
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, this.height);
+      this.ctx.stroke();
+    });
+
+    // Draw horizontal grid lines
+    uniqueYPositions.forEach(y => {
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, y);
+      this.ctx.lineTo(this.width, y);
+      this.ctx.stroke();
+    });
 
     this.ctx.restore();
   }
