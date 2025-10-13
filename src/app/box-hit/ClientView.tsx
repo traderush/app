@@ -329,7 +329,7 @@ export default function ClientView() {
   
   // Bet amount state - synced with right panel
   const [betAmount, setBetAmount] = useState(200);
-  const [activeTab, setActiveTab] = useState<'place' | 'copy'>('place');
+  const [activeTab, setActiveTab] = useState<'place' | 'copy'>('copy');
   const [isCanvasStarted, setIsCanvasStarted] = useState(false); // Controls mock backend canvas
   const [mockBackendPositions, setMockBackendPositions] = useState<Map<string, any>>(new Map());
   const [mockBackendContracts, setMockBackendContracts] = useState<any[]>([]);
@@ -493,12 +493,6 @@ export default function ClientView() {
     return average;
   }, [mockBackendPositions, mockBackendContracts, mockBackendMultipliers, mockBackendPositionCount, betAmount]);
   
-  // Reset canvas started state when switching away from Mock Backend tab
-  useEffect(() => {
-    if (activeTab !== 'copy') {
-      setIsCanvasStarted(false);
-    }
-  }, [activeTab]);
   
   // Debug: Log what will be passed to PositionsTable
   useEffect(() => {
@@ -796,14 +790,9 @@ export default function ClientView() {
   }, []);
 
   const handleTradingModeChange = useCallback((tradingMode: boolean) => {
-    if (activeTab === 'copy') {
-      // In Mock Backend mode, control canvas start/stop
+    // Control canvas start/stop
       setIsCanvasStarted(tradingMode);
-    } else {
-      // In Place Trade mode, control normal trading mode
-    setIsTradingMode(tradingMode);
-    }
-  }, [activeTab]);
+  }, []);
 
   // Initialize multi-exchange WebSocket connections on mount
   useEffect(() => {
@@ -1036,7 +1025,7 @@ export default function ClientView() {
                         onClick={() => {
                           if (activeTab !== 'copy' || key === 'DEMO') {
                             setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO');
-                            setAssetDropdownOpen(false);
+                          setAssetDropdownOpen(false);
                           }
                         }}
                         title={
@@ -1272,29 +1261,29 @@ export default function ClientView() {
               }}
             >
               {/* Show Canvas component controlled by Start Trading button */}
-              <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
-                <Canvas 
-                  externalControl={true}
-                  externalIsStarted={isCanvasStarted}
-                  onExternalStartChange={setIsCanvasStarted}
-                  externalTimeframe={timeframe}
-                  onPositionsChange={handleMockBackendPositionsChange}
-                  onSelectionChange={handleMockBackendSelectionChange}
-                  betAmount={betAmount}
-                  onPriceUpdate={setMockBackendCurrentPrice}
-                  showProbabilities={showProbabilities}
+                <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
+                  <Canvas 
+                    externalControl={true}
+                    externalIsStarted={isCanvasStarted}
+                    onExternalStartChange={setIsCanvasStarted}
+                    externalTimeframe={timeframe}
+                    onPositionsChange={handleMockBackendPositionsChange}
+                    onSelectionChange={handleMockBackendSelectionChange}
+                    betAmount={betAmount}
+                    onPriceUpdate={setMockBackendCurrentPrice}
+                    showProbabilities={showProbabilities}
                   showOtherPlayers={showOtherPlayers}
-                  minMultiplier={minMultiplier}
-                />
-              </div>
+                    minMultiplier={minMultiplier}
+                  />
+                </div>
             </ErrorBoundary>
           </div>
           
           <PositionsTable 
-            selectedCount={activeTab === 'copy' ? mockBackendPositionCount : selectedCount}
-            selectedMultipliers={activeTab === 'copy' ? mockBackendMultipliers : selectedMultipliers}
+            selectedCount={mockBackendPositionCount}
+            selectedMultipliers={mockBackendMultipliers}
             betAmount={betAmount}
-            currentBTCPrice={activeTab === 'copy' ? mockBackendCurrentPrice : (assetData[selectedAsset].price || 0)}
+            currentBTCPrice={mockBackendCurrentPrice}
             onPositionHit={(positionId) => {
               // Handle position hit - this will be called when a box is hit
               logger.info('Position hit', { positionId }, 'GAME');
@@ -1303,26 +1292,26 @@ export default function ClientView() {
               // Handle position missed - this will be called when a box is missed
               logger.info('Position missed', { positionId }, 'GAME');
             }}
-            hitBoxes={activeTab === 'copy' ? mockBackendHitBoxes : []}
-            missedBoxes={activeTab === 'copy' ? mockBackendMissedBoxes : []}
-            realPositions={activeTab === 'copy' ? mockBackendPositions : undefined}
-            contracts={activeTab === 'copy' ? mockBackendContracts : undefined}
+            hitBoxes={mockBackendHitBoxes}
+            missedBoxes={mockBackendMissedBoxes}
+            realPositions={mockBackendPositions}
+            contracts={mockBackendContracts}
           />
         </div>
         
         {/* Right: betting panel only */}
         <RightPanel 
-          isTradingMode={activeTab === 'copy' ? isCanvasStarted : isTradingMode}
+          isTradingMode={isCanvasStarted}
           onTradingModeChange={handleTradingModeChange}
-          selectedCount={activeTab === 'copy' ? mockBackendSelectedCount : selectedCount}
-          bestMultiplier={activeTab === 'copy' ? mockBackendBestMultiplier : bestMultiplier}
-          selectedMultipliers={activeTab === 'copy' ? mockBackendSelectedMultipliers : selectedMultipliers}
-          currentBTCPrice={activeTab === 'copy' ? mockBackendCurrentPrice : (assetData[selectedAsset].price || 0)}
-          averagePositionPrice={activeTab === 'copy' ? mockBackendSelectedAveragePrice : averagePositionPrice}
+          selectedCount={mockBackendSelectedCount}
+          bestMultiplier={mockBackendBestMultiplier}
+          selectedMultipliers={mockBackendSelectedMultipliers}
+          currentBTCPrice={mockBackendCurrentPrice}
+          averagePositionPrice={mockBackendSelectedAveragePrice}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
-          dailyHigh={activeTab === 'copy' ? (mockBackendCurrentPrice + 2) : btc24hHigh}
-          dailyLow={activeTab === 'copy' ? (mockBackendCurrentPrice - 2) : btc24hLow}
+          dailyHigh={mockBackendCurrentPrice + 2}
+          dailyLow={mockBackendCurrentPrice - 2}
           activeTab={activeTab}
           onActiveTabChange={setActiveTab}
         />
