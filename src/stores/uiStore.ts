@@ -63,7 +63,7 @@ interface UIState {
   signatureColor: string;
   
   // Asset Preferences
-  favoriteAssets: Set<'BTC' | 'ETH' | 'SOL'>;
+  favoriteAssets: Set<'BTC' | 'ETH' | 'SOL' | 'DEMO'>;
   
   // Dropdown States
   isAssetDropdownOpen: boolean;
@@ -97,8 +97,8 @@ interface UIState {
   resetSignatureColor: () => void;
   
   // Actions - Asset Preferences
-  toggleFavoriteAsset: (asset: 'BTC' | 'ETH' | 'SOL') => void;
-  setFavoriteAssets: (assets: ('BTC' | 'ETH' | 'SOL')[]) => void;
+  toggleFavoriteAsset: (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => void;
+  setFavoriteAssets: (assets: ('BTC' | 'ETH' | 'SOL' | 'DEMO')[]) => void;
   
   // Actions - Dropdowns
   setAssetDropdownOpen: (isOpen: boolean) => void;

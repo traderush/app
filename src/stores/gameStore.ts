@@ -39,7 +39,7 @@ export interface GameSettings {
   isTradingMode: boolean;
   zoomLevel: number;
   showProbabilities: boolean;
-  selectedAsset: 'BTC' | 'ETH' | 'SOL';
+  selectedAsset: 'BTC' | 'ETH' | 'SOL' | 'DEMO';
   timeframe: number; // Timeframe in milliseconds (500, 1000, 2000, 4000, 10000)
 }
 

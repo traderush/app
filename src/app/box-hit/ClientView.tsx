@@ -2870,13 +2870,8 @@ export default function ClientView() {
                       >
                         {/* Star icon for favorites - clickable */}
                         <button
-                          onClick={(e) => activeTab !== 'copy' && toggleFavorite(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO', e)}
-                          className={`flex-shrink-0 p-0.5 rounded transition-colors ${
-                            activeTab === 'copy' 
-                              ? 'cursor-pointer hover:bg-zinc-700/50 opacity-50' 
-                              : 'cursor-pointer hover:bg-zinc-700/50'
-                          }`}
-                          disabled={activeTab === 'copy'}
+                          onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO', e)}
+                          className="flex-shrink-0 p-0.5 rounded transition-colors cursor-pointer hover:bg-zinc-700/50"
                         >
                           <svg 
                             className={`w-3.5 h-3.5 transition-colors ${
