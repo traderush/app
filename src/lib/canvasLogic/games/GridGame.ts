@@ -1221,7 +1221,7 @@ export class GridGame extends BaseGame {
         this.ctx.stroke();
         
         // Draw profile image if loaded, otherwise fallback to letter
-        const img = this.otherPlayerImages[player.avatar];
+        const img = this.otherPlayerImages[player.id];
         if (img) {
           // Draw the preloaded image inside the box with fade
           this.ctx.save();

@@ -569,25 +569,26 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       const playerCounts = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15];
       setAvailablePlayerCounts(playerCounts);
 
-      // Initialize available tracked selections pool
+      // Initialize available tracked selections pool - using same diverse avatars as normal box-hit canvas
       const trackedSelections = [
-        [{ id: 'player1', name: 'CryptoWhale', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'whale' }],
-        [{ id: 'player2', name: 'TradingPro', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'pro' }],
-        [{ id: 'player3', name: 'DeFiMaster', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'master' }],
-        [{ id: 'player4', name: 'MoonTrader', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'trader' }],
-        [{ id: 'player5', name: 'DiamondHands', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'hodler' }],
-        [{ id: 'player6', name: 'BullRun', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'bull' }],
-        [{ id: 'player7', name: 'HODLer', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'hodler' }],
-        [{ id: 'player8', name: 'CryptoKing', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'king' }]
+        [{ id: 'leaderboard1', name: 'CryptoWhale', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'leaderboard' }],
+        [{ id: 'leaderboard2', name: 'TradingPro', avatar: 'https://pbs.twimg.com/profile_images/1848910264051052546/Mu18BSYv_400x400.jpg', type: 'leaderboard' }],
+        [{ id: 'leaderboard3', name: 'DeFiMaster', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'leaderboard' }],
+        [{ id: 'watchlist1', name: 'MoonTrader', avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg', type: 'watchlist' }],
+        [{ id: 'watchlist2', name: 'DiamondHands', avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png', type: 'watchlist' }],
+        [{ id: 'watchlist3', name: 'BullRun', avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg', type: 'watchlist' }],
+        [{ id: 'watchlist4', name: 'HODLer', avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg', type: 'watchlist' }],
+        [{ id: 'watchlist5', name: 'CryptoKing', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'watchlist' }]
       ];
       setAvailableTrackedSelections(trackedSelections);
 
       // Preload images
       trackedSelections.flat().forEach(player => {
-        if (!loadedImages[player.avatar]) {
+        if (!loadedImages[player.id]) {
           const img = new Image();
+          img.crossOrigin = 'anonymous';
           img.onload = () => {
-            setLoadedImages(prev => ({ ...prev, [player.avatar]: img }));
+            setLoadedImages(prev => ({ ...prev, [player.id]: img }));
           };
           img.src = player.avatar;
         }
