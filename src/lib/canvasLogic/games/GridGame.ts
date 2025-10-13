@@ -547,8 +547,8 @@ export class GridGame extends BaseGame {
       }
     });
 
-    // Update empty boxes based on viewport changes
-    this.updateEmptyBoxes();
+    // Update empty boxes based on viewport changes (DISABLED - filler grid archived)
+    // this.updateEmptyBoxes();
   }
 
   protected render(): void {
@@ -956,25 +956,10 @@ export class GridGame extends BaseGame {
     const currentWorldX =
       (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
 
-    // Combine backend boxes with empty boxes for rendering
+    // Use only backend boxes (filler grid archived)
     const allBoxes = {
-      ...this.backendMultipliers,
-      ...Object.fromEntries(
-        Object.entries(this.emptyBoxes).map(([id, box]) => [
-          id,
-          {
-            ...box,
-            value: box.value || 0, // ✅ PRESERVE random multiplier (don't override to 0)
-            x: 0,
-            y: 0,
-            totalBets: 0,
-            status: undefined,
-            timestampRange: undefined,
-            priceRange: undefined,
-            userBet: undefined
-          }
-        ])
-      )
+      ...this.backendMultipliers
+      // ...this.emptyBoxes - DISABLED: filler grid archived
     };
 
     // Reduced logging for performance
@@ -1387,10 +1372,10 @@ export class GridGame extends BaseGame {
     this.ctx.lineWidth = 0.6;
     this.ctx.setLineDash([]);
 
-    // Get all unique positions from multiplier boxes to create grid lines
+    // Get all unique positions from multiplier boxes to create grid lines (filler grid archived)
     const allBoxes = {
-      ...this.backendMultipliers,
-      ...this.emptyBoxes
+      ...this.backendMultipliers
+      // ...this.emptyBoxes - DISABLED: filler grid archived
     };
 
     const uniqueXPositions = new Set<number>();
