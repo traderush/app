@@ -1147,7 +1147,10 @@ export default function ClientView() {
                   type="checkbox"
                   id="showProbabilities"
                   checked={showProbabilities}
-                  onChange={(e) => setShowProbabilities(e.target.checked)}
+                  onChange={(e) => {
+                    console.log('🔥 Show Probabilities toggled:', e.target.checked);
+                    setShowProbabilities(e.target.checked);
+                  }}
                   className="w-3 h-3 rounded cursor-pointer"
                   style={{
                     borderColor: showProbabilities ? '#0F0F0F' : 'transparent',
@@ -1177,7 +1180,10 @@ export default function ClientView() {
                   type="checkbox"
                   id="showOtherPlayers"
                   checked={showOtherPlayers}
-                  onChange={(e) => setShowOtherPlayers(e.target.checked)}
+                  onChange={(e) => {
+                    console.log('🔧 Show Other Players toggled:', e.target.checked);
+                    setShowOtherPlayers(e.target.checked);
+                  }}
                   className="w-3 h-3 rounded cursor-pointer"
                   style={{
                     borderColor: showOtherPlayers ? '#0F0F0F' : 'transparent',
@@ -1263,6 +1269,7 @@ export default function ClientView() {
               {/* Show Canvas component controlled by Start Trading button */}
                 <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
                   <Canvas 
+                  key={`canvas-${showOtherPlayers}-${showProbabilities}`}
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}
                     onExternalStartChange={setIsCanvasStarted}
