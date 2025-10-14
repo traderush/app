@@ -396,7 +396,7 @@ export default function ClientView() {
                   <div 
                     className="absolute top-full left-0 mt-2 border border-zinc-700/50 rounded-lg shadow-2xl z-50" 
                     style={{ 
-                      width: '280px',
+                    width: '360px',
                       backgroundColor: 'rgba(14, 14, 14, 0.7)',
                       backdropFilter: 'blur(12px)',
                       WebkitBackdropFilter: 'blur(12px)'
@@ -480,9 +480,8 @@ export default function ClientView() {
                         </div>
                         
                         {/* Volume text */}
-                        <div className="text-zinc-400 flex-shrink-0 text-right" style={{ fontSize: '11px' }}>
-                          <div>Vol:</div>
-                          <div>{asset.volume24h}</div>
+                        <div className="text-zinc-400 flex-shrink-0" style={{ fontSize: '11px' }}>
+                          Vol: {asset.volume24h}
                         </div>
                       </div>
                     ))}
