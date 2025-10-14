@@ -121,92 +121,96 @@ const PositionsTable = React.memo(function PositionsTable({
       <div className="border-b mx-0" style={{ borderColor: '#0E0E0E' }}></div>
 
       {/* Content based on active tab */}
-      {activeTab === 'positions' && (
-        <div className="overflow-x-auto pb-3" style={{ height: '256px' }}>
-          <div className="h-full overflow-y-auto overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-zinc-400 sticky top-0 z-10" style={{ 
-                backgroundColor: '#09090B',
-                boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
-              }}>
-                <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Equity</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Probability of Hit</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Trade Progression</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Entry Price</th>
-                </tr>
-              </thead>
-              <tbody className="text-zinc-200" style={{ fontSize: '12px', fontWeight: '400' }}>
-                {activePositions.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-8 text-zinc-500">
-                      No active positions. Select boxes to start trading.
-                    </td>
+              {activeTab === 'positions' && (
+          <div className="overflow-x-auto pb-3" style={{ height: '256px' }}>
+            <div className="h-full overflow-y-auto overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-zinc-400 sticky top-0 z-10" style={{ 
+                  backgroundColor: '#09090B',
+                  boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
+                }}>
+                  <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
+                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>#</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Equity</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Probability of Hit</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Trade Progression</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Entry Price</th>
                   </tr>
-                ) : (
+                </thead>
+            <tbody className="text-zinc-200" style={{ fontSize: '12px', fontWeight: '400' }}>
+              {activePositions.length === 0 ? (
+                <tr>
+                    <td colSpan={8} className="text-center py-8 text-zinc-500">
+                    No active positions. Select boxes to start trading.
+                  </td>
+                </tr>
+              ) : (
                   activePositions.map((position, i) => (
                     <tr key={position.id} className="[&>td]:py-2 [&>td]:px-3 border-t border-zinc-800/70" style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}>
+                      <td className="text-zinc-400">{i + 1}</td>
                       <td>{position.time}</td>
                       <td>${position.size.toFixed(2)}</td>
                       <td className="font-medium" style={{ color: signatureColor }}>{position.multiplier.toFixed(1)}x</td>
                       <td style={{ color: position.equity.includes('-') ? TRADING_COLORS.negative : TRADING_COLORS.positive }}>{position.equity}</td>
                       <td style={{ color: parseFloat(position.hit) >= 50 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>{position.hit}</td>
-                      <td>
-                        <div className="h-4 w-24 relative">
-                          <div 
-                            className="h-4" 
-                            style={{ 
+                    <td>
+                      <div className="h-4 w-24 relative">
+                        <div 
+                          className="h-4" 
+                          style={{ 
                               width: position.prog,
-                              background: `linear-gradient(to right, rgba(250, 86, 22, 0) 0%, rgba(250, 86, 22, 1) 100%)`
-                            }} 
-                          />
-                          <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-xs text-white font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>
+                            background: `linear-gradient(to right, rgba(250, 86, 22, 0) 0%, rgba(250, 86, 22, 1) 100%)`
+                          }} 
+                        />
+                        <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-xs text-white font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>
                             {position.prog}
-                          </span>
-                        </div>
-                      </td>
+                        </span>
+                      </div>
+                    </td>
                       <td>{position.entry}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {activeTab === 'history' && (
         <div className="overflow-x-auto pb-3" style={{ height: '256px' }}>
           <div className="h-full overflow-y-auto overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-zinc-400 sticky top-0 z-10" style={{ 
-                backgroundColor: '#09090B',
-                boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
-              }}>
-                <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Equity</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Probability of Hit</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Trade Progression</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Entry Price</th>
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Result</th>
-                </tr>
-              </thead>
-              <tbody className="text-zinc-200" style={{ fontSize: '12px', fontWeight: '400' }}>
+                              <thead className="text-zinc-400 sticky top-0 z-10" style={{ 
+                  backgroundColor: '#09090B',
+                  boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
+                }}>
+                  <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
+                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>#</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Equity</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Probability of Hit</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Trade Progression</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Entry Price</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Result</th>
+                  </tr>
+                </thead>
+                        <tbody className="text-zinc-200" style={{ fontSize: '12px', fontWeight: '400' }}>
                 {historyPositions.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-zinc-500">
+                    <td colSpan={9} className="text-center py-8 text-zinc-500">
                       No completed trades yet.
                     </td>
                   </tr>
                 ) : (
                   historyPositions.map((position, i) => (
                     <tr key={position.id} className="[&>td]:py-2 [&>td]:px-3 border-t border-zinc-800/70" style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}>
+                      <td className="text-zinc-400">{i + 1}</td>
                       <td>{position.time}</td>
                       <td>${position.size.toFixed(2)}</td>
                       <td className="font-medium" style={{ color: signatureColor }}>{position.multiplier.toFixed(1)}x</td>
@@ -240,11 +244,11 @@ const PositionsTable = React.memo(function PositionsTable({
                     </tr>
                   ))
                 )}
-              </tbody>
+            </tbody>
             </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 });
