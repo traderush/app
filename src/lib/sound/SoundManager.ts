@@ -49,13 +49,23 @@ const createSound = async (frequency: number, duration: number, type: Oscillator
 // Sound effect functions
 export const playSelectionSound = async () => {
   const soundEnabled = useUIStore.getState().settings.soundEnabled;
-  if (!soundEnabled) return;
+  console.log('🔊 playSelectionSound called, soundEnabled:', soundEnabled);
+  if (!soundEnabled) {
+    console.log('🔊 Selection sound disabled, skipping');
+    return;
+  }
+  console.log('🔊 Playing selection sound');
   await createSound(800, 0.1, 'sine', 0.15);
 };
 
 export const playHitSound = async () => {
   const soundEnabled = useUIStore.getState().settings.soundEnabled;
-  if (!soundEnabled) return;
+  console.log('🔊 playHitSound called, soundEnabled:', soundEnabled);
+  if (!soundEnabled) {
+    console.log('🔊 Hit sound disabled, skipping');
+    return;
+  }
+  console.log('🔊 Playing hit sound');
   await createSound(600, 0.15, 'sine', 0.2);
   setTimeout(async () => await createSound(800, 0.2, 'sine', 0.15), 50);
 };
@@ -63,9 +73,11 @@ export const playHitSound = async () => {
 // Sound toggle function
 export const toggleSound = () => {
   const currentState = useUIStore.getState();
+  const oldState = currentState.settings.soundEnabled;
+  console.log('🔊 toggleSound called, current state:', oldState);
   currentState.toggleSound();
   const newState = useUIStore.getState().settings.soundEnabled;
-  console.log('Sound toggled:', newState ? 'ON' : 'OFF');
+  console.log('🔊 Sound toggled from', oldState ? 'ON' : 'OFF', 'to', newState ? 'ON' : 'OFF');
 };
 
 // Get sound enabled state

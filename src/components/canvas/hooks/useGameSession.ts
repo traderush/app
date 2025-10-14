@@ -253,6 +253,7 @@ export function useGameSession({
         settleTrade(originalTradeId, won ? 'win' : 'loss', payout);
         
         // Play hit sound for trade result
+        console.log('🔊 About to play hit sound for trade result:', { won, payout });
         playHitSound();
         
         console.log('✅ Trade settled in userStore:', {

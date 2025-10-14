@@ -308,7 +308,6 @@ const SidebarRail = React.memo(function SidebarRail({
         )}>
           <button
             onClick={() => {
-              useUIStore.getState().toggleSound();
               onSoundToggle?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"

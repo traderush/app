@@ -338,6 +338,7 @@ export class GridGame extends BaseGame {
               progress: 0,
             });
             // Play selection sound
+            console.log('🔊 About to play selection sound for box:', clickedSquareId);
             playSelectionSound();
             this.emit('squareSelected', { squareId: clickedSquareId });
           } else if (!this.selectedSquareIds.has(clickedSquareId)) {
