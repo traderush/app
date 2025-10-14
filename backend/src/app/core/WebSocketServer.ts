@@ -156,6 +156,7 @@ export class WebSocketServer {
       // Log raw message for debugging validation errors
       if (!data || typeof data !== 'object') {
         logger.error('Invalid message format', { connectionId, rawMessage: message });
+        return;
       }
 
       // Validate message format
