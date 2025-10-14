@@ -1073,7 +1073,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
   const handleStart = async () => {
     try {
-      await connect();
+      // Generate a username for the connection
+      const username = `player_${Math.random().toString(36).substring(2, 11)}`;
+      console.log('🔗 Canvas: Attempting to connect with username:', username);
+      await connect(username);
       if (!externalControl) {
         setIsStarted(true);
       }

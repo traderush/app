@@ -41,8 +41,8 @@ export class WebSocketServer {
     this.config = {
       host: 'localhost',
       maxConnections: 10000,
-      heartbeatInterval: 15000, // 15 seconds (more frequent to detect disconnections faster)
-      connectionTimeout: 600000, // 10 minutes (longer timeout for stability)
+      heartbeatInterval: 30000, // 30 seconds
+      connectionTimeout: 300000, // 5 minutes (was too aggressive at 60 seconds)
       ...config
     };
     this.connectionManager = connectionManager;
@@ -58,32 +58,16 @@ export class WebSocketServer {
         fetch: this.handleHttpRequest.bind(this),
         
         websocket: {
-          message: async (ws: any, message: string | Buffer) => {
-            try {
-              await this.handleMessage(ws, message);
-            } catch (error) {
-              console.error('Error in message handler:', error);
-              // Don't close connection on message errors, just log them
-            }
-          },
-          open: async (ws: any) => {
-            try {
-              await this.handleOpen(ws);
-            } catch (error) {
-              console.error('Error in open handler:', error);
-              ws.close(1011, 'Internal server error');
-            }
-          },
-          close: async (ws: any, code: number, reason: string) => {
-            try {
-              await this.handleClose(ws, code, reason);
-            } catch (error) {
-              console.error('Error in close handler:', error);
-            }
-          },
+          message: this.handleMessage.bind(this),
+          open: this.handleOpen.bind(this),
+          close: this.handleClose.bind(this),
           drain: this.handleDrain.bind(this),
           ping: this.handlePing.bind(this),
-          pong: this.handlePong.bind(this)
+          pong: this.handlePong.bind(this),
+          maxPayloadLength: 16 * 1024 * 1024, // 16MB
+          idleTimeout: 120, // 2 minutes
+          backpressureLimit: 1024 * 1024, // 1MB
+          perMessageDeflate: true // Enable compression
         }
       });
 
@@ -139,7 +123,6 @@ export class WebSocketServer {
           createdAt: Date.now(),
         },
       });
-      
       if (success) {
         return new Response(null, { status: 101 }); // WebSocket upgrade response
       }
@@ -176,7 +159,6 @@ export class WebSocketServer {
       // Log raw message for debugging validation errors
       if (!data || typeof data !== 'object') {
         logger.error('Invalid message format', { connectionId, rawMessage: message });
-        return;
       }
 
       // Validate message format

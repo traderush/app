@@ -17,9 +17,6 @@ export const useWebSocketHandler = () => {
   const setUser = useUserStore((state) => state.setUser);
   const addTrade = useUserStore((state) => state.addTrade);
   const removeTrade = useUserStore((state) => state.removeTrade);
-  const settleTrade = useUserStore((state) => state.settleTrade);
-  const markTradeAsConfirmed = useUserStore((state) => state.markTradeAsConfirmed);
-  const markTradeAsFailed = useUserStore((state) => state.markTradeAsFailed);
   
   const addPricePoint = usePriceStore((state) => state.addPricePoint);
   const updateStats = usePriceStore((state) => state.updateStats);
@@ -71,44 +68,10 @@ export const useWebSocketHandler = () => {
         updateBalance(message.payload.balance);
         break;
 
-      case 'trade_result':
-        console.log('🎯 Received trade_result from backend:', message.payload);
-        const { tradeId, contractId, won, payout, balance, profit } = message.payload;
-        
-        // Mark trade as confirmed first
-        const markTradeAsConfirmed = useUserStore.getState().markTradeAsConfirmed;
-        markTradeAsConfirmed(tradeId);
-        
-        // Update user balance (authoritative from backend)
-        updateBalance(balance);
-        
-        // Settle the trade in the store (move from active to history)
-        const settleTrade = useUserStore.getState().settleTrade;
-        settleTrade(tradeId, won ? 'win' : 'loss', payout);
-        
-        // Play hit sound for successful trades
-        if (won) {
-          console.log('🔊 Playing hit sound for backend settlement');
-          import('@/lib/sound/SoundManager').then(({ playHitSound }) => {
-            playHitSound();
-          });
-        }
-        
-        console.log('✅ Backend settlement processed (pessimistic):', {
-          tradeId,
-          contractId,
-          won,
-          payout,
-          profit,
-          newBalance: balance
-        });
-        break;
-
       case 'box_hit':
       case 'tower_hit':
       case 'tower_missed':
         // Handle game results - could trigger animations, sounds, etc.
-        console.log('🎮 Game result received:', message.type, message.payload);
         break;
 
       case 'error':
@@ -125,9 +88,6 @@ export const useWebSocketHandler = () => {
     setConnected,
     setError,
     addTrade,
-    settleTrade,
-    markTradeAsConfirmed,
-    markTradeAsFailed,
     addPricePoint,
     updateStats,
     updateGameSettings,

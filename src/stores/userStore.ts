@@ -13,8 +13,6 @@ export interface Trade {
   payout?: number;
   asset?: string;
   type?: string;
-  status?: 'pending' | 'confirmed' | 'failed'; // Track settlement status
-  error?: string; // Error message if trade failed
 }
 
 export interface UserProfile {
@@ -51,9 +49,6 @@ interface UserState {
   activeTrades: Trade[];
   tradeHistory: Trade[];
   
-  // Trade status tracking
-  pendingTrades: Map<string, { tradeId: string; status: 'pending' | 'confirmed' | 'failed'; timestamp: number }>;
-  
   // Stats
   stats: UserStats;
   
@@ -73,11 +68,6 @@ interface UserState {
   removeTrade: (tradeId: string) => void;
   settleTrade: (tradeId: string, result: 'win' | 'loss', payout?: number) => void;
   clearTrades: () => void;
-  
-  // Trade Status Actions
-  markTradeAsPending: (tradeId: string) => void;
-  markTradeAsConfirmed: (tradeId: string) => void;
-  markTradeAsFailed: (tradeId: string, reason?: string) => void;
   
   // Actions - Stats
   updateStats: (stats: Partial<UserStats>) => void;
@@ -109,7 +99,6 @@ export const useUserStore = create<UserState>()(
       balanceHistory: [],
       activeTrades: [],
       tradeHistory: [],
-      pendingTrades: new Map(),
       stats: initialStats,
       
       // Profile Actions
@@ -172,41 +161,21 @@ export const useUserStore = create<UserState>()(
       // Trade Actions
       addTrade: (tradeData) =>
         set((state) => {
-          try {
-            // Validate trade data
-            if (!tradeData.contractId || !tradeData.amount || tradeData.amount <= 0) {
-              console.error('❌ Invalid trade data:', tradeData);
-              throw new Error('Invalid trade data: contractId and amount are required');
-            }
-
-            // Check if trade already exists by contractId
-            const existingTrade = state.activeTrades.find((t) => t.contractId === tradeData.contractId);
-            if (existingTrade) {
-              console.warn('⚠️ Trade already exists for contractId:', tradeData.contractId, 'Skipping duplicate add.');
-              return state;
-            }
-
-            const newTrade: Trade = {
-              ...tradeData,
-              id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              result: 'pending',
-              status: 'pending', // Initially pending until server confirms
-            };
-            
-            console.log('➕ userStore.addTrade called:', {
-              tradeData,
-              newTrade,
-              activeTradesCount: state.activeTrades.length,
-              existingTradeIds: state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId }))
-            });
-            
-            return {
-              activeTrades: [...state.activeTrades, newTrade],
-            };
-          } catch (error) {
-            console.error('❌ Error in addTrade:', error);
-            return state; // Return unchanged state on error
-          }
+          const newTrade: Trade = {
+            ...tradeData,
+            id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            result: 'pending',
+          };
+          
+          console.log('➕ userStore.addTrade called:', {
+            tradeData,
+            newTrade,
+            activeTradesCount: state.activeTrades.length
+          });
+          
+          return {
+            activeTrades: [...state.activeTrades, newTrade],
+          };
         }),
       
       updateTrade: (tradeId, updates) =>
@@ -226,26 +195,14 @@ export const useUserStore = create<UserState>()(
       
       settleTrade: (tradeId, result, payout = 0) =>
         set((state) => {
-          try {
-            console.log('🔄 userStore.settleTrade called:', { tradeId, result, payout });
-            console.log('📋 Current activeTrades:', state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId, amount: t.amount, result: t.result })));
-            
-            // Validate parameters
-            if (!tradeId || !result || !['win', 'loss'].includes(result)) {
-              console.error('❌ Invalid settleTrade parameters:', { tradeId, result, payout });
-              throw new Error('Invalid settleTrade parameters: tradeId and result (win/loss) are required');
-            }
-
-            if (result === 'win' && payout < 0) {
-              console.error('❌ Invalid payout for winning trade:', payout);
-              throw new Error('Payout cannot be negative for winning trades');
-            }
-            
-            const trade = state.activeTrades.find((t) => t.id === tradeId);
-            if (!trade) {
-              console.warn('⚠️ Trade not found in activeTrades:', tradeId);
-              return state;
-            }
+          console.log('🔄 userStore.settleTrade called:', { tradeId, result, payout });
+          console.log('📋 Current activeTrades:', state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId, amount: t.amount, result: t.result })));
+          
+          const trade = state.activeTrades.find((t) => t.id === tradeId);
+          if (!trade) {
+            console.warn('⚠️ Trade not found in activeTrades:', tradeId);
+            return state;
+          }
           
           const settledTrade: Trade = {
             ...trade,
@@ -318,112 +275,30 @@ export const useUserStore = create<UserState>()(
             }
           });
           
-          console.log('🔄 userStore.settleTrade - Final state update:', {
-            removingFromActive: tradeId,
-            activeTradesBefore: state.activeTrades.length,
-            activeTradesAfter: state.activeTrades.filter((t) => t.id !== tradeId).length,
-            addingToHistory: settledTrade.id,
-            tradeHistoryLength: [settledTrade, ...state.tradeHistory].length
-          });
-
-            return {
-              activeTrades: state.activeTrades.filter((t) => t.id !== tradeId),
-              tradeHistory: [settledTrade, ...state.tradeHistory].slice(0, 1000), // Keep last 1000 trades
-              balance: newBalance,
-              balanceHistory: [
-                ...state.balanceHistory,
-                { timestamp: Date.now(), balance: newBalance, change: balanceChange },
-              ].slice(-100),
-              stats: {
-                totalTrades,
-                totalWins,
-                totalLosses,
-                winRate,
-                totalVolume,
-                totalProfit,
-                bestStreak,
-                currentStreak: streakType === 'win' ? currentStreak : 0,
-              },
-            };
-          } catch (error) {
-            console.error('❌ Error in settleTrade:', error);
-            return state; // Return unchanged state on error
-          }
+          return {
+            activeTrades: state.activeTrades.filter((t) => t.id !== tradeId),
+            tradeHistory: [settledTrade, ...state.tradeHistory].slice(0, 1000), // Keep last 1000 trades
+            balance: newBalance,
+            balanceHistory: [
+              ...state.balanceHistory,
+              { timestamp: Date.now(), balance: newBalance, change: balanceChange },
+            ].slice(-100),
+            stats: {
+              totalTrades,
+              totalWins,
+              totalLosses,
+              winRate,
+              totalVolume,
+              totalProfit,
+              bestStreak,
+              currentStreak: streakType === 'win' ? currentStreak : 0,
+            },
+          };
         }),
       
       clearTrades: () =>
         set({
           activeTrades: [],
-        }),
-      
-      // Trade Status Actions (Pessimistic - wait for server confirmation)
-      markTradeAsPending: (tradeId) =>
-        set((state) => {
-          try {
-            console.log('⏳ Marking trade as pending:', tradeId);
-            
-            const newPendingTrades = new Map(state.pendingTrades);
-            newPendingTrades.set(tradeId, {
-              tradeId,
-              status: 'pending',
-              timestamp: Date.now(),
-            });
-
-            return {
-              pendingTrades: newPendingTrades,
-            };
-          } catch (error) {
-            console.error('❌ Error in markTradeAsPending:', error);
-            return state;
-          }
-        }),
-
-      markTradeAsConfirmed: (tradeId) =>
-        set((state) => {
-          try {
-            console.log('✅ Marking trade as confirmed:', tradeId);
-            
-            const newPendingTrades = new Map(state.pendingTrades);
-            const pendingTrade = newPendingTrades.get(tradeId);
-            if (pendingTrade) {
-              newPendingTrades.set(tradeId, {
-                ...pendingTrade,
-                status: 'confirmed',
-                timestamp: Date.now(),
-              });
-            }
-
-            return {
-              pendingTrades: newPendingTrades,
-            };
-          } catch (error) {
-            console.error('❌ Error in markTradeAsConfirmed:', error);
-            return state;
-          }
-        }),
-
-      markTradeAsFailed: (tradeId, reason = 'Unknown error') =>
-        set((state) => {
-          try {
-            console.log('❌ Marking trade as failed:', { tradeId, reason });
-            
-            const newPendingTrades = new Map(state.pendingTrades);
-            const pendingTrade = newPendingTrades.get(tradeId);
-            if (pendingTrade) {
-              newPendingTrades.set(tradeId, {
-                ...pendingTrade,
-                status: 'failed',
-                timestamp: Date.now(),
-              });
-            }
-
-            return {
-              pendingTrades: newPendingTrades,
-            };
-          } catch (error) {
-            console.error('❌ Error in markTradeAsFailed:', error);
-            return state;
-          }
         }),
       
       // Stats Actions
@@ -509,14 +384,13 @@ export const useUserStore = create<UserState>()(
     })),
     {
       name: 'user-store',
+      storage: createPersistentStorage('user'),
       partialize: (state) => ({
         user: state.user,
         balance: state.balance,
         balanceHistory: state.balanceHistory,
         tradeHistory: state.tradeHistory.slice(0, 100), // Only persist last 100 trades
         stats: state.stats,
-        // Note: activeTrades and pendingTrades are intentionally not persisted
-        // They should be session-only state for financial accuracy
       }),
     }
   )

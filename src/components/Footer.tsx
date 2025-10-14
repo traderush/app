@@ -16,40 +16,6 @@ interface FooterProps {
   isBackendConnected?: boolean; // Backend API status
 }
 
-// Client-side memory component to avoid hydration mismatch
-const MemoryDisplay = React.memo(function MemoryDisplay() {
-  const [memory, setMemory] = React.useState<string>('N/A');
-
-  React.useEffect(() => {
-    const updateMemory = () => {
-      if (typeof performance !== 'undefined' && (performance as any).memory) {
-        const usedMB = Math.round((performance as any).memory.usedJSHeapSize / 1048576);
-        setMemory(`${usedMB}MB`);
-      } else {
-        setMemory('N/A');
-      }
-    };
-
-    // Small delay to ensure hydration is complete
-    const timeoutId = setTimeout(() => {
-      updateMemory();
-      const interval = setInterval(updateMemory, 1000);
-      
-      // Store interval ID for cleanup
-      (MemoryDisplay as any)._intervalId = interval;
-    }, 100);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      if ((MemoryDisplay as any)._intervalId) {
-        clearInterval((MemoryDisplay as any)._intervalId);
-      }
-    };
-  }, []);
-
-  return <span className="text-zinc-300">{memory}</span>;
-});
-
 const Footer = React.memo(function Footer({ 
   onPnLTrackerOpen, 
   pnLTrackerButtonRef, 
@@ -180,7 +146,11 @@ const Footer = React.memo(function Footer({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Memory:</span>
-                        <MemoryDisplay />
+                        <span className="text-zinc-300">
+                          {typeof performance !== 'undefined' && (performance as any).memory 
+                            ? `${Math.round((performance as any).memory.usedJSHeapSize / 1048576)}MB`
+                            : 'N/A'}
+                        </span>
                       </div>
                     </div>
                     
