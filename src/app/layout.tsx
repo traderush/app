@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning>
         <ErrorBoundary>
           <AppShell>{children}</AppShell>
-          <PerformanceDashboard />
+          {/* <PerformanceDashboard /> - Temporarily disabled to prevent infinite loops */}
         </ErrorBoundary>
       </body>
     </html>
