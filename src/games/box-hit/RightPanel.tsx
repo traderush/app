@@ -120,7 +120,7 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
   };
 
   return (
-    <aside className="border-l border-zinc-800/80 bg-zinc-950/60 pr-0">
+    <aside className="w-80 border-l border-zinc-800/80 bg-zinc-950/60 pr-0 flex-shrink-0">
       <div className="space-y-0 p-4">
         {/* First Section: Daily High/Low BTC Price */}
         <div>
