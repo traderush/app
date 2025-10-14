@@ -284,9 +284,11 @@ export default function ClientView() {
 
   return (
     <>
-      <div className="relative flex h-full w-full flex-col items-center justify-center bg-zinc-950 text-white">
-        {/* Top Bar */}
-        <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6">
+      <div className="relative flex h-full w-full bg-zinc-950 text-white">
+        {/* Left side with header and canvas */}
+        <div className="flex-1 flex flex-col">
+          {/* Top Bar - Only over Canvas */}
+          <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6">
           {/* Left side: Asset info */}
           <div className="flex items-center gap-4">
             {/* Asset Icon */}
@@ -414,9 +416,7 @@ export default function ClientView() {
           </div>
         </div>
           
-        {/* Main Content Area */}
-        <div className="relative flex h-full w-full flex-grow">
-          {/* Left: Canvas */}
+          {/* Canvas Area */}
           <div className="flex-1">
             <ErrorBoundary 
               fallback={
@@ -467,24 +467,24 @@ export default function ClientView() {
               missedBoxes={mockBackendMissedBoxes}
               realPositions={mockBackendPositions}
               contracts={mockBackendContracts}
-          />
+            />
+          </div>
         </div>
         
         {/* Right: betting panel only */}
         <RightPanel 
-            isTradingMode={isCanvasStarted}
+          isTradingMode={isCanvasStarted}
           onTradingModeChange={handleTradingModeChange}
-            selectedCount={mockBackendSelectedCount}
-            bestMultiplier={mockBackendBestMultiplier}
-            selectedMultipliers={mockBackendSelectedMultipliers}
-            currentBTCPrice={mockBackendCurrentPrice}
-            averagePositionPrice={mockBackendSelectedAveragePrice || null}
+          selectedCount={mockBackendSelectedCount}
+          bestMultiplier={mockBackendBestMultiplier}
+          selectedMultipliers={mockBackendSelectedMultipliers}
+          currentBTCPrice={mockBackendCurrentPrice}
+          averagePositionPrice={mockBackendSelectedAveragePrice || null}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
-            dailyHigh={mockBackendCurrentPrice + 2}
-            dailyLow={mockBackendCurrentPrice - 2}
-          />
-        </div>
+          dailyHigh={mockBackendCurrentPrice + 2}
+          dailyLow={mockBackendCurrentPrice - 2}
+        />
       </div>
       
       {/* Toast Notifications - Stacked from bottom-right, oldest on top, newest on bottom */}
