@@ -17,6 +17,9 @@ export const useWebSocketHandler = () => {
   const setUser = useUserStore((state) => state.setUser);
   const addTrade = useUserStore((state) => state.addTrade);
   const removeTrade = useUserStore((state) => state.removeTrade);
+  const settleTrade = useUserStore((state) => state.settleTrade);
+  const markTradeAsConfirmed = useUserStore((state) => state.markTradeAsConfirmed);
+  const markTradeAsFailed = useUserStore((state) => state.markTradeAsFailed);
   
   const addPricePoint = usePriceStore((state) => state.addPricePoint);
   const updateStats = usePriceStore((state) => state.updateStats);
@@ -72,16 +75,16 @@ export const useWebSocketHandler = () => {
         console.log('🎯 Received trade_result from backend:', message.payload);
         const { tradeId, contractId, won, payout, balance, profit } = message.payload;
         
-        // Update user balance
+        // Mark trade as confirmed first
+        const markTradeAsConfirmed = useUserStore.getState().markTradeAsConfirmed;
+        markTradeAsConfirmed(tradeId);
+        
+        // Update user balance (authoritative from backend)
         updateBalance(balance);
         
         // Settle the trade in the store (move from active to history)
         const settleTrade = useUserStore.getState().settleTrade;
         settleTrade(tradeId, won ? 'win' : 'loss', payout);
-        
-        // Revert any optimistic settlements since we now have backend confirmation
-        const revertOptimisticSettlement = useUserStore.getState().revertOptimisticSettlement;
-        revertOptimisticSettlement(tradeId);
         
         // Play hit sound for successful trades
         if (won) {
@@ -91,7 +94,7 @@ export const useWebSocketHandler = () => {
           });
         }
         
-        console.log('✅ Backend settlement processed:', {
+        console.log('✅ Backend settlement processed (pessimistic):', {
           tradeId,
           contractId,
           won,
@@ -122,6 +125,9 @@ export const useWebSocketHandler = () => {
     setConnected,
     setError,
     addTrade,
+    settleTrade,
+    markTradeAsConfirmed,
+    markTradeAsFailed,
     addPricePoint,
     updateStats,
     updateGameSettings,

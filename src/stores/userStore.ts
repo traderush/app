@@ -13,6 +13,8 @@ export interface Trade {
   payout?: number;
   asset?: string;
   type?: string;
+  status?: 'pending' | 'confirmed' | 'failed'; // Track settlement status
+  error?: string; // Error message if trade failed
 }
 
 export interface UserProfile {
@@ -49,8 +51,8 @@ interface UserState {
   activeTrades: Trade[];
   tradeHistory: Trade[];
   
-  // Optimistic updates tracking
-  optimisticSettlements: Map<string, { tradeId: string; result: 'win' | 'loss'; payout: number; timestamp: number }>;
+  // Trade status tracking
+  pendingTrades: Map<string, { tradeId: string; status: 'pending' | 'confirmed' | 'failed'; timestamp: number }>;
   
   // Stats
   stats: UserStats;
@@ -72,9 +74,10 @@ interface UserState {
   settleTrade: (tradeId: string, result: 'win' | 'loss', payout?: number) => void;
   clearTrades: () => void;
   
-  // Optimistic Actions
-  optimisticSettleTrade: (tradeId: string, result: 'win' | 'loss', payout?: number) => void;
-  revertOptimisticSettlement: (tradeId: string) => void;
+  // Trade Status Actions
+  markTradeAsPending: (tradeId: string) => void;
+  markTradeAsConfirmed: (tradeId: string) => void;
+  markTradeAsFailed: (tradeId: string, reason?: string) => void;
   
   // Actions - Stats
   updateStats: (stats: Partial<UserStats>) => void;
@@ -106,7 +109,7 @@ export const useUserStore = create<UserState>()(
       balanceHistory: [],
       activeTrades: [],
       tradeHistory: [],
-      optimisticSettlements: new Map(),
+      pendingTrades: new Map(),
       stats: initialStats,
       
       // Profile Actions
@@ -187,6 +190,7 @@ export const useUserStore = create<UserState>()(
               ...tradeData,
               id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               result: 'pending',
+              status: 'pending', // Initially pending until server confirms
             };
             
             console.log('➕ userStore.addTrade called:', {
@@ -352,86 +356,72 @@ export const useUserStore = create<UserState>()(
           activeTrades: [],
         }),
       
-      // Optimistic Actions
-      optimisticSettleTrade: (tradeId, result, payout = 0) =>
+      // Trade Status Actions (Pessimistic - wait for server confirmation)
+      markTradeAsPending: (tradeId) =>
         set((state) => {
           try {
-            console.log('🚀 Optimistic settlement for trade:', { tradeId, result, payout });
+            console.log('⏳ Marking trade as pending:', tradeId);
             
-            const trade = state.activeTrades.find((t) => t.id === tradeId);
-            if (!trade) {
-              console.warn('⚠️ Trade not found for optimistic settlement:', tradeId);
-              return state;
-            }
-
-            // Track optimistic settlement
-            const optimisticKey = `${tradeId}_${Date.now()}`;
-            const newOptimisticSettlements = new Map(state.optimisticSettlements);
-            newOptimisticSettlements.set(optimisticKey, {
+            const newPendingTrades = new Map(state.pendingTrades);
+            newPendingTrades.set(tradeId, {
               tradeId,
-              result,
-              payout,
+              status: 'pending',
               timestamp: Date.now(),
             });
 
-            // Immediately update UI with optimistic state
-            const settledTrade: Trade = {
-              ...trade,
-              result,
-              payout,
-              settledAt: new Date(),
-            };
-
-            // Calculate optimistic balance change
-            const balanceChange = result === 'win' ? payout : -trade.amount;
-            const optimisticBalance = state.balance + balanceChange;
-
             return {
-              optimisticSettlements: newOptimisticSettlements,
-              // Don't move to history yet - wait for backend confirmation
-              balance: optimisticBalance,
-              balanceHistory: [
-                ...state.balanceHistory,
-                { timestamp: Date.now(), balance: optimisticBalance, change: balanceChange },
-              ].slice(-100),
+              pendingTrades: newPendingTrades,
             };
           } catch (error) {
-            console.error('❌ Error in optimisticSettleTrade:', error);
+            console.error('❌ Error in markTradeAsPending:', error);
             return state;
           }
         }),
 
-      revertOptimisticSettlement: (tradeId) =>
+      markTradeAsConfirmed: (tradeId) =>
         set((state) => {
           try {
-            console.log('🔄 Reverting optimistic settlement for trade:', tradeId);
+            console.log('✅ Marking trade as confirmed:', tradeId);
             
-            // Find and remove optimistic settlements for this trade
-            const newOptimisticSettlements = new Map(state.optimisticSettlements);
-            for (const [key, settlement] of newOptimisticSettlements) {
-              if (settlement.tradeId === tradeId) {
-                newOptimisticSettlements.delete(key);
-              }
-            }
-
-            // Recalculate balance by removing optimistic changes
-            let revertedBalance = state.balance;
-            for (const settlement of state.optimisticSettlements.values()) {
-              if (settlement.tradeId === tradeId) {
-                const trade = state.activeTrades.find(t => t.id === tradeId);
-                if (trade) {
-                  const balanceChange = settlement.result === 'win' ? settlement.payout : -trade.amount;
-                  revertedBalance -= balanceChange;
-                }
-              }
+            const newPendingTrades = new Map(state.pendingTrades);
+            const pendingTrade = newPendingTrades.get(tradeId);
+            if (pendingTrade) {
+              newPendingTrades.set(tradeId, {
+                ...pendingTrade,
+                status: 'confirmed',
+                timestamp: Date.now(),
+              });
             }
 
             return {
-              optimisticSettlements: newOptimisticSettlements,
-              balance: revertedBalance,
+              pendingTrades: newPendingTrades,
             };
           } catch (error) {
-            console.error('❌ Error in revertOptimisticSettlement:', error);
+            console.error('❌ Error in markTradeAsConfirmed:', error);
+            return state;
+          }
+        }),
+
+      markTradeAsFailed: (tradeId, reason = 'Unknown error') =>
+        set((state) => {
+          try {
+            console.log('❌ Marking trade as failed:', { tradeId, reason });
+            
+            const newPendingTrades = new Map(state.pendingTrades);
+            const pendingTrade = newPendingTrades.get(tradeId);
+            if (pendingTrade) {
+              newPendingTrades.set(tradeId, {
+                ...pendingTrade,
+                status: 'failed',
+                timestamp: Date.now(),
+              });
+            }
+
+            return {
+              pendingTrades: newPendingTrades,
+            };
+          } catch (error) {
+            console.error('❌ Error in markTradeAsFailed:', error);
             return state;
           }
         }),
@@ -525,8 +515,8 @@ export const useUserStore = create<UserState>()(
         balanceHistory: state.balanceHistory,
         tradeHistory: state.tradeHistory.slice(0, 100), // Only persist last 100 trades
         stats: state.stats,
-        // Note: activeTrades and optimisticSettlements are intentionally not persisted
-        // They should be session-only state
+        // Note: activeTrades and pendingTrades are intentionally not persisted
+        // They should be session-only state for financial accuracy
       }),
     }
   )
