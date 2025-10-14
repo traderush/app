@@ -288,7 +288,7 @@ export default function ClientView() {
         {/* Left side with header and canvas */}
         <div className="flex-1 flex flex-col">
           {/* Top Bar - Only over Canvas */}
-          <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6">
+          <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-[#09090B] px-6">
           {/* Left side: Asset info */}
           <div className="flex items-center gap-4">
             {/* Asset Icon */}
@@ -400,9 +400,36 @@ export default function ClientView() {
               </label>
             </div>
             
+            {/* Timeframe Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-400">Timeframe:</span>
+              <div className="flex gap-1">
+                {[500, 1000, 2000, 4000, 10000].map((ms) => {
+                  const isSelected = timeframe === ms;
+                  const label = ms < 1000 ? `${ms}ms` : `${ms/1000}s`;
+                  return (
+                    <button
+                      key={ms}
+                      onClick={() => setTimeframe(ms)}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        isSelected
+                          ? 'text-white'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      style={{
+                        backgroundColor: isSelected ? signatureColor : 'transparent'
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            
             {/* Multiplier Filter Slider */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-400">Min Multiplier:</span>
+              <span className="text-xs text-zinc-400">Min Multiplier:</span>
               <CustomSlider
                 min={1.0}
                 max={15.0}
@@ -411,7 +438,7 @@ export default function ClientView() {
                 onChange={setMinMultiplier}
                 className="w-24"
               />
-              <span className="text-sm font-medium text-white">{minMultiplier.toFixed(1)}x</span>
+              <span className="text-xs font-medium text-white">{minMultiplier.toFixed(1)}x</span>
             </div>
           </div>
         </div>
