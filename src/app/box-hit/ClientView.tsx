@@ -405,7 +405,7 @@ export default function ClientView() {
                     {Object.entries(assetData).map(([key, asset]) => (
                       <div
                         key={key}
-                        className={`flex items-center gap-4 px-4 py-3 transition-colors ${
+                        className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
                           key === 'DEMO' 
                             ? `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
                             : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''} opacity-50`
@@ -425,10 +425,10 @@ export default function ClientView() {
                         {/* Star icon for favorites - clickable */}
                         <button
                           onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO', e)}
-                          className="flex-shrink-0 p-1 rounded transition-colors cursor-pointer hover:bg-zinc-700/50"
+                          className="flex-shrink-0 p-0.5 rounded transition-colors cursor-pointer hover:bg-zinc-700/50"
                         >
                           <svg 
-                            className={`w-4 h-4 transition-colors ${
+                            className={`w-3.5 h-3.5 transition-colors ${
                               favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') 
                                 ? 'text-yellow-400 fill-current' 
                                 : 'text-zinc-500 fill-none'
@@ -443,7 +443,7 @@ export default function ClientView() {
                         </button>
                         
                         {/* Asset icon */}
-                        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                        <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
                           <img 
                             src={asset.icon} 
                             alt={asset.name} 
@@ -453,13 +453,13 @@ export default function ClientView() {
                         
                         {/* Asset info */}
                         <div className="flex-1 min-w-0">
-                          <div className="text-white text-sm font-medium">{asset.symbol}</div>
-                          <div className="text-zinc-400" style={{ fontSize: '12px' }}>{asset.name}</div>
+                          <div className="text-white text-xs font-medium">{asset.symbol}</div>
+                          <div className="text-zinc-400" style={{ fontSize: '11px' }}>{asset.name}</div>
                         </div>
                         
                         {/* Price and change */}
-                        <div className="text-right flex-shrink-0 mr-3">
-                          <div className="text-white text-sm font-medium">
+                        <div className="text-right flex-shrink-0 mr-2">
+                          <div className="text-white text-xs font-medium">
                             {asset.price 
                               ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                               : <span className="text-zinc-500">--</span>
@@ -468,7 +468,7 @@ export default function ClientView() {
                           <div 
                             style={{ 
                               color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative,
-                              fontSize: '12px',
+                              fontSize: '11px',
                               fontWeight: 500
                             }}
                           >
@@ -480,7 +480,7 @@ export default function ClientView() {
                         </div>
                         
                         {/* Volume text */}
-                        <div className="text-zinc-400 flex-shrink-0" style={{ fontSize: '12px' }}>
+                        <div className="text-zinc-400 flex-shrink-0" style={{ fontSize: '11px' }}>
                           Vol: {asset.volume24h}
                         </div>
                       </div>
@@ -490,7 +490,7 @@ export default function ClientView() {
               </div>
               
               {/* Current Value */}
-              <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
+                <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
                 ${(selectedAsset === 'DEMO' ? mockBackendCurrentPrice : assetData[selectedAsset].price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               </div>
               
