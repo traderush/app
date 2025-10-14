@@ -16,6 +16,37 @@ interface FooterProps {
   isBackendConnected?: boolean; // Backend API status
 }
 
+// Client-side memory component to avoid hydration mismatch
+const MemoryDisplay = React.memo(function MemoryDisplay() {
+  const [memory, setMemory] = React.useState<string>('N/A');
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+    
+    const updateMemory = () => {
+      if (typeof performance !== 'undefined' && (performance as any).memory) {
+        const usedMB = Math.round((performance as any).memory.usedJSHeapSize / 1048576);
+        setMemory(`${usedMB}MB`);
+      } else {
+        setMemory('N/A');
+      }
+    };
+
+    updateMemory();
+    const interval = setInterval(updateMemory, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Return N/A during SSR and initial render to match server
+  if (!isClient) {
+    return <span className="text-zinc-300">N/A</span>;
+  }
+
+  return <span className="text-zinc-300">{memory}</span>;
+});
+
 const Footer = React.memo(function Footer({ 
   onPnLTrackerOpen, 
   pnLTrackerButtonRef, 
@@ -146,11 +177,7 @@ const Footer = React.memo(function Footer({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Memory:</span>
-                        <span className="text-zinc-300">
-                          {typeof performance !== 'undefined' && (performance as any).memory 
-                            ? `${Math.round((performance as any).memory.usedJSHeapSize / 1048576)}MB`
-                            : 'N/A'}
-                        </span>
+                        <MemoryDisplay />
                       </div>
                     </div>
                     
