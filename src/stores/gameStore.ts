@@ -120,7 +120,7 @@ const initialGameSettings: GameSettings = {
   soundEnabled: true,
   autoPlay: false,
   minMultiplier: 1.0,
-  showOtherPlayers: false,
+  showOtherPlayers: true,
   isTradingMode: false,
   zoomLevel: 1.0,
   showProbabilities: false,
