@@ -278,6 +278,30 @@ export default function ClientView() {
   // Toast notification state - support up to 5 stacked toasts with animation states
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; timestamp: number; isVisible: boolean }>>([]);
   
+  // Show default welcome notification on component mount
+  useEffect(() => {
+    const welcomeToast = {
+      id: Date.now(),
+      message: '🚀 Welcome to TradeRush! Start trading to see live updates.',
+      timestamp: Date.now(),
+      isVisible: true
+    };
+    
+    setToasts([welcomeToast]);
+    
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.map(toast => 
+        toast.id === welcomeToast.id ? { ...toast, isVisible: false } : toast
+      ));
+      
+      // Remove completely after fade out
+      setTimeout(() => {
+        setToasts(prev => prev.filter(toast => toast.id !== welcomeToast.id));
+      }, 300);
+    }, 4000);
+  }, []);
+  
   /**
    * Displays a toast notification to the user
    * @param message - The message to display in the toast
@@ -1224,14 +1248,6 @@ export default function ClientView() {
                     {minMultiplier.toFixed(1)}x
                   </span>
                 </div>
-
-                {/* Test Notification Button */}
-                <button
-                  onClick={() => showToast('🧪 Test notification - everything is working!', 'success')}
-                  className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded transition-colors"
-                >
-                  Test Toast
-                </button>
 
                 {/* Timeframe Selector */}
                 <div className="flex items-center gap-1">
