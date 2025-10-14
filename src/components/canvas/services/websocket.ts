@@ -54,7 +54,7 @@ class WebSocketService {
         this.ws = new WebSocket(this.config.url);
         
         this.ws.onopen = () => {
-          console.log('WebSocket connected successfully');
+          console.log('🔍 WebSocket connected successfully to:', this.config.url);
           clearTimeout(timeoutId); // Clear the timeout
           this.reconnectAttempts = 0;
           
@@ -97,8 +97,16 @@ class WebSocketService {
         };
         
         this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          console.error('WebSocket readyState:', this.ws?.readyState);
+          console.error('❌ WebSocket connection error:', error);
+          console.error('❌ WebSocket URL attempted:', this.config.url);
+          console.error('❌ WebSocket readyState:', this.ws?.readyState);
+          console.error('❌ WebSocket connection states:', {
+            CONNECTING: WebSocket.CONNECTING,
+            OPEN: WebSocket.OPEN,
+            CLOSING: WebSocket.CLOSING,
+            CLOSED: WebSocket.CLOSED,
+            currentState: this.ws?.readyState
+          });
           clearTimeout(timeoutId); // Clear the timeout on error
           if (this.onErrorCallback) {
             this.onErrorCallback(new Error('WebSocket connection error'));

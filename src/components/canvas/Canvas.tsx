@@ -1074,6 +1074,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   const handleStart = async () => {
     try {
       console.log('🔍 Canvas handleStart: Attempting to connect to WebSocket...');
+      console.log('🔍 Canvas handleStart: Current connection state:', { isConnected, isConnecting });
       await connect();
       console.log('🔍 Canvas handleStart: WebSocket connected successfully');
       if (!externalControl) {
