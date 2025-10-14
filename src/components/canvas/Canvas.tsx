@@ -1073,15 +1073,12 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
   const handleStart = async () => {
     try {
-      console.log('🔍 Canvas handleStart: Attempting to connect to WebSocket...');
-      console.log('🔍 Canvas handleStart: Current connection state:', { isConnected, isConnecting });
       await connect();
-      console.log('🔍 Canvas handleStart: WebSocket connected successfully');
       if (!externalControl) {
         setIsStarted(true);
       }
     } catch (error) {
-      console.error('❌ Canvas handleStart: Failed to connect to server:', error);
+      console.error('Failed to connect to server:', error);
       alert(
         'Failed to connect to server. Please ensure the backend is running.'
       );
@@ -1124,20 +1121,11 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   useEffect(() => {
     if (!externalControl) return;
     
-    console.log('🔍 Canvas auto-connect check:', {
-      externalControl,
-      externalIsStarted,
-      isConnected,
-      isConnecting
-    });
-    
     if (externalIsStarted && !isConnected && !isConnecting) {
       // Start requested from external control
-      console.log('🔍 Canvas: Auto-connecting to WebSocket...');
       handleStart();
     } else if (!externalIsStarted && isConnected) {
       // Stop requested from external control
-      console.log('🔍 Canvas: Auto-disconnecting from WebSocket...');
       handleStop();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

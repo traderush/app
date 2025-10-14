@@ -32,11 +32,11 @@ class WebSocketService {
   private onErrorCallback?: (error: Error) => void;
 
   constructor(config: WebSocketConfig = {}) {
-    this.config = {
-      url: config.url || 'ws://localhost:8080',
-      reconnectAttempts: config.reconnectAttempts || 5,
-      reconnectDelay: config.reconnectDelay || 1000,
-    };
+      this.config = {
+        url: config.url || 'ws://localhost:8080/ws',
+        reconnectAttempts: config.reconnectAttempts || 5,
+        reconnectDelay: config.reconnectDelay || 1000,
+      };
   }
 
   async connect(username: string): Promise<void> {
