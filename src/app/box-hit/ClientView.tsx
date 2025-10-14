@@ -51,7 +51,7 @@ export default function ClientView() {
   const setSelectedAsset = (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => updateGameSettings({ selectedAsset: asset });
   
   // Toggle favorite asset (now uses Zustand store)
-  const toggleFavorite = (asset: 'BTC' | 'ETH' | 'SOL', event: React.MouseEvent) => {
+  const toggleFavorite = (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO', event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent dropdown from closing
     toggleFavoriteAsset(asset);
   };
@@ -64,6 +64,14 @@ export default function ClientView() {
 
   // Asset data with live prices and 24h stats
   const assetData = {
+    DEMO: {
+      name: 'Demo Asset',
+      symbol: 'DEMO',
+      icon: 'https://framerusercontent.com/images/dWPrOABO15xb2dkrxTZj3Z6cAU.png?width=256&height=256',
+      price: 100.00, // Fixed demo price
+      change24h: 2.50,
+      volume24h: '45.20B'
+    },
     BTC: {
       name: 'Bitcoin',
       symbol: 'BTC',
@@ -75,7 +83,7 @@ export default function ClientView() {
     ETH: {
       name: 'Ethereum',
       symbol: 'ETH',
-      icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSs-O63J4u38kjYToo_vgMds4su_KK9BbHD0A&s',
+      icon: 'https://static1.tokenterminal.com//ethereum/logo.png?logo_hash=fd8f54cab23f8f4980041f4e74607cac0c7ab880',
       price: 3420,
       change24h: 1.8,
       volume24h: '25.30B'
@@ -83,7 +91,7 @@ export default function ClientView() {
     SOL: {
       name: 'Solana',
       symbol: 'SOL',
-      icon: 'https://static.crypto.com/token/icons/solana/color_icon.png',
+      icon: 'https://avatarfiles.alphacoders.com/377/377220.png',
       price: 142.50,
       change24h: -0.5,
       volume24h: '8.45B'
@@ -357,8 +365,8 @@ export default function ClientView() {
               {/* Asset Icon */}
               <div className="rounded-lg overflow-hidden" style={{ width: '28px', height: '28px' }}>
                 <img 
-                src={assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].icon} 
-                alt={assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].name} 
+                src={assetData[selectedAsset].icon} 
+                alt={assetData[selectedAsset].name} 
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -368,9 +376,10 @@ export default function ClientView() {
                 <div 
                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
+                title="Select asset"
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
-                  {assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].symbol}
+                  {assetData[selectedAsset].symbol}
                   </div>
                   <svg 
                     className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
@@ -396,29 +405,38 @@ export default function ClientView() {
                     {Object.entries(assetData).map(([key, asset]) => (
                       <div
                         key={key}
-                        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
-                          selectedAsset === key ? 'bg-zinc-800/50' : ''
+                      className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
+                        key === 'DEMO' 
+                          ? `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
+                          : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''} opacity-50`
                         }`}
                         onClick={() => {
-                          setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL');
+                        if (key === 'DEMO') {
+                          setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO');
                           setAssetDropdownOpen(false);
+                        }
                         }}
+                      title={
+                        key === 'DEMO' 
+                          ? `Select ${asset.name}` 
+                          : 'Asset selection not available in mock backend mode'
+                      }
                       >
                         {/* Star icon for favorites - clickable */}
                         <button
-                          onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL', e)}
-                          className="flex-shrink-0 p-0.5 hover:bg-zinc-700/50 rounded transition-colors"
+                        onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO', e)}
+                        className="flex-shrink-0 p-0.5 rounded transition-colors cursor-pointer hover:bg-zinc-700/50"
                         >
                           <svg 
                             className={`w-3.5 h-3.5 transition-colors ${
-                              favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL') 
+                            favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') 
                                 ? 'text-yellow-400 fill-current' 
                                 : 'text-zinc-500 fill-none'
                             }`} 
                             fill="currentColor" 
                             viewBox="0 0 24 24"
                             stroke="currentColor"
-                            strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL') ? 0 : 1.5}
+                          strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') ? 0 : 1.5}
                           >
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                           </svg>
@@ -435,27 +453,29 @@ export default function ClientView() {
                         
                         {/* Asset info */}
                         <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-medium" style={{ fontSize: '14px' }}>
-                            {asset.symbol}
-                          </span>
-                          <span className="text-zinc-400" style={{ fontSize: '12px' }}>
-                            {asset.name}
-                          </span>
+                          <div className="text-white text-xs font-medium">{asset.symbol}</div>
+                          <div className="text-zinc-400" style={{ fontSize: '11px' }}>{asset.name}</div>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-white" style={{ fontSize: '12px' }}>
-                            ${asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                          </span>
-                          <span 
-                            className="font-medium" 
+                        
+                        {/* Price and change */}
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-white text-xs font-medium">
+                            {asset.price 
+                              ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                              : <span className="text-zinc-500">--</span>
+                            }
+                          </div>
+                          <div 
                             style={{ 
+                              color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative,
                               fontSize: '11px',
-                              color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                              fontWeight: 500
                             }}
                           >
-                            {asset.change24h >= 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
-                          </span>
+                            {asset.change24h !== 0 
+                              ? `${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`
+                              : <span className="text-zinc-500">--</span>
+                            }
                           </div>
                         </div>
                       </div>
@@ -466,7 +486,7 @@ export default function ClientView() {
               
               {/* Current Value */}
                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                ${assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                ${assetData[selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               </div>
               
               {/* 24h Change */}
@@ -474,9 +494,9 @@ export default function ClientView() {
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
                 <div className="font-medium leading-none" style={{ 
                   fontSize: '18px',
-                  color: assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                  color: assetData[selectedAsset].change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
                 }}>
-                  {assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].change24h >= 0 ? '+' : ''}{assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].change24h.toFixed(2)}%
+                  {assetData[selectedAsset].change24h >= 0 ? '+' : ''}{assetData[selectedAsset].change24h.toFixed(2)}%
                 </div>
               </div>
               
@@ -484,7 +504,7 @@ export default function ClientView() {
               <div className="leading-none">
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
                 <div className="text-white leading-none" style={{ fontSize: '18px' }}>
-                  {assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].volume24h}
+                  {assetData[selectedAsset].volume24h}
                 </div>
               </div>
             </div>
