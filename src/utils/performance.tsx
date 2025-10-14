@@ -1,6 +1,7 @@
 /**
  * Performance monitoring and optimization utilities
  */
+'use client';
 
 import React from 'react';
 
@@ -282,7 +283,9 @@ export function PerformanceDashboard() {
     // Initial summary
     setSummary(performanceMonitor.getPerformanceSummary());
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Keyboard shortcut to toggle dashboard
