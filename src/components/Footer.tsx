@@ -19,11 +19,8 @@ interface FooterProps {
 // Client-side memory component to avoid hydration mismatch
 const MemoryDisplay = React.memo(function MemoryDisplay() {
   const [memory, setMemory] = React.useState<string>('N/A');
-  const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
-    setIsClient(true);
-    
     const updateMemory = () => {
       if (typeof performance !== 'undefined' && (performance as any).memory) {
         const usedMB = Math.round((performance as any).memory.usedJSHeapSize / 1048576);
@@ -33,16 +30,22 @@ const MemoryDisplay = React.memo(function MemoryDisplay() {
       }
     };
 
-    updateMemory();
-    const interval = setInterval(updateMemory, 1000);
+    // Small delay to ensure hydration is complete
+    const timeoutId = setTimeout(() => {
+      updateMemory();
+      const interval = setInterval(updateMemory, 1000);
+      
+      // Store interval ID for cleanup
+      (MemoryDisplay as any)._intervalId = interval;
+    }, 100);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeoutId);
+      if ((MemoryDisplay as any)._intervalId) {
+        clearInterval((MemoryDisplay as any)._intervalId);
+      }
+    };
   }, []);
-
-  // Return N/A during SSR and initial render to match server
-  if (!isClient) {
-    return <span className="text-zinc-300">N/A</span>;
-  }
 
   return <span className="text-zinc-300">{memory}</span>;
 });
