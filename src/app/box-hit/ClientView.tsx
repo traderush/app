@@ -233,12 +233,9 @@ export default function ClientView() {
     setMockBackendSelectedMultipliers(multipliers);
     setMockBackendSelectedAveragePrice(averagePrice || null);
 
-    // Only show toast when count actually increases (new box selected by user)
-    if (count > previousCountRef.current && count > 0) {
-      showToast(`Selected ${count} boxes. Best multiplier: ${best.toFixed(2)}x`, 'info');
-    }
+    // Update previous count for future comparisons
     previousCountRef.current = count;
-  }, [showToast]);
+  }, []);
 
   // Mock backend position count and multipliers for PositionsTable
   const mockBackendPositionCount = useMemo(() => mockBackendPositions.size, [mockBackendPositions]);
