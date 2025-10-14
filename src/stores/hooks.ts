@@ -68,10 +68,44 @@ export const useWebSocketHandler = () => {
         updateBalance(message.payload.balance);
         break;
 
+      case 'trade_result':
+        console.log('🎯 Received trade_result from backend:', message.payload);
+        const { tradeId, contractId, won, payout, balance, profit } = message.payload;
+        
+        // Update user balance
+        updateBalance(balance);
+        
+        // Settle the trade in the store (move from active to history)
+        const settleTrade = useUserStore.getState().settleTrade;
+        settleTrade(tradeId, won ? 'win' : 'loss', payout);
+        
+        // Revert any optimistic settlements since we now have backend confirmation
+        const revertOptimisticSettlement = useUserStore.getState().revertOptimisticSettlement;
+        revertOptimisticSettlement(tradeId);
+        
+        // Play hit sound for successful trades
+        if (won) {
+          console.log('🔊 Playing hit sound for backend settlement');
+          import('@/lib/sound/SoundManager').then(({ playHitSound }) => {
+            playHitSound();
+          });
+        }
+        
+        console.log('✅ Backend settlement processed:', {
+          tradeId,
+          contractId,
+          won,
+          payout,
+          profit,
+          newBalance: balance
+        });
+        break;
+
       case 'box_hit':
       case 'tower_hit':
       case 'tower_missed':
         // Handle game results - could trigger animations, sounds, etc.
+        console.log('🎮 Game result received:', message.type, message.payload);
         break;
 
       case 'error':

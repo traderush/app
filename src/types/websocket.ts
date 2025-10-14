@@ -101,6 +101,18 @@ export interface TowerHitMessage extends WSMessage<{
   type: 'tower_hit';
 }
 
+// Trade result message (from backend settlement)
+export interface TradeResultMessage extends WSMessage<{
+  tradeId: string;
+  contractId: string;
+  won: boolean;
+  payout: number;
+  balance: number;
+  profit: number;
+}> {
+  type: 'trade_result';
+}
+
 export interface TowerMissedMessage extends WSMessage<{
   contractId: SpreadCallId | SpreadPutId; // Replaces towerId
   type: 'top' | 'bottom';
@@ -168,5 +180,6 @@ export type WebSocketMessage =
   | TowerMissedMessage
   | BalanceUpdateMessage
   | TradePlacedMessage
+  | TradeResultMessage
   | ErrorMessage
   | StateUpdateMessage;

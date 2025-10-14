@@ -49,6 +49,9 @@ interface UserState {
   activeTrades: Trade[];
   tradeHistory: Trade[];
   
+  // Optimistic updates tracking
+  optimisticSettlements: Map<string, { tradeId: string; result: 'win' | 'loss'; payout: number; timestamp: number }>;
+  
   // Stats
   stats: UserStats;
   
@@ -68,6 +71,10 @@ interface UserState {
   removeTrade: (tradeId: string) => void;
   settleTrade: (tradeId: string, result: 'win' | 'loss', payout?: number) => void;
   clearTrades: () => void;
+  
+  // Optimistic Actions
+  optimisticSettleTrade: (tradeId: string, result: 'win' | 'loss', payout?: number) => void;
+  revertOptimisticSettlement: (tradeId: string) => void;
   
   // Actions - Stats
   updateStats: (stats: Partial<UserStats>) => void;
@@ -99,6 +106,7 @@ export const useUserStore = create<UserState>()(
       balanceHistory: [],
       activeTrades: [],
       tradeHistory: [],
+      optimisticSettlements: new Map(),
       stats: initialStats,
       
       // Profile Actions
@@ -161,29 +169,40 @@ export const useUserStore = create<UserState>()(
       // Trade Actions
       addTrade: (tradeData) =>
         set((state) => {
-          // Check if trade already exists by contractId
-          const existingTrade = state.activeTrades.find((t) => t.contractId === tradeData.contractId);
-          if (existingTrade) {
-            console.warn('⚠️ Trade already exists for contractId:', tradeData.contractId, 'Skipping duplicate add.');
-            return state;
-          }
+          try {
+            // Validate trade data
+            if (!tradeData.contractId || !tradeData.amount || tradeData.amount <= 0) {
+              console.error('❌ Invalid trade data:', tradeData);
+              throw new Error('Invalid trade data: contractId and amount are required');
+            }
 
-          const newTrade: Trade = {
-            ...tradeData,
-            id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            result: 'pending',
-          };
-          
-          console.log('➕ userStore.addTrade called:', {
-            tradeData,
-            newTrade,
-            activeTradesCount: state.activeTrades.length,
-            existingTradeIds: state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId }))
-          });
-          
-          return {
-            activeTrades: [...state.activeTrades, newTrade],
-          };
+            // Check if trade already exists by contractId
+            const existingTrade = state.activeTrades.find((t) => t.contractId === tradeData.contractId);
+            if (existingTrade) {
+              console.warn('⚠️ Trade already exists for contractId:', tradeData.contractId, 'Skipping duplicate add.');
+              return state;
+            }
+
+            const newTrade: Trade = {
+              ...tradeData,
+              id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              result: 'pending',
+            };
+            
+            console.log('➕ userStore.addTrade called:', {
+              tradeData,
+              newTrade,
+              activeTradesCount: state.activeTrades.length,
+              existingTradeIds: state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId }))
+            });
+            
+            return {
+              activeTrades: [...state.activeTrades, newTrade],
+            };
+          } catch (error) {
+            console.error('❌ Error in addTrade:', error);
+            return state; // Return unchanged state on error
+          }
         }),
       
       updateTrade: (tradeId, updates) =>
@@ -203,14 +222,26 @@ export const useUserStore = create<UserState>()(
       
       settleTrade: (tradeId, result, payout = 0) =>
         set((state) => {
-          console.log('🔄 userStore.settleTrade called:', { tradeId, result, payout });
-          console.log('📋 Current activeTrades:', state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId, amount: t.amount, result: t.result })));
-          
-          const trade = state.activeTrades.find((t) => t.id === tradeId);
-          if (!trade) {
-            console.warn('⚠️ Trade not found in activeTrades:', tradeId);
-            return state;
-          }
+          try {
+            console.log('🔄 userStore.settleTrade called:', { tradeId, result, payout });
+            console.log('📋 Current activeTrades:', state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId, amount: t.amount, result: t.result })));
+            
+            // Validate parameters
+            if (!tradeId || !result || !['win', 'loss'].includes(result)) {
+              console.error('❌ Invalid settleTrade parameters:', { tradeId, result, payout });
+              throw new Error('Invalid settleTrade parameters: tradeId and result (win/loss) are required');
+            }
+
+            if (result === 'win' && payout < 0) {
+              console.error('❌ Invalid payout for winning trade:', payout);
+              throw new Error('Payout cannot be negative for winning trades');
+            }
+            
+            const trade = state.activeTrades.find((t) => t.id === tradeId);
+            if (!trade) {
+              console.warn('⚠️ Trade not found in activeTrades:', tradeId);
+              return state;
+            }
           
           const settledTrade: Trade = {
             ...trade,
@@ -291,30 +322,118 @@ export const useUserStore = create<UserState>()(
             tradeHistoryLength: [settledTrade, ...state.tradeHistory].length
           });
 
-          return {
-            activeTrades: state.activeTrades.filter((t) => t.id !== tradeId),
-            tradeHistory: [settledTrade, ...state.tradeHistory].slice(0, 1000), // Keep last 1000 trades
-            balance: newBalance,
-            balanceHistory: [
-              ...state.balanceHistory,
-              { timestamp: Date.now(), balance: newBalance, change: balanceChange },
-            ].slice(-100),
-            stats: {
-              totalTrades,
-              totalWins,
-              totalLosses,
-              winRate,
-              totalVolume,
-              totalProfit,
-              bestStreak,
-              currentStreak: streakType === 'win' ? currentStreak : 0,
-            },
-          };
+            return {
+              activeTrades: state.activeTrades.filter((t) => t.id !== tradeId),
+              tradeHistory: [settledTrade, ...state.tradeHistory].slice(0, 1000), // Keep last 1000 trades
+              balance: newBalance,
+              balanceHistory: [
+                ...state.balanceHistory,
+                { timestamp: Date.now(), balance: newBalance, change: balanceChange },
+              ].slice(-100),
+              stats: {
+                totalTrades,
+                totalWins,
+                totalLosses,
+                winRate,
+                totalVolume,
+                totalProfit,
+                bestStreak,
+                currentStreak: streakType === 'win' ? currentStreak : 0,
+              },
+            };
+          } catch (error) {
+            console.error('❌ Error in settleTrade:', error);
+            return state; // Return unchanged state on error
+          }
         }),
       
       clearTrades: () =>
         set({
           activeTrades: [],
+        }),
+      
+      // Optimistic Actions
+      optimisticSettleTrade: (tradeId, result, payout = 0) =>
+        set((state) => {
+          try {
+            console.log('🚀 Optimistic settlement for trade:', { tradeId, result, payout });
+            
+            const trade = state.activeTrades.find((t) => t.id === tradeId);
+            if (!trade) {
+              console.warn('⚠️ Trade not found for optimistic settlement:', tradeId);
+              return state;
+            }
+
+            // Track optimistic settlement
+            const optimisticKey = `${tradeId}_${Date.now()}`;
+            const newOptimisticSettlements = new Map(state.optimisticSettlements);
+            newOptimisticSettlements.set(optimisticKey, {
+              tradeId,
+              result,
+              payout,
+              timestamp: Date.now(),
+            });
+
+            // Immediately update UI with optimistic state
+            const settledTrade: Trade = {
+              ...trade,
+              result,
+              payout,
+              settledAt: new Date(),
+            };
+
+            // Calculate optimistic balance change
+            const balanceChange = result === 'win' ? payout : -trade.amount;
+            const optimisticBalance = state.balance + balanceChange;
+
+            return {
+              optimisticSettlements: newOptimisticSettlements,
+              // Don't move to history yet - wait for backend confirmation
+              balance: optimisticBalance,
+              balanceHistory: [
+                ...state.balanceHistory,
+                { timestamp: Date.now(), balance: optimisticBalance, change: balanceChange },
+              ].slice(-100),
+            };
+          } catch (error) {
+            console.error('❌ Error in optimisticSettleTrade:', error);
+            return state;
+          }
+        }),
+
+      revertOptimisticSettlement: (tradeId) =>
+        set((state) => {
+          try {
+            console.log('🔄 Reverting optimistic settlement for trade:', tradeId);
+            
+            // Find and remove optimistic settlements for this trade
+            const newOptimisticSettlements = new Map(state.optimisticSettlements);
+            for (const [key, settlement] of newOptimisticSettlements) {
+              if (settlement.tradeId === tradeId) {
+                newOptimisticSettlements.delete(key);
+              }
+            }
+
+            // Recalculate balance by removing optimistic changes
+            let revertedBalance = state.balance;
+            for (const settlement of state.optimisticSettlements.values()) {
+              if (settlement.tradeId === tradeId) {
+                const trade = state.activeTrades.find(t => t.id === tradeId);
+                if (trade) {
+                  const balanceChange = settlement.result === 'win' ? settlement.payout : -trade.amount;
+                  revertedBalance -= balanceChange;
+                }
+              }
+            }
+
+            return {
+              optimisticSettlements: newOptimisticSettlements,
+              balance: revertedBalance,
+            };
+          } catch (error) {
+            console.error('❌ Error in revertOptimisticSettlement:', error);
+            return state;
+          }
         }),
       
       // Stats Actions
@@ -400,13 +519,14 @@ export const useUserStore = create<UserState>()(
     })),
     {
       name: 'user-store',
-      storage: createPersistentStorage('user'),
       partialize: (state) => ({
         user: state.user,
         balance: state.balance,
         balanceHistory: state.balanceHistory,
         tradeHistory: state.tradeHistory.slice(0, 100), // Only persist last 100 trades
         stats: state.stats,
+        // Note: activeTrades and optimisticSettlements are intentionally not persisted
+        // They should be session-only state
       }),
     }
   )
