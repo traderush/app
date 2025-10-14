@@ -82,7 +82,7 @@ export abstract class BaseGame extends EventEmitter {
           if (mutation.type === 'childList') {
             mutation.removedNodes.forEach((node) => {
               if (node === this.canvas) {
-                console.warn('Canvas was removed from DOM during component lifecycle - this is normal in React development mode');
+                console.warn('Canvas was removed from DOM (expected during React unmounting)');
               }
             });
           }
@@ -240,6 +240,12 @@ export abstract class BaseGame extends EventEmitter {
   }
 
   public destroy(): void {
+    // Prevent multiple destroy calls
+    if ((this as any)._destroyed) {
+      return;
+    }
+    (this as any)._destroyed = true;
+
     this.stop();
 
     // Remove event listeners
@@ -249,6 +255,14 @@ export abstract class BaseGame extends EventEmitter {
         this.resizeObserver.disconnect();
       } catch {}
       this.resizeObserver = null;
+    }
+
+    // Disconnect mutation observer
+    if ((this as any)._mutationObserver) {
+      try {
+        (this as any)._mutationObserver.disconnect();
+      } catch {}
+      (this as any)._mutationObserver = null;
     }
 
     // Remove canvas
