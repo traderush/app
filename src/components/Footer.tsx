@@ -14,7 +14,6 @@ interface FooterProps {
   customizeButtonRef: React.RefObject<HTMLButtonElement | null>;
   // Connection status props
   isWebSocketConnected?: boolean;
-  connectedExchanges?: string[];
   isBackendConnected?: boolean; // Backend API status
 }
 
@@ -24,50 +23,12 @@ const Footer = React.memo(function Footer({
   onCustomizeOpen, 
   customizeButtonRef,
   isWebSocketConnected = false,
-  connectedExchanges = [],
   isBackendConnected = false
 }: FooterProps) {
-  // Read prices from store using refs + throttled state for display
-  const currentBTCPriceRef = React.useRef(0);
-  const currentETHPriceRef = React.useRef(0);
-  const currentSOLPriceRef = React.useRef(0);
-  const [displayBTCPrice, setDisplayBTCPrice] = React.useState(0);
-  const [displayETHPrice, setDisplayETHPrice] = React.useState(0);
-  const [displaySOLPrice, setDisplaySOLPrice] = React.useState(0);
-  const lastUpdateTimeRef = React.useRef<number | null>(null);
+  // Performance metrics
   const [latency, setLatency] = React.useState(0);
   const [fps, setFps] = React.useState(60);
   
-  // Subscribe to prices and lastUpdateTime via refs (no re-renders)
-  React.useEffect(() => {
-    const unsubscribe = useConnectionStore.subscribe(
-      (state) => ({
-        lastUpdateTime: state.lastUpdateTime,
-        currentBTCPrice: state.currentBTCPrice,
-        currentETHPrice: state.currentETHPrice,
-        currentSOLPrice: state.currentSOLPrice,
-      }),
-      (values) => {
-        lastUpdateTimeRef.current = values.lastUpdateTime;
-        currentBTCPriceRef.current = values.currentBTCPrice;
-        currentETHPriceRef.current = values.currentETHPrice;
-        currentSOLPriceRef.current = values.currentSOLPrice;
-      }
-    );
-    
-    return () => unsubscribe();
-  }, []);
-  
-  // Update display prices every 2 seconds (throttled for Footer display only)
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setDisplayBTCPrice(currentBTCPriceRef.current);
-      setDisplayETHPrice(currentETHPriceRef.current);
-      setDisplaySOLPrice(currentSOLPriceRef.current);
-    }, 2000);
-    
-    return () => clearInterval(interval);
-  }, []);
   
   // FPS measurement
   React.useEffect(() => {
@@ -92,15 +53,9 @@ const Footer = React.memo(function Footer({
     return () => cancelAnimationFrame(animationId);
   }, []);
   
-  // Update latency every 2 seconds instead of on every update
+  // Set static latency since we're not using dynamic price updates
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      if (lastUpdateTimeRef.current) {
-        setLatency(Math.floor((Date.now() - lastUpdateTimeRef.current) / 1000));
-      }
-    }, 2000);
-    
-    return () => clearInterval(interval);
+    setLatency(1); // Static 1 second latency
   }, []);
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
@@ -119,7 +74,7 @@ const Footer = React.memo(function Footer({
               className="w-4 h-4 rounded object-cover"
             />
             <span style={{color: '#FFA21C'}}>
-              {displayBTCPrice > 0 ? `$${(displayBTCPrice / 1000).toFixed(1)}K` : '...'}
+              $65.2K
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -129,7 +84,7 @@ const Footer = React.memo(function Footer({
               className="w-4 h-4 rounded object-cover"
             />
             <span style={{color: '#5080A0'}}>
-              {displayETHPrice > 0 ? `$${displayETHPrice.toLocaleString()}` : '...'}
+              $3,420
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -139,7 +94,7 @@ const Footer = React.memo(function Footer({
               className="w-4 h-4 rounded object-cover"
             />
             <span style={{color: '#26FFA4'}}>
-              {displaySOLPrice > 0 ? `$${displaySOLPrice.toFixed(2)}` : '...'}
+              $142.50
             </span>
           </div>
           
@@ -176,15 +131,6 @@ const Footer = React.memo(function Footer({
                 
                 {isWebSocketConnected ? (
                   <>
-                    {/* Exchange Status */}
-                    <div className="space-y-1 pt-1 border-t border-zinc-700/50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400">Exchanges:</span>
-                        <span className="text-zinc-300">{connectedExchanges.length}/3</span>
-                      </div>
-                      <div className="text-xs text-zinc-500">{connectedExchanges.join(' • ')}</div>
-                    </div>
-                    
                     {/* Performance Metrics */}
                     <div className="space-y-1 pt-1 border-t border-zinc-700/50">
                       <div className="flex justify-between">
@@ -338,17 +284,11 @@ const Footer = React.memo(function Footer({
 }, (prevProps, nextProps) => {
   // Custom comparison function for React.memo to prevent unnecessary re-renders
   // Return true if props are equal (component should NOT re-render)
-  const exchangesEqual = (
-    prevProps.connectedExchanges?.length === nextProps.connectedExchanges?.length &&
-    prevProps.connectedExchanges?.every((val, idx) => val === nextProps.connectedExchanges?.[idx])
-  ) ?? true;
-  
   return (
     prevProps.isWebSocketConnected === nextProps.isWebSocketConnected &&
     prevProps.isBackendConnected === nextProps.isBackendConnected &&
     prevProps.onPnLTrackerOpen === nextProps.onPnLTrackerOpen &&
-    prevProps.onCustomizeOpen === nextProps.onCustomizeOpen &&
-    exchangesEqual
+    prevProps.onCustomizeOpen === nextProps.onCustomizeOpen
   );
 });
 
