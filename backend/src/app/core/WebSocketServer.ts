@@ -63,11 +63,7 @@ export class WebSocketServer {
           close: this.handleClose.bind(this),
           drain: this.handleDrain.bind(this),
           ping: this.handlePing.bind(this),
-          pong: this.handlePong.bind(this),
-          maxPayloadLength: 16 * 1024 * 1024, // 16MB
-          idleTimeout: 120, // 2 minutes
-          backpressureLimit: 1024 * 1024, // 1MB
-          perMessageDeflate: true // Enable compression
+          pong: this.handlePong.bind(this)
         }
       });
 
@@ -123,6 +119,7 @@ export class WebSocketServer {
           createdAt: Date.now(),
         },
       });
+      
       if (success) {
         return new Response(null, { status: 101 }); // WebSocket upgrade response
       }
