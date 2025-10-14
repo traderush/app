@@ -90,15 +90,20 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       balanceHistoryLength: balanceHistory.length
     });
 
-    // Calculate today's PnL from today's trades
+    // Calculate today's PnL from today's trades (more accurate calculation)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayTrades = tradeHistory.filter(trade => 
       trade.settledAt && new Date(trade.settledAt) >= today
     );
     const todayPnL = todayTrades.reduce((sum, trade) => {
-      if (trade.result === 'win' && trade.payout) return sum + (trade.payout - trade.amount);
-      if (trade.result === 'loss') return sum - trade.amount;
+      if (trade.result === 'win' && trade.payout) {
+        const profit = trade.payout - trade.amount;
+        return sum + profit;
+      }
+      if (trade.result === 'loss') {
+        return sum - trade.amount;
+      }
       return sum;
     }, 0);
 
@@ -141,9 +146,28 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       }
     }
 
+    // Calculate actual total PnL from all settled trades for accuracy
+    const settledTrades = tradeHistory.filter(trade => trade.result && trade.settledAt);
+    const actualTotalPnL = settledTrades.reduce((sum, trade) => {
+      if (trade.result === 'win' && trade.payout) {
+        return sum + (trade.payout - trade.amount);
+      }
+      if (trade.result === 'loss') {
+        return sum - trade.amount;
+      }
+      return sum;
+    }, 0);
+
+    console.log('📊 Actual total PnL calculation:', {
+      settledTradesCount: settledTrades.length,
+      actualTotalPnL,
+      statsTotalProfit: stats.totalProfit,
+      difference: actualTotalPnL - stats.totalProfit
+    });
+
     setPnlData({
       balance: balance,
-      totalPnL: stats.totalProfit, // Now using stats.totalProfit which is calculated correctly
+      totalPnL: actualTotalPnL, // Use calculated total PnL instead of stats
       todayPnL: todayPnL,
       winRate: stats.winRate,
       totalTrades: stats.totalTrades,
