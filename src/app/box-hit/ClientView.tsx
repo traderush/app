@@ -50,6 +50,46 @@ export default function ClientView() {
   const setTimeframe = (ms: number) => updateGameSettings({ timeframe: ms });
   const setSelectedAsset = (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => updateGameSettings({ selectedAsset: asset });
   
+  // Toggle favorite asset (now uses Zustand store)
+  const toggleFavorite = (asset: 'BTC' | 'ETH' | 'SOL', event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent dropdown from closing
+    toggleFavoriteAsset(asset);
+  };
+  
+  // Helper function to format volume in billions
+  const formatVolumeInBillions = (volume: number): string => {
+    const billions = volume / 1_000_000_000;
+    return `${billions.toFixed(2)}B`;
+  };
+
+  // Asset data with live prices and 24h stats
+  const assetData = {
+    BTC: {
+      name: 'Bitcoin',
+      symbol: 'BTC',
+      icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/fd/f6/d8fdf69a-e716-1018-1740-b344df03476a/AppIcon-0-0-1x_U007epad-0-11-0-sRGB-85-220.png/460x0w.webp',
+      price: 65000, // Static for now
+      change24h: 2.5,
+      volume24h: '45.20B'
+    },
+    ETH: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSs-O63J4u38kjYToo_vgMds4su_KK9BbHD0A&s',
+      price: 3420,
+      change24h: 1.8,
+      volume24h: '25.30B'
+    },
+    SOL: {
+      name: 'Solana',
+      symbol: 'SOL',
+      icon: 'https://static.crypto.com/token/icons/solana/color_icon.png',
+      price: 142.50,
+      change24h: -0.5,
+      volume24h: '8.45B'
+    }
+  };
+  
   // UserStore integration for mock backend PnL tracking
   const addTrade = useUserStore((state) => state.addTrade);
   const settleTrade = useUserStore((state) => state.settleTrade);
@@ -84,6 +124,30 @@ export default function ClientView() {
   const gameBetAmount = useGameStore((state) => state.gameSettings.betAmount);
   const timeframe = useGameStore((state) => state.gameSettings.timeframe);
   const selectedAsset = useGameStore((state) => state.gameSettings.selectedAsset);
+  
+  // UI store for dropdowns and preferences
+  const favoriteAssets = useUIStore((state) => state.favoriteAssets);
+  const isAssetDropdownOpen = useUIStore((state) => state.isAssetDropdownOpen);
+  const toggleFavoriteAsset = useUIStore((state) => state.toggleFavoriteAsset);
+  const setAssetDropdownOpen = useUIStore((state) => state.setAssetDropdownOpen);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.asset-dropdown')) {
+        setAssetDropdownOpen(false);
+      }
+    };
+    
+    if (isAssetDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAssetDropdownOpen, setAssetDropdownOpen]);
   
   // Toast notification state - support up to 5 stacked toasts with animation states
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; timestamp: number; isVisible: boolean; type: 'success' | 'error' | 'info' | 'warning' }>>([]);
@@ -293,36 +357,116 @@ export default function ClientView() {
               {/* Asset Icon */}
               <div className="rounded-lg overflow-hidden" style={{ width: '28px', height: '28px' }}>
                 <img 
-                src="https://framerusercontent.com/images/dWPrOABO15xb2dkrxTZj3Z6cAU.png?width=256&height=256" 
-                alt="Demo Asset" 
+                src={assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].icon} 
+                alt={assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].name} 
                   className="w-full h-full object-cover"
                 />
               </div>
               
-            {/* Asset Name Display with Dropdown */}
-            <div className="flex items-center gap-2">
-                  <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
-                DEMO
-                  </div>
-              {/* Asset Dropdown */}
-              <div className="relative">
-                <select 
-                  value={selectedAsset}
-                  onChange={(e) => setSelectedAsset(e.target.value as 'BTC' | 'ETH' | 'SOL' | 'DEMO')}
-                  className="bg-transparent text-white text-sm border-none outline-none cursor-pointer"
-                  style={{ fontSize: '12px' }}
+            {/* Asset Selector Dropdown */}
+              <div className="relative asset-dropdown">
+                <div 
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
                 >
-                  <option value="DEMO" className="bg-zinc-900 text-white">DEMO</option>
-                  <option value="BTC" className="bg-zinc-900 text-white">BTC</option>
-                  <option value="ETH" className="bg-zinc-900 text-white">ETH</option>
-                  <option value="SOL" className="bg-zinc-900 text-white">SOL</option>
-                </select>
+                  <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
+                  {assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].symbol}
+                  </div>
+                  <svg 
+                    className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
+                
+              {/* Dropdown Menu */}
+              {isAssetDropdownOpen && (
+                  <div 
+                    className="absolute top-full left-0 mt-2 border border-zinc-700/50 rounded-lg shadow-2xl z-50" 
+                    style={{ 
+                      width: '280px',
+                      backgroundColor: 'rgba(14, 14, 14, 0.7)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)'
+                    }}
+                  >
+                    {Object.entries(assetData).map(([key, asset]) => (
+                      <div
+                        key={key}
+                        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
+                          selectedAsset === key ? 'bg-zinc-800/50' : ''
+                        }`}
+                        onClick={() => {
+                          setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL');
+                          setAssetDropdownOpen(false);
+                        }}
+                      >
+                        {/* Star icon for favorites - clickable */}
+                        <button
+                          onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL', e)}
+                          className="flex-shrink-0 p-0.5 hover:bg-zinc-700/50 rounded transition-colors"
+                        >
+                          <svg 
+                            className={`w-3.5 h-3.5 transition-colors ${
+                              favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL') 
+                                ? 'text-yellow-400 fill-current' 
+                                : 'text-zinc-500 fill-none'
+                            }`} 
+                            fill="currentColor" 
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL') ? 0 : 1.5}
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                        </button>
+                        
+                        {/* Asset icon */}
+                        <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
+                          <img 
+                            src={asset.icon} 
+                            alt={asset.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        
+                        {/* Asset info */}
+                        <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium" style={{ fontSize: '14px' }}>
+                            {asset.symbol}
+                          </span>
+                          <span className="text-zinc-400" style={{ fontSize: '12px' }}>
+                            {asset.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-white" style={{ fontSize: '12px' }}>
+                            ${asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          </span>
+                          <span 
+                            className="font-medium" 
+                            style={{ 
+                              fontSize: '11px',
+                              color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                            }}
+                          >
+                            {asset.change24h >= 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
+                          </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
               {/* Current Value */}
                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-              {mockBackendCurrentPrice.toFixed(2)}
+                ${assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               </div>
               
               {/* 24h Change */}
@@ -330,9 +474,9 @@ export default function ClientView() {
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
                 <div className="font-medium leading-none" style={{ 
                   fontSize: '18px',
-                color: TRADING_COLORS.positive
+                  color: assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
                 }}>
-                +2.50%
+                  {assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].change24h >= 0 ? '+' : ''}{assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].change24h.toFixed(2)}%
                 </div>
               </div>
               
@@ -340,7 +484,7 @@ export default function ClientView() {
               <div className="leading-none">
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
                 <div className="text-white leading-none" style={{ fontSize: '18px' }}>
-                45.20B
+                  {assetData[selectedAsset === 'DEMO' ? 'BTC' : selectedAsset].volume24h}
                 </div>
               </div>
             </div>
