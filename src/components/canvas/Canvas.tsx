@@ -755,14 +755,17 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
   // Update GridGame config when showProbabilities, showOtherPlayers or minMultiplier change (live updates without restart)
   useEffect(() => {
-    if (gameRef.current) {
+    if (gameRef.current && isStarted) {
+      console.log('🎮 Canvas: Updating GridGame config:', { showProbabilities, showOtherPlayers, minMultiplier });
       gameRef.current.updateConfig({
         showProbabilities,
         showOtherPlayers,
         minMultiplier
       });
+    } else {
+      console.log('🎮 Canvas: Cannot update config - game not ready:', { hasGame: !!gameRef.current, isStarted });
     }
-  }, [showProbabilities, showOtherPlayers, minMultiplier]);
+  }, [showProbabilities, showOtherPlayers, minMultiplier, isStarted]);
 
   // Initialize canvas game
   useEffect(() => {

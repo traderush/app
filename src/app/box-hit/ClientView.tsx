@@ -1269,7 +1269,6 @@ export default function ClientView() {
               {/* Show Canvas component controlled by Start Trading button */}
                 <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
                   <Canvas 
-                  key={`canvas-${showOtherPlayers}-${showProbabilities}`}
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}
                     onExternalStartChange={setIsCanvasStarted}

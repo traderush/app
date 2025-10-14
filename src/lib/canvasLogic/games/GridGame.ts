@@ -2028,7 +2028,9 @@ export class GridGame extends BaseGame {
    * @param newConfig - Partial configuration to merge with existing config
    */
   public updateConfig(newConfig: Partial<GridGameConfig>): void {
+    console.log('🎯 GridGame: updateConfig called with:', newConfig);
     this.config = { ...this.config, ...newConfig };
+    console.log('🎯 GridGame: Updated config showOtherPlayers:', this.config.showOtherPlayers);
   }
 
   public setOtherPlayerData(
