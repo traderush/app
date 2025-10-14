@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 /** centralized trading colors */
 const TRADING_COLORS = {
   positive: '#2fe3ac',  // Green for positive values (gains, up movements)
   negative: '#ec397a',  // Red for negative values (losses, down movements)
 } as const;
+
+// Client-side only memory display component to prevent hydration mismatch
+const MemoryDisplay: React.FC = () => {
+  const [memoryUsage, setMemoryUsage] = useState<string>('Loading...');
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    
+    const updateMemoryUsage = () => {
+      if (typeof performance !== 'undefined' && (performance as any).memory) {
+        const used = Math.round((performance as any).memory.usedJSHeapSize / 1048576);
+        setMemoryUsage(`${used}MB`);
+      } else {
+        setMemoryUsage('N/A');
+      }
+    };
+
+    updateMemoryUsage();
+    const interval = setInterval(updateMemoryUsage, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span>{isClient ? memoryUsage : 'Loading...'}</span>;
+};
 
 interface FooterProps {
   onPnLTrackerOpen: () => void;
@@ -147,9 +173,7 @@ const Footer = React.memo(function Footer({
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Memory:</span>
                         <span className="text-zinc-300">
-                          {typeof performance !== 'undefined' && (performance as any).memory 
-                            ? `${Math.round((performance as any).memory.usedJSHeapSize / 1048576)}MB`
-                            : 'N/A'}
+                          <MemoryDisplay />
                         </span>
                       </div>
                     </div>
