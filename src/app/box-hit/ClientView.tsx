@@ -1225,6 +1225,14 @@ export default function ClientView() {
                   </span>
                 </div>
 
+                {/* Test Notification Button */}
+                <button
+                  onClick={() => showToast('🧪 Test notification - everything is working!', 'success')}
+                  className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                >
+                  Test Toast
+                </button>
+
                 {/* Timeframe Selector */}
                 <div className="flex items-center gap-1">
                   {[
