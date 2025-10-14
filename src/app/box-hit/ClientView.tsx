@@ -280,26 +280,31 @@ export default function ClientView() {
   
   // Show default welcome notification on component mount
   useEffect(() => {
-    const welcomeToast = {
-      id: Date.now(),
-      message: '🚀 Welcome to TradeRush! Start trading to see live updates.',
-      timestamp: Date.now(),
-      isVisible: true
-    };
-    
-    setToasts([welcomeToast]);
-    
-    // Auto-hide after 4 seconds
-    setTimeout(() => {
-      setToasts(prev => prev.map(toast => 
-        toast.id === welcomeToast.id ? { ...toast, isVisible: false } : toast
-      ));
+    // Add a small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      const welcomeToast = {
+        id: Date.now(),
+        message: '🚀 Welcome to TradeRush! Start trading to see live updates.',
+        timestamp: Date.now(),
+        isVisible: true
+      };
       
-      // Remove completely after fade out
+      setToasts(prev => [...prev, welcomeToast]);
+      
+      // Auto-hide after 4 seconds
       setTimeout(() => {
-        setToasts(prev => prev.filter(toast => toast.id !== welcomeToast.id));
-      }, 300);
-    }, 4000);
+        setToasts(prev => prev.map(toast => 
+          toast.id === welcomeToast.id ? { ...toast, isVisible: false } : toast
+        ));
+        
+        // Remove completely after fade out
+        setTimeout(() => {
+          setToasts(prev => prev.filter(toast => toast.id !== welcomeToast.id));
+        }, 300);
+      }, 4000);
+    }, 500); // 500ms delay to ensure component is mounted
+    
+    return () => clearTimeout(timer);
   }, []);
   
   /**
@@ -778,7 +783,8 @@ export default function ClientView() {
     setAveragePositionPrice(averagePrice ?? null);
     
     // Only show toast when count actually increases (new box selected by user)
-    if (count > previousCountRef.current && count > 0) {
+    // Skip notification if this is the initial load (previousCountRef is 0 and count is 0)
+    if (count > previousCountRef.current && count > 0 && previousCountRef.current > 0) {
       const newToastId = Date.now(); // Use timestamp as unique ID
       const newToast = {
         id: newToastId,

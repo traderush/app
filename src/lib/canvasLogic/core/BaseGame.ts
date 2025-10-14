@@ -82,7 +82,7 @@ export abstract class BaseGame extends EventEmitter {
           if (mutation.type === 'childList') {
             mutation.removedNodes.forEach((node) => {
               if (node === this.canvas) {
-                console.error('CANVAS WAS REMOVED FROM DOM!', new Error().stack);
+                console.warn('Canvas was removed from DOM during component lifecycle - this is normal in React development mode');
               }
             });
           }
