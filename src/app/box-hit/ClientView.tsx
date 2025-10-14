@@ -124,20 +124,18 @@ export default function ClientView() {
   const [selectedMultipliers, setSelectedMultipliers] = useState<number[]>([]); // Array of multipliers for selected boxes
   const [averagePositionPrice, setAveragePositionPrice] = useState<number | null>(null);
   
-  // Use Zustand store for game settings - subscribe to individual values
-  const minMultiplier = useGameStore((state) => state.gameSettings.minMultiplier);
-  const showOtherPlayers = useGameStore((state) => state.gameSettings.showOtherPlayers);
-  const zoomLevel = useGameStore((state) => state.gameSettings.zoomLevel);
-  const showProbabilities = useGameStore((state) => state.gameSettings.showProbabilities);
-  const gameBetAmount = useGameStore((state) => state.gameSettings.betAmount);
-  const timeframe = useGameStore((state) => state.gameSettings.timeframe);
-  const selectedAsset = useGameStore((state) => state.gameSettings.selectedAsset);
+  // Use Zustand store for game settings - single subscription for better performance
+  const gameSettings = useGameStore((state) => state.gameSettings);
+  const { minMultiplier, showOtherPlayers, zoomLevel, showProbabilities, betAmount: gameBetAmount, timeframe, selectedAsset } = gameSettings;
   
-  // UI store for dropdowns and preferences
-  const favoriteAssets = useUIStore((state) => state.favoriteAssets);
-  const isAssetDropdownOpen = useUIStore((state) => state.isAssetDropdownOpen);
-  const toggleFavoriteAsset = useUIStore((state) => state.toggleFavoriteAsset);
-  const setAssetDropdownOpen = useUIStore((state) => state.setAssetDropdownOpen);
+  // UI store for dropdowns and preferences - single subscription for better performance
+  const uiState = useUIStore((state) => ({
+    favoriteAssets: state.favoriteAssets,
+    isAssetDropdownOpen: state.isAssetDropdownOpen,
+    toggleFavoriteAsset: state.toggleFavoriteAsset,
+    setAssetDropdownOpen: state.setAssetDropdownOpen
+  }));
+  const { favoriteAssets, isAssetDropdownOpen, toggleFavoriteAsset, setAssetDropdownOpen } = uiState;
   
   // Close dropdown when clicking outside
   useEffect(() => {

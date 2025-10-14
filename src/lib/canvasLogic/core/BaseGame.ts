@@ -26,6 +26,9 @@ export abstract class BaseGame extends EventEmitter {
   protected animationId: number | null = null;
   protected lastFrameTime: number = 0;
   protected targetFPS: number = 60;
+  protected frameSkipCounter: number = 0;
+  protected frameSkipThreshold: number = 2; // Render every 2nd frame for complex scenes
+  protected isComplexScene: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
 
   protected theme: Theme;
@@ -225,13 +228,48 @@ export abstract class BaseGame extends EventEmitter {
 
     if (!this.state.isPaused) {
       this.update(deltaTime);
-      this.render();
+      
+      // Implement frame skipping for complex scenes
+      this.frameSkipCounter++;
+      const shouldRender = !this.isComplexScene || (this.frameSkipCounter % this.frameSkipThreshold === 0);
+      
+      if (shouldRender) {
+        this.render();
+      }
+      
+      // Reset frame skip counter periodically to prevent overflow
+      if (this.frameSkipCounter >= 1000) {
+        this.frameSkipCounter = 0;
+      }
     }
   }
 
   protected clearCanvas(): void {
     this.ctx.fillStyle = this.theme.colors.background;
     this.ctx.fillRect(0, 0, this.width, this.height);
+  }
+
+  // Performance optimization methods
+  public setComplexScene(isComplex: boolean): void {
+    this.isComplexScene = isComplex;
+  }
+
+  public setFrameSkipThreshold(threshold: number): void {
+    this.frameSkipThreshold = Math.max(1, threshold);
+  }
+
+  public getPerformanceMetrics(): { 
+    frameSkipCounter: number; 
+    frameSkipThreshold: number; 
+    isComplexScene: boolean;
+    targetFPS: number;
+  } {
+    return {
+      frameSkipCounter: this.frameSkipCounter,
+      frameSkipThreshold: this.frameSkipThreshold,
+      isComplexScene: this.isComplexScene,
+      targetFPS: this.targetFPS
+    };
   }
 
   public setTheme(theme: Theme): void {
