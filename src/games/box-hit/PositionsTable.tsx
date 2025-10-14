@@ -96,7 +96,7 @@ const PositionsTable = React.memo(function PositionsTable({
           }`}
           style={{ fontSize: '14px', fontWeight: '500' }}
         >
-          Positions
+          Positions ({activePositions.length})
           {activeTab === 'positions' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-100"></div>
           )}
@@ -110,7 +110,7 @@ const PositionsTable = React.memo(function PositionsTable({
           }`}
           style={{ fontSize: '14px', fontWeight: '500' }}
         >
-          Position History
+          Position History ({historyPositions.length})
           {activeTab === 'history' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-100"></div>
           )}
@@ -130,7 +130,6 @@ const PositionsTable = React.memo(function PositionsTable({
                   boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
                 }}>
                   <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>#</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
@@ -143,14 +142,13 @@ const PositionsTable = React.memo(function PositionsTable({
             <tbody className="text-zinc-200" style={{ fontSize: '12px', fontWeight: '400' }}>
               {activePositions.length === 0 ? (
                 <tr>
-                    <td colSpan={8} className="text-center py-8 text-zinc-500">
+                  <td colSpan={7} className="text-center py-8 text-zinc-500">
                     No active positions. Select boxes to start trading.
                   </td>
                 </tr>
               ) : (
                   activePositions.map((position, i) => (
                     <tr key={position.id} className="[&>td]:py-2 [&>td]:px-3 border-t border-zinc-800/70" style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}>
-                      <td className="text-zinc-400">{i + 1}</td>
                       <td>{position.time}</td>
                       <td>${position.size.toFixed(2)}</td>
                       <td className="font-medium" style={{ color: signatureColor }}>{position.multiplier.toFixed(1)}x</td>
@@ -189,7 +187,6 @@ const PositionsTable = React.memo(function PositionsTable({
                   boxShadow: '0 1px 0 0 rgb(39 39 42), 0 -1px 0 0 rgb(39 39 42)'
                 }}>
                   <tr className="[&>th]:py-1 [&>th]:px-3 text-left [&>th]:border-t [&>th]:border-b [&>th]:border-zinc-800">
-                  <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>#</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
@@ -201,49 +198,48 @@ const PositionsTable = React.memo(function PositionsTable({
                   </tr>
                 </thead>
                         <tbody className="text-zinc-200" style={{ fontSize: '12px', fontWeight: '400' }}>
-                {historyPositions.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="text-center py-8 text-zinc-500">
-                      No completed trades yet.
-                    </td>
-                  </tr>
-                ) : (
+              {historyPositions.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-zinc-500">
+                    No completed trades yet.
+                  </td>
+                </tr>
+              ) : (
                   historyPositions.map((position, i) => (
                     <tr key={position.id} className="[&>td]:py-2 [&>td]:px-3 border-t border-zinc-800/70" style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}>
-                      <td className="text-zinc-400">{i + 1}</td>
                       <td>{position.time}</td>
                       <td>${position.size.toFixed(2)}</td>
                       <td className="font-medium" style={{ color: signatureColor }}>{position.multiplier.toFixed(1)}x</td>
                       <td style={{ color: position.equity === '$0.00' ? TRADING_COLORS.negative : TRADING_COLORS.positive }}>{position.equity}</td>
                       <td style={{ color: parseFloat(position.hit) >= 50 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>{position.hit}</td>
-                      <td>
-                        <div className="h-4 w-24 relative">
-                          <div 
-                            className="h-4" 
-                            style={{ 
+                    <td>
+                      <div className="h-4 w-24 relative">
+                        <div 
+                          className="h-4" 
+                          style={{ 
                               width: position.prog,
-                              background: `linear-gradient(to right, rgba(250, 86, 22, 0) 0%, rgba(250, 86, 22, 1) 100%)`
-                            }} 
-                          />
-                          <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-xs text-white font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>
+                            background: `linear-gradient(to right, rgba(250, 86, 22, 0) 0%, rgba(250, 86, 22, 1) 100%)`
+                        }} 
+                        />
+                        <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-xs text-white font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>
                             {position.prog}
-                          </span>
-                        </div>
-                      </td>
+                        </span>
+                      </div>
+                    </td>
                       <td>{position.entry}</td>
-                      <td>
-                        <span className="px-2 py-1 rounded text-xs font-normal" style={{ 
-                          fontSize: '12px', 
-                          fontWeight: '400',
+                    <td>
+                      <span className="px-2 py-1 rounded text-xs font-normal" style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '400',
                           backgroundColor: position.result === 'Won' ? `${TRADING_COLORS.positive}20` : `${TRADING_COLORS.negative}20`,
                           color: position.result === 'Won' ? TRADING_COLORS.positive : TRADING_COLORS.negative
-                        }}>
+                      }}>
                           {position.result}
-                        </span>
-                      </td>
-                    </tr>
+                      </span>
+                    </td>
+                  </tr>
                   ))
-                )}
+              )}
             </tbody>
             </table>
             </div>
