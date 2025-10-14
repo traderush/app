@@ -405,10 +405,10 @@ export default function ClientView() {
                     {Object.entries(assetData).map(([key, asset]) => (
                       <div
                         key={key}
-                      className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
-                        key === 'DEMO' 
-                          ? `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
-                          : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''} opacity-50`
+                        className={`flex items-center gap-4 px-4 py-3 transition-colors ${
+                          key === 'DEMO' 
+                            ? `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''}`
+                            : `cursor-pointer hover:bg-zinc-800/50 ${selectedAsset === key ? 'bg-zinc-800/50' : ''} opacity-50`
                         }`}
                         onClick={() => {
                         if (key === 'DEMO') {
@@ -424,26 +424,26 @@ export default function ClientView() {
                       >
                         {/* Star icon for favorites - clickable */}
                         <button
-                        onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO', e)}
-                        className="flex-shrink-0 p-0.5 rounded transition-colors cursor-pointer hover:bg-zinc-700/50"
+                          onClick={(e) => toggleFavorite(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO', e)}
+                          className="flex-shrink-0 p-1 rounded transition-colors cursor-pointer hover:bg-zinc-700/50"
                         >
                           <svg 
-                            className={`w-3.5 h-3.5 transition-colors ${
-                            favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') 
+                            className={`w-4 h-4 transition-colors ${
+                              favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') 
                                 ? 'text-yellow-400 fill-current' 
                                 : 'text-zinc-500 fill-none'
                             }`} 
                             fill="currentColor" 
                             viewBox="0 0 24 24"
                             stroke="currentColor"
-                          strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') ? 0 : 1.5}
+                            strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') ? 0 : 1.5}
                           >
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                           </svg>
                         </button>
                         
                         {/* Asset icon */}
-                        <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
+                        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
                           <img 
                             src={asset.icon} 
                             alt={asset.name} 
@@ -453,13 +453,13 @@ export default function ClientView() {
                         
                         {/* Asset info */}
                         <div className="flex-1 min-w-0">
-                          <div className="text-white text-xs font-medium">{asset.symbol}</div>
-                          <div className="text-zinc-400" style={{ fontSize: '11px' }}>{asset.name}</div>
+                          <div className="text-white text-sm font-medium">{asset.symbol}</div>
+                          <div className="text-zinc-400" style={{ fontSize: '12px' }}>{asset.name}</div>
                         </div>
                         
                         {/* Price and change */}
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-white text-xs font-medium">
+                        <div className="text-right flex-shrink-0 mr-3">
+                          <div className="text-white text-sm font-medium">
                             {asset.price 
                               ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                               : <span className="text-zinc-500">--</span>
@@ -468,7 +468,7 @@ export default function ClientView() {
                           <div 
                             style={{ 
                               color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative,
-                              fontSize: '11px',
+                              fontSize: '12px',
                               fontWeight: 500
                             }}
                           >
@@ -480,7 +480,7 @@ export default function ClientView() {
                         </div>
                         
                         {/* Volume text */}
-                        <div className="text-zinc-400 flex-shrink-0" style={{ fontSize: '11px' }}>
+                        <div className="text-zinc-400 flex-shrink-0" style={{ fontSize: '12px' }}>
                           Vol: {asset.volume24h}
                         </div>
                       </div>
