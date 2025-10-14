@@ -48,6 +48,7 @@ export default function ClientView() {
   const setShowOtherPlayers = (show: boolean) => updateGameSettings({ showOtherPlayers: show });
   const setMinMultiplier = (mult: number) => updateGameSettings({ minMultiplier: mult });
   const setTimeframe = (ms: number) => updateGameSettings({ timeframe: ms });
+  const setSelectedAsset = (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => updateGameSettings({ selectedAsset: asset });
   
   // UserStore integration for mock backend PnL tracking
   const addTrade = useUserStore((state) => state.addTrade);
@@ -82,6 +83,7 @@ export default function ClientView() {
   const showProbabilities = useGameStore((state) => state.gameSettings.showProbabilities);
   const gameBetAmount = useGameStore((state) => state.gameSettings.betAmount);
   const timeframe = useGameStore((state) => state.gameSettings.timeframe);
+  const selectedAsset = useGameStore((state) => state.gameSettings.selectedAsset);
   
   // Toast notification state - support up to 5 stacked toasts with animation states
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; timestamp: number; isVisible: boolean; type: 'success' | 'error' | 'info' | 'warning' }>>([]);
@@ -297,11 +299,25 @@ export default function ClientView() {
                 />
               </div>
               
-            {/* Asset Name Display */}
+            {/* Asset Name Display with Dropdown */}
             <div className="flex items-center gap-2">
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
                 DEMO
                   </div>
+              {/* Asset Dropdown */}
+              <div className="relative">
+                <select 
+                  value={selectedAsset}
+                  onChange={(e) => setSelectedAsset(e.target.value as 'BTC' | 'ETH' | 'SOL' | 'DEMO')}
+                  className="bg-transparent text-white text-sm border-none outline-none cursor-pointer"
+                  style={{ fontSize: '12px' }}
+                >
+                  <option value="DEMO" className="bg-zinc-900 text-white">DEMO</option>
+                  <option value="BTC" className="bg-zinc-900 text-white">BTC</option>
+                  <option value="ETH" className="bg-zinc-900 text-white">ETH</option>
+                  <option value="SOL" className="bg-zinc-900 text-white">SOL</option>
+                </select>
+                </div>
               </div>
               
               {/* Current Value */}
@@ -360,7 +376,7 @@ export default function ClientView() {
                   className="text-zinc-400 cursor-pointer select-none"
                   style={{ fontSize: '12px' }}
                 >
-                Probabilities
+                  Heatmap
                 </label>
               </div>
 
