@@ -16,17 +16,15 @@ const LazyWatchlistPopup = React.lazy(() => import('./WatchlistPopup'));
 const LazyPlayerTrackerPopup = React.lazy(() => import('./PlayerTrackerPopup'));
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import CustomSlider from '@/components/CustomSlider';
-import { useUIStore, usePlayerStore, useModal, useConnectionStore } from '@/stores';
+import { useUIStore, usePlayerStore, useModal } from '@/stores';
 
 const AppShellContent = React.memo(function AppShellContent({ children }: { children: React.ReactNode }) {
   // Get signature color from UI store
   const signatureColor = useUIStore((state) => state.signatureColor);
   
-  // Get connection status values (only subscribe to what we need)
-  // DO NOT subscribe to prices here - they update every 500ms causing app-wide re-renders
-  const isWebSocketConnected = useConnectionStore((state) => state.isWebSocketConnected);
-  const connectedExchanges = useConnectionStore((state) => state.connectedExchanges);
-  const isBackendConnected = useConnectionStore((state) => state.isBackendConnected);
+  // Static connection status for demo purposes
+  const isWebSocketConnected = true; // Demo mode - always connected
+  const isBackendConnected = true; // Demo mode - always connected
   
   // UI store - subscribe to specific values only
   const layout = useUIStore((state) => state.layout);
@@ -164,7 +162,6 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
         onCustomizeOpen={handleCustomizeOpen}
         customizeButtonRef={customizeButtonRef}
         isWebSocketConnected={isWebSocketConnected}
-        connectedExchanges={connectedExchanges}
         isBackendConnected={isBackendConnected}
       />
       

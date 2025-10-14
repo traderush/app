@@ -9,7 +9,7 @@ export const logBundleInfo = () => {
       'AppShell',
       'SidebarRail', 
       'ClientView',
-      'BoxHitCanvas',
+      'Canvas',
       'SoundManager',
       'CanvasRenderer',
       'GridSystem'

@@ -1,5 +1,4 @@
 import React from 'react';
-import { useConnectionStore } from '@/stores';
 
 /** centralized trading colors */
 const TRADING_COLORS = {
