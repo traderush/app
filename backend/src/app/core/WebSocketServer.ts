@@ -41,8 +41,8 @@ export class WebSocketServer {
     this.config = {
       host: 'localhost',
       maxConnections: 10000,
-      heartbeatInterval: 30000, // 30 seconds
-      connectionTimeout: 300000, // 5 minutes (was too aggressive at 60 seconds)
+      heartbeatInterval: 15000, // 15 seconds (more frequent to detect disconnections faster)
+      connectionTimeout: 600000, // 10 minutes (longer timeout for stability)
       ...config
     };
     this.connectionManager = connectionManager;
@@ -58,9 +58,29 @@ export class WebSocketServer {
         fetch: this.handleHttpRequest.bind(this),
         
         websocket: {
-          message: this.handleMessage.bind(this),
-          open: this.handleOpen.bind(this),
-          close: this.handleClose.bind(this),
+          message: async (ws: any, message: string | Buffer) => {
+            try {
+              await this.handleMessage(ws, message);
+            } catch (error) {
+              console.error('Error in message handler:', error);
+              // Don't close connection on message errors, just log them
+            }
+          },
+          open: async (ws: any) => {
+            try {
+              await this.handleOpen(ws);
+            } catch (error) {
+              console.error('Error in open handler:', error);
+              ws.close(1011, 'Internal server error');
+            }
+          },
+          close: async (ws: any, code: number, reason: string) => {
+            try {
+              await this.handleClose(ws, code, reason);
+            } catch (error) {
+              console.error('Error in close handler:', error);
+            }
+          },
           drain: this.handleDrain.bind(this),
           ping: this.handlePing.bind(this),
           pong: this.handlePong.bind(this)
