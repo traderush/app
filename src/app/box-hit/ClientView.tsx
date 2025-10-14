@@ -480,8 +480,9 @@ export default function ClientView() {
                         </div>
                         
                         {/* Volume text */}
-                        <div className="text-zinc-400 flex-shrink-0" style={{ fontSize: '11px' }}>
-                          Vol: {asset.volume24h}
+                        <div className="text-zinc-400 flex-shrink-0 text-right" style={{ fontSize: '11px' }}>
+                          <div>Vol:</div>
+                          <div>{asset.volume24h}</div>
                         </div>
                       </div>
                     ))}
