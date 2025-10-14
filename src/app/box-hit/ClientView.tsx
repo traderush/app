@@ -287,136 +287,132 @@ export default function ClientView() {
       <div className="relative flex h-full w-full flex-col items-center justify-center bg-zinc-950 text-white">
         {/* Top Bar */}
         <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6">
-            {/* Left side: Asset info */}
-            <div className="flex items-center gap-4">
-              {/* Asset Icon */}
-              <div className="rounded-lg overflow-hidden" style={{ width: '28px', height: '28px' }}>
-                <img 
+          {/* Left side: Asset info */}
+          <div className="flex items-center gap-4">
+            {/* Asset Icon */}
+            <div className="rounded-lg overflow-hidden" style={{ width: '28px', height: '28px' }}>
+              <img 
                 src="https://framerusercontent.com/images/dWPrOABO15xb2dkrxTZj3Z6cAU.png?width=256&height=256" 
                 alt="Demo Asset" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              
-            {/* Asset Name Display */}
-            <div>
-              <div className="flex items-center gap-2">
-                  <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
-                  DEMO
-                  </div>
-                </div>
-              </div>
-              
-              {/* Current Value */}
-              <div className="flex items-center gap-2">
-                <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                {mockBackendCurrentPrice.toFixed(2)}
-                </div>
-              </div>
-              
-              {/* 24h Change */}
-              <div className="leading-none">
-                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
-                <div className="font-medium leading-none" style={{ 
-                  fontSize: '18px',
-                color: TRADING_COLORS.positive
-                }}>
-                +2.50%
-                </div>
-              </div>
-              
-              {/* 24h Volume */}
-              <div className="leading-none">
-                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
-                <div className="text-white leading-none" style={{ fontSize: '18px' }}>
-                45.20B
-                </div>
-              </div>
+                className="w-full h-full object-cover"
+              />
             </div>
             
-            {/* Right side: Probabilities, User icon and Multiplier filter */}
-            <div className="flex items-center gap-6">
-              {/* Probabilities Checkbox - Toggle for Heatmap Overlay */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="showProbabilities"
-                  checked={showProbabilities}
+            {/* Asset Name Display */}
+            <div className="flex items-center gap-2">
+              <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
+                DEMO
+              </div>
+            </div>
+              
+            {/* Current Value */}
+            <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
+              {mockBackendCurrentPrice.toFixed(2)}
+            </div>
+              
+            {/* 24h Change */}
+            <div className="leading-none">
+              <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
+              <div className="font-medium leading-none" style={{ 
+                fontSize: '18px',
+                color: TRADING_COLORS.positive
+              }}>
+                +2.50%
+              </div>
+            </div>
+              
+            {/* 24h Volume */}
+            <div className="leading-none">
+              <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
+              <div className="text-white leading-none" style={{ fontSize: '18px' }}>
+                45.20B
+              </div>
+            </div>
+          </div>
+          
+          {/* Right side: Probabilities, User icon and Multiplier filter */}
+          <div className="flex items-center gap-6">
+            {/* Probabilities Checkbox - Toggle for Heatmap Overlay */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="showProbabilities"
+                checked={showProbabilities}
                 onChange={(e) => {
                   console.log('🔥 Show Probabilities toggled:', e.target.checked);
                   setShowProbabilities(e.target.checked);
                 }}
-                  className="w-3 h-3 rounded cursor-pointer"
-                  style={{
-                    borderColor: showProbabilities ? '#0F0F0F' : 'transparent',
-                    backgroundColor: showProbabilities ? signatureColor : 'transparent',
-                    borderRadius: '4px',
-                    borderWidth: '1px',
-                    padding: '0px',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    outline: showProbabilities ? `1px solid ${signatureColor}` : `1px solid #52525B`,
-                    outlineOffset: '1px'
-                  }}
-                />
-                <label 
-                  htmlFor="showProbabilities" 
-                  className="text-zinc-400 cursor-pointer select-none"
-                  style={{ fontSize: '12px' }}
-                >
+                className="w-3 h-3 rounded cursor-pointer"
+                style={{
+                  borderColor: showProbabilities ? '#0F0F0F' : 'transparent',
+                  backgroundColor: showProbabilities ? signatureColor : 'transparent',
+                  borderRadius: '4px',
+                  borderWidth: '1px',
+                  padding: '0px',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  outline: showProbabilities ? `1px solid ${signatureColor}` : `1px solid #52525B`,
+                  outlineOffset: '1px'
+                }}
+              />
+              <label 
+                htmlFor="showProbabilities" 
+                className="text-zinc-400 cursor-pointer select-none"
+                style={{ fontSize: '12px' }}
+              >
                 Probabilities
-                </label>
-              </div>
+              </label>
+            </div>
 
-              {/* Other Players Checkbox - Toggle for Other Players */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="showOtherPlayers"
-                  checked={showOtherPlayers}
+            {/* Other Players Checkbox - Toggle for Other Players */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="showOtherPlayers"
+                checked={showOtherPlayers}
                 onChange={(e) => {
                   console.log('🔧 Show Other Players toggled:', e.target.checked);
                   setShowOtherPlayers(e.target.checked);
                 }}
-                  className="w-3 h-3 rounded cursor-pointer"
-                  style={{
-                    borderColor: showOtherPlayers ? '#0F0F0F' : 'transparent',
-                    backgroundColor: showOtherPlayers ? signatureColor : 'transparent',
-                    borderRadius: '4px',
-                    borderWidth: '1px',
-                    padding: '0px',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    outline: showOtherPlayers ? `1px solid ${signatureColor}` : `1px solid #52525B`,
-                    outlineOffset: '1px'
-                  }}
-                />
-                <label 
-                  htmlFor="showOtherPlayers" 
-                  className="text-zinc-400 cursor-pointer select-none"
-                  style={{ fontSize: '12px' }}
-                >
-                  Show Players
-                </label>
-              </div>
-              
+                className="w-3 h-3 rounded cursor-pointer"
+                style={{
+                  borderColor: showOtherPlayers ? '#0F0F0F' : 'transparent',
+                  backgroundColor: showOtherPlayers ? signatureColor : 'transparent',
+                  borderRadius: '4px',
+                  borderWidth: '1px',
+                  padding: '0px',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  outline: showOtherPlayers ? `1px solid ${signatureColor}` : `1px solid #52525B`,
+                  outlineOffset: '1px'
+                }}
+              />
+              <label 
+                htmlFor="showOtherPlayers" 
+                className="text-zinc-400 cursor-pointer select-none"
+                style={{ fontSize: '12px' }}
+              >
+                Show Players
+              </label>
+            </div>
+            
             {/* Multiplier Filter Slider */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-zinc-400">Min Multiplier:</span>
-                    <CustomSlider
-                      min={1.0}
-                      max={15.0}
-                      step={0.1}
-                      value={minMultiplier}
-                      onChange={setMinMultiplier}
+              <CustomSlider
+                min={1.0}
+                max={15.0}
+                step={0.1}
+                value={minMultiplier}
+                onChange={setMinMultiplier}
                 className="w-24"
-                    />
+              />
               <span className="text-sm font-medium text-white">{minMultiplier.toFixed(1)}x</span>
-                  </div>
             </div>
           </div>
+        </div>
           
         {/* Main Content Area */}
         <div className="relative flex h-full w-full flex-grow">
