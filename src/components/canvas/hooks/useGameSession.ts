@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUserStore } from '@/stores/userStore';
+import { playHitSound } from '@/lib/sound/SoundManager';
 
 interface UseGameSessionProps {
   gameMode: 'box_hit' | 'towers';
@@ -250,6 +251,9 @@ export function useGameSession({
         
         // Settle the trade in userStore (this will update stats and PnL)
         settleTrade(originalTradeId, won ? 'win' : 'loss', payout);
+        
+        // Play hit sound for trade result
+        playHitSound();
         
         console.log('✅ Trade settled in userStore:', {
           originalTradeId,

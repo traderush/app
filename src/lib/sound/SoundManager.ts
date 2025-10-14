@@ -1,3 +1,5 @@
+import { useUIStore } from '@/stores/uiStore';
+
 // Global audio context management
 let globalAudioContext: AudioContext | null = null;
 
@@ -44,16 +46,15 @@ const createSound = async (frequency: number, duration: number, type: Oscillator
   }
 };
 
-// Global sound state
-let soundEnabled = true;
-
 // Sound effect functions
 export const playSelectionSound = async () => {
+  const soundEnabled = useUIStore.getState().settings.soundEnabled;
   if (!soundEnabled) return;
   await createSound(800, 0.1, 'sine', 0.15);
 };
 
 export const playHitSound = async () => {
+  const soundEnabled = useUIStore.getState().settings.soundEnabled;
   if (!soundEnabled) return;
   await createSound(600, 0.15, 'sine', 0.2);
   setTimeout(async () => await createSound(800, 0.2, 'sine', 0.15), 50);
@@ -61,13 +62,15 @@ export const playHitSound = async () => {
 
 // Sound toggle function
 export const toggleSound = () => {
-  soundEnabled = !soundEnabled;
-  console.log('Sound toggled:', soundEnabled ? 'ON' : 'OFF');
+  const currentState = useUIStore.getState();
+  currentState.toggleSound();
+  const newState = useUIStore.getState().settings.soundEnabled;
+  console.log('Sound toggled:', newState ? 'ON' : 'OFF');
 };
 
 // Get sound enabled state
 export const getSoundEnabled = () => {
-  return soundEnabled;
+  return useUIStore.getState().settings.soundEnabled;
 };
 
 // Initialize global sound functions on client side

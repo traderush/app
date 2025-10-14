@@ -6,6 +6,7 @@ import {
   SquareRenderer,
   SquareRenderOptions,
 } from '../rendering/SquareRenderer';
+import { playSelectionSound } from '@/lib/sound/SoundManager';
 
 export interface PriceData {
   price: number;
@@ -336,6 +337,8 @@ export class GridGame extends BaseGame {
               startTime: performance.now(),
               progress: 0,
             });
+            // Play selection sound
+            playSelectionSound();
             this.emit('squareSelected', { squareId: clickedSquareId });
           } else if (!this.selectedSquareIds.has(clickedSquareId)) {
             // First click - highlight the square (clear any other highlights)
