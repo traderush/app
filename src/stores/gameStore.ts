@@ -124,7 +124,7 @@ const initialGameSettings: GameSettings = {
   isTradingMode: false,
   zoomLevel: 1.0,
   showProbabilities: false,
-  selectedAsset: 'BTC',
+  selectedAsset: 'DEMO',
   timeframe: 2000, // Default 2s timeframe
 };
 

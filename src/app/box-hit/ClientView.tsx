@@ -490,8 +490,8 @@ export default function ClientView() {
               </div>
               
               {/* Current Value */}
-                <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                ${assetData[selectedAsset].price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
+                ${(selectedAsset === 'DEMO' ? mockBackendCurrentPrice : assetData[selectedAsset].price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               </div>
               
               {/* 24h Change */}
@@ -499,9 +499,9 @@ export default function ClientView() {
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
                 <div className="font-medium leading-none" style={{ 
                   fontSize: '18px',
-                  color: assetData[selectedAsset].change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                  color: (selectedAsset === 'DEMO' ? 2.5 : assetData[selectedAsset].change24h) >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
                 }}>
-                  {assetData[selectedAsset].change24h >= 0 ? '+' : ''}{assetData[selectedAsset].change24h.toFixed(2)}%
+                  {(selectedAsset === 'DEMO' ? 2.5 : assetData[selectedAsset].change24h) >= 0 ? '+' : ''}{(selectedAsset === 'DEMO' ? 2.5 : assetData[selectedAsset].change24h).toFixed(2)}%
                 </div>
               </div>
               
@@ -509,7 +509,7 @@ export default function ClientView() {
               <div className="leading-none">
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
                 <div className="text-white leading-none" style={{ fontSize: '18px' }}>
-                  {assetData[selectedAsset].volume24h}
+                  {selectedAsset === 'DEMO' ? '45.20B' : assetData[selectedAsset].volume24h}
                 </div>
               </div>
             </div>
