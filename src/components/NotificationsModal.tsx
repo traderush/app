@@ -93,8 +93,11 @@ export default function NotificationsPopup({ isOpen, onClose, triggerRef }: Noti
             <h3 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Notifications</h3>
           <div className="flex items-center gap-2">
             <button
-              className="text-xs font-medium text-zinc-400 hover:opacity-90 active:opacity-80 disabled:opacity-50 disabled:pointer-events-none transition-opacity"
-              disabled={true}
+              className="text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:opacity-90 active:opacity-80 transition-colors"
+              onClick={() => {
+                // Demo: Clear all notifications
+                console.log('Clear all notifications clicked');
+              }}
             >
               Clear All
             </button>
@@ -110,9 +113,35 @@ export default function NotificationsPopup({ isOpen, onClose, triggerRef }: Noti
         
         {/* Content */}
         <div className="max-h-96 overflow-auto">
-          {/* Empty state */}
-          <div className="p-6 text-center">
-            <div className="text-zinc-400" style={{fontSize: '12px'}}>No notifications</div>
+          {/* Demo notification */}
+          <div className="p-3 border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors">
+            <div className="flex items-start gap-3">
+              {/* Notification icon */}
+              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+              
+              {/* Notification content */}
+              <div className="flex-1 min-w-0">
+                <div className="text-zinc-100 text-sm font-medium mb-1">
+                  Trade Executed Successfully
+                </div>
+                <div className="text-zinc-400 text-xs leading-relaxed">
+                  Your trade for 2.5x multiplier has been executed. Profit: +$150.00
+                </div>
+                <div className="text-zinc-500 text-xs mt-1">
+                  2 minutes ago
+                </div>
+              </div>
+              
+              {/* Close button */}
+              <button 
+                className="w-5 h-5 rounded hover:bg-zinc-800/50 flex items-center justify-center transition-colors flex-shrink-0"
+                aria-label="Dismiss notification"
+              >
+                <X size={12} className="text-zinc-500" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
