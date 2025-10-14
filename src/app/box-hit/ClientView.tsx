@@ -279,11 +279,11 @@ export default function ClientView() {
 
   const handleTradingModeChange = useCallback((tradingMode: boolean) => {
     // Control canvas start/stop
-      setIsCanvasStarted(tradingMode);
+    setIsCanvasStarted(tradingMode);
   }, []);
 
-      return (
-      <>
+  return (
+    <>
       <div className="relative flex h-full w-full flex-col items-center justify-center bg-zinc-950 text-white">
         {/* Top Bar */}
         <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6">
@@ -421,6 +421,7 @@ export default function ClientView() {
         {/* Main Content Area */}
         <div className="relative flex h-full w-full flex-grow">
           {/* Left: Canvas */}
+          <div className="flex-1">
             <ErrorBoundary 
               fallback={
                 <div className="h-96 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-lg">
@@ -435,7 +436,7 @@ export default function ClientView() {
                 showToast('⚠️ Game canvas error occurred. Please refresh if issues persist.');
               }}
             >
-            {/* Show Canvas component controlled by Start Trading button */}
+              {/* Show Canvas component controlled by Start Trading button */}
                 <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
                   <Canvas 
                     externalControl={true}
@@ -447,18 +448,17 @@ export default function ClientView() {
                     betAmount={betAmount}
                     onPriceUpdate={setMockBackendCurrentPrice}
                     showProbabilities={showProbabilities}
-                showOtherPlayers={showOtherPlayers}
+                  showOtherPlayers={showOtherPlayers}
                     minMultiplier={minMultiplier}
                   />
                 </div>
             </ErrorBoundary>
-          </div>
           
           <PositionsTable 
-          selectedCount={mockBackendPositionCount}
-          selectedMultipliers={mockBackendMultipliers}
+              selectedCount={mockBackendPositionCount}
+              selectedMultipliers={mockBackendMultipliers}
             betAmount={betAmount}
-          currentBTCPrice={mockBackendCurrentPrice}
+              currentBTCPrice={mockBackendCurrentPrice}
             onPositionHit={(positionId) => {
               // Handle position hit - this will be called when a box is hit
               logger.info('Position hit', { positionId }, 'GAME');
@@ -467,27 +467,29 @@ export default function ClientView() {
               // Handle position missed - this will be called when a box is missed
               logger.info('Position missed', { positionId }, 'GAME');
             }}
-          hitBoxes={mockBackendHitBoxes}
-          missedBoxes={mockBackendMissedBoxes}
-          realPositions={mockBackendPositions}
-          contracts={mockBackendContracts}
+              hitBoxes={mockBackendHitBoxes}
+              missedBoxes={mockBackendMissedBoxes}
+              realPositions={mockBackendPositions}
+              contracts={mockBackendContracts}
           />
         </div>
         
         {/* Right: betting panel only */}
         <RightPanel 
-        isTradingMode={isCanvasStarted}
+            isTradingMode={isCanvasStarted}
           onTradingModeChange={handleTradingModeChange}
-        selectedCount={mockBackendSelectedCount}
-        bestMultiplier={mockBackendBestMultiplier}
-        selectedMultipliers={mockBackendSelectedMultipliers}
-        currentBTCPrice={mockBackendCurrentPrice}
-        averagePositionPrice={mockBackendSelectedAveragePrice || null}
+            selectedCount={mockBackendSelectedCount}
+            bestMultiplier={mockBackendBestMultiplier}
+            selectedMultipliers={mockBackendSelectedMultipliers}
+            currentBTCPrice={mockBackendCurrentPrice}
+            averagePositionPrice={mockBackendSelectedAveragePrice || null}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
-        dailyHigh={mockBackendCurrentPrice + 2}
-        dailyLow={mockBackendCurrentPrice - 2}
-      />
+            dailyHigh={mockBackendCurrentPrice + 2}
+            dailyLow={mockBackendCurrentPrice - 2}
+          />
+        </div>
+      </div>
       
       {/* Toast Notifications - Stacked from bottom-right, oldest on top, newest on bottom */}
       <div className="fixed bottom-4 right-4 z-50 space-y-3">
@@ -514,6 +516,6 @@ export default function ClientView() {
           </div>
         ))}
       </div>
-        </>
-    );
+    </>
+  );
 }
