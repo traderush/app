@@ -161,6 +161,13 @@ export const useUserStore = create<UserState>()(
       // Trade Actions
       addTrade: (tradeData) =>
         set((state) => {
+          // Check if trade already exists by contractId
+          const existingTrade = state.activeTrades.find((t) => t.contractId === tradeData.contractId);
+          if (existingTrade) {
+            console.warn('⚠️ Trade already exists for contractId:', tradeData.contractId, 'Skipping duplicate add.');
+            return state;
+          }
+
           const newTrade: Trade = {
             ...tradeData,
             id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -170,7 +177,8 @@ export const useUserStore = create<UserState>()(
           console.log('➕ userStore.addTrade called:', {
             tradeData,
             newTrade,
-            activeTradesCount: state.activeTrades.length
+            activeTradesCount: state.activeTrades.length,
+            existingTradeIds: state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId }))
           });
           
           return {
@@ -275,6 +283,14 @@ export const useUserStore = create<UserState>()(
             }
           });
           
+          console.log('🔄 userStore.settleTrade - Final state update:', {
+            removingFromActive: tradeId,
+            activeTradesBefore: state.activeTrades.length,
+            activeTradesAfter: state.activeTrades.filter((t) => t.id !== tradeId).length,
+            addingToHistory: settledTrade.id,
+            tradeHistoryLength: [settledTrade, ...state.tradeHistory].length
+          });
+
           return {
             activeTrades: state.activeTrades.filter((t) => t.id !== tradeId),
             tradeHistory: [settledTrade, ...state.tradeHistory].slice(0, 1000), // Keep last 1000 trades
