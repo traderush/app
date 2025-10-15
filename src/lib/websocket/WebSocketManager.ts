@@ -102,10 +102,30 @@ export class WebSocketManager {
           
           this.clearConnectionTimeout();
           this.startHeartbeat();
-          this.processMessageQueue();
           
-          this.options.onConnected();
-          resolve();
+          // Send authentication message immediately
+          this.send({
+            type: 'auth',
+            payload: {
+              token: username
+            }
+          });
+          
+          // Wait for auth confirmation
+          const authHandler = (message: WebSocketMessage) => {
+            if (message.type === 'connected') {
+              this.isAuthenticated = true;
+              this.off('connected', authHandler);
+              
+              // Process queued messages after authentication
+              this.processMessageQueue();
+              
+              this.options.onConnected();
+              resolve();
+            }
+          };
+          
+          this.on('connected', authHandler);
         };
 
         this.ws.onmessage = (event) => {
@@ -182,6 +202,12 @@ export class WebSocketManager {
 
     if (!this.isConnected || !this.ws) {
       // Queue message for later if not connected
+      this.messageQueue.push(fullMessage);
+      return;
+    }
+
+    if (!this.isAuthenticated && message.type !== 'auth') {
+      // Queue non-auth messages until authenticated
       this.messageQueue.push(fullMessage);
       return;
     }
