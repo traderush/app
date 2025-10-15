@@ -15,6 +15,7 @@ interface WatchedPlayer {
   level?: number;
   lastActive?: Date;
   address?: string;
+  isOnline?: boolean;
 }
 
 // WatchedPlayer interface is now imported from usePlayerData hook
@@ -241,26 +242,39 @@ const SidebarRail = React.memo(function SidebarRail({
               <img 
                 src={player.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(player.username)}&background=random`}
                 alt={player.username} 
-                className="w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                className={`w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity ${
+                  !player.isOnline ? 'opacity-50' : ''
+                }`}
                 style={{ 
                   borderRadius: '4px',
-                  border: `1px solid ${signatureColor}`
+                  border: `1px solid ${player.isOnline ? signatureColor : '#6B7280'}`
                 }}
                 title={`${player.username} - ${player.profit > 0 ? '+' : ''}${player.profit.toFixed(2)}`}
                 loading="lazy"
                 onClick={() => onPlayerClick?.(player)}
               />
-              {/* Level indicator circle */}
-              {player.level && (
+              {/* Game indicator circle - only show if player is online */}
+              {player.isOnline && (
                 <div 
                   className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
                   style={{ 
                     backgroundColor: signatureColor,
                     border: '1px solid #09090B'
                   }}
-                  title={`Level ${player.level}`}
+                  title="Box Hit Game"
                 >
-                  <span className="text-[10px] font-bold" style={{ color: '#09090B' }}>{player.level}</span>
+                  <svg 
+                    width="10" 
+                    height="10" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="#09090B" 
+                    strokeWidth="2.5"
+                    className="target-icon"
+                  >
+                    <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
+                    <rect x="8" y="8" width="8" height="8" rx="1" ry="1"/>
+                  </svg>
                 </div>
               )}
             </div>

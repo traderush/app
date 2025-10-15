@@ -70,6 +70,7 @@ export interface WatchedPlayer {
   level?: number;
   lastActive?: Date;
   address?: string;
+  isOnline?: boolean;
 }
 
 export interface PlayerPreferences {
@@ -238,10 +239,10 @@ export const useTradingStore = create<TradingState>()(
       
       // Player Tracking Initial State
       watchedPlayers: [
-        { id: '1', username: 'CryptoTrader', profit: 1250, trades: 45, winRate: 67, avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg', level: 15, address: '0x1234...5678' },
-        { id: '2', username: 'DeFiMaster', profit: 890, trades: 32, winRate: 59, avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png', level: 12, address: '0x2345...6789' },
-        { id: '3', username: 'BlockchainPro', profit: 2100, trades: 78, winRate: 72, avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg', level: 18, address: '0x3456...7890' },
-        { id: '4', username: 'TradingGuru', profit: -150, trades: 12, winRate: 25, avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg', level: 8, address: '0x4567...8901' },
+        { id: '1', username: 'CryptoTrader', profit: 1250, trades: 45, winRate: 67, avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg', level: 15, address: '0x1234...5678', isOnline: true },
+        { id: '2', username: 'DeFiMaster', profit: 890, trades: 32, winRate: 59, avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png', level: 12, address: '0x2345...6789', isOnline: false },
+        { id: '3', username: 'BlockchainPro', profit: 2100, trades: 78, winRate: 72, avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg', level: 18, address: '0x3456...7890', isOnline: true },
+        { id: '4', username: 'TradingGuru', profit: -150, trades: 12, winRate: 25, avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg', level: 8, address: '0x4567...8901', isOnline: false },
       ],
       selectedPlayer: null,
       isPlayerTrackerOpen: false,
