@@ -7,6 +7,8 @@ import { GridGame } from '../../lib/canvasLogic/games/GridGame';
 import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
 import { useWebSocket } from './hooks/useWebSocket';
+// New unified WebSocket service (Phase 2 migration)
+import { useWebSocketManager } from '@/lib/websocket';
 import { useAppStore, useTradingStore, useConnectionStore } from '@/stores';
 import { Contract, Position, WebSocketMessage } from '@/types/game';
 import { handleCanvasError, handleWebSocketError } from '@/lib/errorHandler';
@@ -272,8 +274,28 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
       on('game_config', handleGameConfig);
 
+      // Fallback: Set default config after 2 seconds if no response from backend
+      const fallbackTimer = setTimeout(() => {
+        if (!configLoaded) {
+          console.log('Using fallback game configuration for mock backend mode');
+          setPriceStep(0.01);
+          setTimeStep(selectedTimeframe);
+          setBasePrice(100);
+
+          // Use centralized timeframe config for dimensions
+          const tfConfig = getTimeframeConfig(selectedTimeframe);
+          setNumYsquares(
+            tfConfig.ironCondor.rowsAbove + tfConfig.ironCondor.rowsBelow
+          );
+          setNumXsquares(tfConfig.ironCondor.numColumns);
+
+          setConfigLoaded(true);
+        }
+      }, 2000);
+
       return () => {
         off('game_config', handleGameConfig);
+        clearTimeout(fallbackTimer);
       };
     }
   }, [isConnected, configLoaded, selectedTimeframe, send, on, off]);
