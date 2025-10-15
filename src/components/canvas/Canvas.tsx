@@ -95,8 +95,9 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   // Get backend connection setter from store
   const setBackendConnected = useConnectionStore((state) => state.setBackendConnected);
 
+  // Phase 2: Use new unified WebSocket manager
   const { isConnected, isConnecting, connect, disconnect, send, on, off } =
-    useWebSocket({
+    useWebSocketManager({
       autoConnect: false,
     });
 
