@@ -3,6 +3,27 @@ import { IronCondorId, SpreadCallId, SpreadPutId, TimeFrame, SpreadTimeframe, Co
 // Note: GridBox and Tower types are not exported from game.ts, removing this import
 import { GameType } from './gameType';
 
+// Grid box interface for box hit game
+export interface GridBox {
+  id: string;
+  contractId: string;
+  multiplier: number;
+  timestamp: number;
+  x: number;
+  y: number;
+}
+
+// Tower interface for towers game
+export interface Tower {
+  id: string;
+  contractId: string;
+  multiplier: number;
+  timestamp: number;
+  x: number;
+  y: number;
+  height: number;
+}
+
 // Base message structure
 export interface WSMessage<T = unknown> {
   type: string;
@@ -62,14 +83,14 @@ export interface PriceUpdateMessage extends WSMessage<{
 // Multiplier messages (updated with contract IDs)
 export interface BoxMultipliersMessage extends WSMessage<{
   timeframe: TimeFrame;
-  multipliers: any[]; // TODO: Define proper GridBox type
+  multipliers: GridBox[];
 }> {
   type: 'box_multipliers';
 }
 
 export interface TowerMultipliersMessage extends WSMessage<{
   timeframe: SpreadTimeframe;
-  multipliers: any[]; // TODO: Define proper Tower type
+  multipliers: Tower[];
 }> {
   type: 'tower_multipliers';
 }

@@ -9,7 +9,8 @@ import { useAppStore, useTradingStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { logger } from '@/utils/logger';
 import Canvas from '@/components/canvas/Canvas';
-import { TRADING_COLORS, ASSET_DATA, TIMEFRAME_OPTIONS } from '@/lib/constants/trading';
+import { ASSET_DATA, TIMEFRAME_OPTIONS } from '@/lib/constants/assets';
+import { COLORS } from '@/styles/theme';
 import { Contract, Position } from '@/types/game';
 import { handleCanvasError } from '@/lib/errorHandler';
 
@@ -128,7 +129,7 @@ export default function ClientView() {
           const payout = betAmount * (contract.returnMultiplier || 1);
           const tradeId = `trade_${contractId}`;
             settleTradeRef.current(tradeId, 'win', payout);
-          }
+        }
       }
     });
 
@@ -205,7 +206,7 @@ export default function ClientView() {
         {/* Left side with header and canvas */}
         <div className="flex-1 flex flex-col">
           {/* Top Bar - Only over Canvas */}
-          <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-[#09090B] px-6">
+          <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 px-6" style={{ backgroundColor: COLORS.background.primary }}>
             {/* Left side: Asset info */}
             <div className="flex items-center gap-4">
               {/* Asset Icon */}
@@ -313,7 +314,7 @@ export default function ClientView() {
                           </div>
                           <div 
                             style={{ 
-                              color: asset.change24h >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative,
+                              color: asset.change24h >= 0 ? COLORS.trading.positive : COLORS.trading.negative,
                               fontSize: '11px',
                               fontWeight: 500
                             }}
@@ -345,7 +346,7 @@ export default function ClientView() {
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
                 <div className="font-medium leading-none" style={{ 
                   fontSize: '18px',
-                  color: (selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                  color: (selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? COLORS.trading.positive : COLORS.trading.negative
                 }}>
                   {(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? '+' : ''}{(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h).toFixed(2)}%
                 </div>
@@ -482,7 +483,7 @@ export default function ClientView() {
               }}
             >
               {/* Show Canvas component controlled by Start Trading button */}
-                <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
+                <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: COLORS.background.secondary }}>
                   <Canvas 
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}
@@ -510,7 +511,7 @@ export default function ClientView() {
           <PositionsTable 
             betAmount={betAmount}
             currentBTCPrice={currentPrice}
-          />
+            />
           </div>
         </div>
         

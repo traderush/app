@@ -67,6 +67,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
   // Demo players for suggestions
   const allDemoPlayers = [
     {
+      id: 'demo_crypto_trader',
       username: 'CryptoTrader',
       profit: 1250,
       trades: 45,
@@ -76,6 +77,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
       address: '0x1234...5678'
     },
     {
+      id: 'demo_defi_master',
       username: 'DeFiMaster',
       profit: 890,
       trades: 32,
@@ -85,6 +87,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
       address: '0x2345...6789'
     },
     {
+      id: 'demo_blockchain_pro',
       username: 'BlockchainPro',
       profit: 2100,
       trades: 78,
@@ -94,6 +97,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
       address: '0x3456...7890'
     },
     {
+      id: 'demo_trading_guru',
       username: 'TradingGuru',
       profit: -150,
       trades: 12,
@@ -127,6 +131,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
         if (!usedNames.has(randomName)) {
           usedNames.add(randomName);
           randomPlayers.push({
+            id: 'random_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             username: randomName,
             profit: Math.floor(Math.random() * 2000) - 500,
             trades: Math.floor(Math.random() * 100) + 1,
@@ -154,6 +159,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
     if (searchQuery.trim() && watchedPlayers.length < 5) {
       // Mock adding new wallet
       const newPlayer = {
+        id: 'wallet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         username: searchQuery.trim(),
         profit: Math.floor(Math.random() * 2000) - 500,
         trades: Math.floor(Math.random() * 100) + 1,
@@ -167,7 +173,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
     }
   };
 
-  const handleAddDemoPlayer = (demoPlayer: any) => {
+  const handleAddDemoPlayer = (demoPlayer: WatchedPlayer) => {
     if (watchedPlayers.length < 5) {
       addWatchedPlayer(demoPlayer);
     }

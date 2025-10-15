@@ -6,10 +6,8 @@ import { Menu, Bell, Wallet } from 'lucide-react';
 import clsx from 'clsx';
 import { useState, useRef } from 'react';
 import ScrollableGameTabs, { type GameTab } from './ScrollableGameTabs';
-// Lazy load popup components
-const NotificationsPopup = React.lazy(() => import('./NotificationsModal'));
-const DepositPopup = React.lazy(() => import('./DepositPopup'));
-import { useAppStore, useTradingStore } from '@/stores';
+import { useAppStore } from '@/stores';
+import { COLORS } from '@/styles/theme';
 
 const gameTabs: GameTab[] = [
   { href: '/box-hit', label: 'Box Hit' },
@@ -45,7 +43,7 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
 
   return (
     <>
-      <header className="border-b border-zinc-800/80 bg-[#09090B] backdrop-blur w-full">
+      <header className="border-b border-zinc-800/80 backdrop-blur w-full" style={{ backgroundColor: COLORS.background.primary }}>
         <div className="w-full h-14 px-4 flex items-center gap-4">
           {/* Brand */}
           <Link href="/" className="flex items-center">
@@ -57,7 +55,7 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
           </Link>
 
           {/* Scrollable game tabs */}
-          <ScrollableGameTabs items={gameTabs} bg="#09090B" />
+          <ScrollableGameTabs items={gameTabs} bg={COLORS.background.primary} />
 
           {/* Separator */}
           <div className="hidden lg:block w-px h-5 bg-white/20 mx-2" />
@@ -101,7 +99,7 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
               style={{
                 backgroundColor: signatureColor,
                 fontWeight: 600, 
-                color: '#09090B'
+                color: COLORS.text.onPrimary
               }}
             >
               Deposit
@@ -119,7 +117,7 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
                   backgroundColor: signatureColor,
                   borderRadius: '7px' 
                 }}>
-                  <span className="text-[10px]" style={{fontWeight: 600, color: '#09090B'}}>12</span>
+                  <span className="text-[10px]" style={{fontWeight: 600, color: COLORS.text.onPrimary}}>12</span>
                 </div>
               </button>
               

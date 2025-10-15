@@ -909,8 +909,8 @@ export class GridGame extends BaseGame {
       // Lower multipliers = higher probability (green)
       const probability = Math.max(0, Math.min(1, (15 - box.value) / 14));
       
-      // Create heatmap colors using TRADING_COLORS with shade variation based on multiplier
-      // TRADING_COLORS.positive = #2fe3ac = rgb(47, 227, 172)
+      // Create heatmap colors using trading colors with shade variation based on multiplier
+      // Trading positive color = #2fe3ac = rgb(47, 227, 172)
       // Proper trading red = #ef4444 = rgb(239, 68, 68) - NOT the pink #ec397a
       // Yellow = #facc15 = rgb(250, 204, 21)
       let heatmapColor;

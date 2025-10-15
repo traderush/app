@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TRADING_COLORS } from '@/lib/constants/trading';
+import { COLORS } from '@/styles/theme';
 
 
 // Client-side only memory display component to prevent hydration mismatch
@@ -85,7 +85,7 @@ const Footer = React.memo(function Footer({
           <span>Players Online: 1,247</span>
           <div className="flex items-center gap-2">
             <span>Volatility Index:</span>
-            <span style={{color: TRADING_COLORS.positive}}>+12.4%</span>
+            <span style={{color: COLORS.trading.positive}}>+12.4%</span>
           </div>
           <div className="w-px h-4 bg-white/20"></div>
           <div className="flex items-center gap-2">
@@ -142,10 +142,10 @@ const Footer = React.memo(function Footer({
               <div className="text-xs text-zinc-300 space-y-2">
                 {/* Status Header with inline status */}
                 <div className="flex items-center justify-between">
-                  <span className={`font-medium text-xs`} style={{ color: isWebSocketConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                  <span className={`font-medium text-xs`} style={{ color: isWebSocketConnected ? COLORS.trading.positive : COLORS.trading.negative }}>
                     {isWebSocketConnected ? 'Live Data Feed' : 'Connection Failed'}
                   </span>
-                  <span className={`text-xs`} style={{ color: isWebSocketConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                  <span className={`text-xs`} style={{ color: isWebSocketConnected ? COLORS.trading.positive : COLORS.trading.negative }}>
                     {isWebSocketConnected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
@@ -156,13 +156,13 @@ const Footer = React.memo(function Footer({
                     <div className="space-y-1 pt-1 border-t border-zinc-700/50">
                       <div className="flex justify-between">
                         <span className="text-zinc-400">FPS:</span>
-                        <span style={{ color: fps >= 55 ? TRADING_COLORS.positive : fps >= 30 ? '#facc15' : TRADING_COLORS.negative }}>
+                        <span style={{ color: fps >= 55 ? COLORS.trading.positive : fps >= 30 ? '#facc15' : COLORS.trading.negative }}>
                           {fps}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Latency:</span>
-                        <span style={{ color: latency <= 1 ? TRADING_COLORS.positive : latency <= 3 ? '#facc15' : TRADING_COLORS.negative }}>
+                        <span style={{ color: latency <= 1 ? COLORS.trading.positive : latency <= 3 ? '#facc15' : COLORS.trading.negative }}>
                           {latency}s
                         </span>
                       </div>
@@ -181,9 +181,9 @@ const Footer = React.memo(function Footer({
                         <div className="flex items-center gap-1.5">
                           <div 
                             className="w-1.5 h-1.5 rounded-full" 
-                            style={{ backgroundColor: isBackendConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}
+                            style={{ backgroundColor: isBackendConnected ? COLORS.trading.positive : COLORS.trading.negative }}
                           />
-                          <span style={{ color: isBackendConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                          <span style={{ color: isBackendConnected ? COLORS.trading.positive : COLORS.trading.negative }}>
                             {isBackendConnected ? 'Connected' : 'Disconnected'}
                           </span>
                         </div>

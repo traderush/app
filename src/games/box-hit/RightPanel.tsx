@@ -2,7 +2,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { TrendingUp, TrendingDown, Filter, ChevronRight, Edit3, ExternalLink } from 'lucide-react';
 import { useAppStore } from '@/stores';
-import { TRADING_COLORS } from '@/lib/constants/trading';
+import { COLORS } from '@/styles/theme';
 
 const ORANGE = '#FA5616';
 
@@ -123,9 +123,9 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
           {/* Daily High/Low Display */}
           <div className="flex">
             {/* Left container for Daily High */}
-            <div className="flex-1" style={{ background: `linear-gradient(to right, transparent 0%, ${TRADING_COLORS.positive}20 50%, transparent 100%)` }}>
+            <div className="flex-1" style={{ background: `linear-gradient(to right, transparent 0%, ${COLORS.trading.positive}20 50%, transparent 100%)` }}>
               <div className="text-xs text-zinc-400 px-3">Daily High</div>
-              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyHigh > 0 ? TRADING_COLORS.positive : '#71717a' }}>
+              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyHigh > 0 ? COLORS.trading.positive : '#71717a' }}>
                 {dailyHigh > 0 ? `$${dailyHigh.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
               </div>
             </div>
@@ -134,9 +134,9 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
             <div className="w-px bg-zinc-700"></div>
             
             {/* Right container for Daily Low */}
-            <div className="flex-1" style={{ background: `linear-gradient(to left, transparent 0%, ${TRADING_COLORS.negative}20 50%, transparent 100%)` }}>
+            <div className="flex-1" style={{ background: `linear-gradient(to left, transparent 0%, ${COLORS.trading.negative}20 50%, transparent 100%)` }}>
               <div className="text-xs text-zinc-400 px-3">Daily Low</div>
-              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyLow > 0 ? TRADING_COLORS.negative : '#71717a' }}>
+              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyLow > 0 ? COLORS.trading.negative : '#71717a' }}>
                 {dailyLow > 0 ? `$${dailyLow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
               </div>
             </div>
@@ -170,11 +170,11 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
           </div>
 
           {/* Warning Box */}
-          <div className="flex items-center justify-center gap-2 px-3 py-2 -mx-4" style={{ backgroundColor: `${TRADING_COLORS.negative}10` }}>
-            <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: `${TRADING_COLORS.negative}20` }}>
-              <span className="text-xs font-bold" style={{ color: TRADING_COLORS.negative }}>i</span>
+          <div className="flex items-center justify-center gap-2 px-3 py-2 -mx-4" style={{ backgroundColor: `${COLORS.trading.negative}10` }}>
+            <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: `${COLORS.trading.negative}20` }}>
+              <span className="text-xs font-bold" style={{ color: COLORS.trading.negative }}>i</span>
             </div>
-            <span style={{ fontSize: '12px', color: TRADING_COLORS.negative }}>Your trades will be live after selecting each box</span>
+            <span style={{ fontSize: '12px', color: COLORS.trading.negative }}>Your trades will be live after selecting each box</span>
           </div>
         </div>
 
@@ -369,9 +369,9 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
           {/* Warning Message */}
           {showWarning && (
             <div className="mt-2 text-center text-xs rounded px-3 py-2" style={{
-              color: TRADING_COLORS.negative,
-              backgroundColor: `${TRADING_COLORS.negative}10`,
-              border: `1px solid ${TRADING_COLORS.negative}20`
+              color: COLORS.trading.negative,
+              backgroundColor: `${COLORS.trading.negative}10`,
+              border: `1px solid ${COLORS.trading.negative}20`
             }}>
               Please enter a bet amount to start trading
             </div>
@@ -386,9 +386,9 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
                           <div className="text-xs text-zinc-400">Volatility Index</div>
                           <div className="flex items-center gap-1">
                             <div className="font-medium" style={{ fontSize: '18px' }}>
-                              {volatilityIndex === 0 && <span style={{ color: TRADING_COLORS.positive }}>Low</span>}
+                              {volatilityIndex === 0 && <span style={{ color: COLORS.trading.positive }}>Low</span>}
                               {volatilityIndex === 1 && <span className="text-yellow-400">Normal</span>}
-                              {volatilityIndex === 2 && <span style={{ color: TRADING_COLORS.negative }}>High</span>}
+                              {volatilityIndex === 2 && <span style={{ color: COLORS.trading.negative }}>High</span>}
                             </div>
                             <ChevronRight size={16} className="text-zinc-400" />
                           </div>
@@ -453,7 +453,7 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
                 </div>
                 <span className="font-normal" style={{ 
                   fontSize: '12px',
-                  color: item.isPositive ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                  color: item.isPositive ? COLORS.trading.positive : COLORS.trading.negative
                 }}>
                   {item.pnl}
                 </span>

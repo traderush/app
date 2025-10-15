@@ -26,8 +26,8 @@ export function isSpreadGame(gameType: GameType): gameType is SpreadGameType {
 }
 
 // Type guard to check if a string is a valid GameType
-export function isValidGameType(value: any): value is GameType {
-  return Object.values(GameType).includes(value);
+export function isValidGameType(value: unknown): value is GameType {
+  return typeof value === 'string' && Object.values(GameType).includes(value as GameType);
 }
 
 // Helper to parse string to GameType

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '@/stores';
-import { TRADING_COLORS } from '@/lib/constants/trading';
+import { COLORS } from '@/styles/theme';
 
 
 interface PositionsTableProps {
@@ -311,8 +311,8 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
                     <td>{r.time}</td>
                     <td>${r.size.toFixed(2)}</td>
                     <td className="font-medium" style={{ color: signatureColor }}>{r.multiplier.toFixed(1)}x</td>
-                    <td style={{ color: r.equity.includes('-') ? TRADING_COLORS.negative : TRADING_COLORS.positive }}>{r.equity}</td>
-                    <td style={{ color: parseFloat(r.hit) >= 50 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>{r.hit}</td>
+                    <td style={{ color: r.equity.includes('-') ? COLORS.trading.negative : COLORS.trading.positive }}>{r.equity}</td>
+                    <td style={{ color: parseFloat(r.hit) >= 50 ? COLORS.trading.positive : COLORS.trading.negative }}>{r.hit}</td>
                     <td>
                       <div className="h-4 w-24 relative">
                         <div 
@@ -366,8 +366,8 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
                     <td>{r.time}</td>
                     <td>${r.size.toFixed(2)}</td>
                     <td className="font-medium" style={{ color: signatureColor }}>{r.multiplier.toFixed(1)}x</td>
-                    <td style={{ color: r.equity === '$0.00' ? TRADING_COLORS.negative : TRADING_COLORS.positive }}>{r.equity}</td>
-                    <td style={{ color: parseFloat(r.hit) >= 50 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>{r.hit}</td>
+                    <td style={{ color: r.equity === '$0.00' ? COLORS.trading.negative : COLORS.trading.positive }}>{r.equity}</td>
+                    <td style={{ color: parseFloat(r.hit) >= 50 ? COLORS.trading.positive : COLORS.trading.negative }}>{r.hit}</td>
                     <td>
                       <div className="h-4 w-24 relative">
                         <div 
@@ -387,8 +387,8 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
                       <span className="px-2 py-1 rounded text-xs font-normal" style={{ 
                         fontSize: '12px', 
                         fontWeight: '400',
-                        backgroundColor: r.result === 'Won' ? `${TRADING_COLORS.positive}20` : `${TRADING_COLORS.negative}20`,
-                        color: r.result === 'Won' ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                        backgroundColor: r.result === 'Won' ? `${COLORS.trading.positive}20` : `${COLORS.trading.negative}20`,
+                        color: r.result === 'Won' ? COLORS.trading.positive : COLORS.trading.negative
                       }}>
                         {r.result}
                       </span>

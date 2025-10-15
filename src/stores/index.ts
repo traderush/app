@@ -119,7 +119,7 @@ export const storeDebug = {
   /**
    * Subscribe to all store changes for debugging
    */
-  subscribeToAll: (callback: (state: unknown, prevState: unknown, action: string) => void) => {
+  subscribeToAll: (callback: (state: unknown, prevState: unknown) => void) => {
     const unsubscribeFunctions = [
       useAppStore.subscribe(callback),
       useTradingStore.subscribe(callback),
@@ -147,9 +147,8 @@ export const storeDebug = {
    */
   enableLogging: () => {
     if (process.env.NODE_ENV === 'development') {
-      return storeDebug.subscribeToAll((state, prevState, action) => {
+      return storeDebug.subscribeToAll((state, prevState) => {
         console.log('Store Update:', {
-          action,
           state,
           prevState,
           timestamp: new Date().toISOString(),

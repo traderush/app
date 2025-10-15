@@ -3,20 +3,23 @@ import React, { useRef } from 'react';
 import Navbar from './Navbar';
 import SidebarRail from './SidebarRail';
 import Footer from './Footer';
-// Lazy load popup components for better performance
-const LazyDepositPopup = React.lazy(() => import('./DepositPopup'));
-const LazyNotificationsModal = React.lazy(() => import('./NotificationsModal'));
-const LazySettingsPopup = React.lazy(() => import('./SettingsPopup'));
-const LazyHowToPlayPopup = React.lazy(() => import('./HowToPlayPopup'));
-const LazyNewsUpdatesPopup = React.lazy(() => import('./NewsUpdatesPopup'));
-const LazyRewardsPopup = React.lazy(() => import('./RewardsPopup'));
-const LazyPnLTrackerPopup = React.lazy(() => import('./PnLTrackerPopup'));
-const LazyCustomizePopup = React.lazy(() => import('./CustomizePopup'));
-const LazyWatchlistPopup = React.lazy(() => import('./WatchlistPopup'));
-const LazyPlayerTrackerPopup = React.lazy(() => import('./PlayerTrackerPopup'));
+// Import lazy components from centralized lazy loader
+import {
+  LazyDepositPopup,
+  LazyNotificationsModal,
+  LazySettingsPopup,
+  LazyHowToPlayPopup,
+  LazyNewsUpdatesPopup,
+  LazyRewardsPopup,
+  LazyPnLTrackerPopup,
+  LazyCustomizePopup,
+  LazyWatchlistPopup,
+  LazyPlayerTrackerPopup,
+} from './lazy';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import CustomSlider from '@/components/CustomSlider';
 import { useAppStore, useTradingStore } from '@/stores';
+import { COLORS } from '@/styles/theme';
 import { useShallow } from 'zustand/react/shallow';
 
 const AppShellContent = React.memo(function AppShellContent({ children }: { children: React.ReactNode }) {
@@ -80,8 +83,8 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
     backgroundOpacity: 100,
     backgroundBlur: 0,
     generalTextColor: '#ffffff', // Balance and general text
-    balanceTextColor: '#ec397a', // Loss color (trading red)
-    pnlTextColor: '#2fe3ac' // Profit color (trading green)
+    balanceTextColor: COLORS.status.error as string, // Loss color (trading red)
+    pnlTextColor: COLORS.status.success as string // Profit color (trading green)
   });
 
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
@@ -93,7 +96,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
   const customizeButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div className="text-zinc-100 min-h-screen" style={{backgroundColor: '#09090B'}}>
+    <div className="text-zinc-100 min-h-screen" style={{backgroundColor: COLORS.background.primary}}>
         {/* Fixed navbar */}
         <div className="fixed top-0 left-0 right-0 z-50">
           <Navbar 
@@ -147,7 +150,6 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
           {/* Toggle button positioned outside the sidebar */}
           <button
             onClick={() => {
-              console.log('Button clicked from AppShell!');
               updateLayout({ sidebarCollapsed: !layout.sidebarCollapsed });
             }}
             className="absolute -right-6 top-1/2 -translate-y-1/2 grid place-items-center w-6 h-12 bg-zinc-800/60 border border-zinc-700/60 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-700/80 transition-all z-20 rounded-r cursor-pointer"
@@ -270,7 +272,7 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
           <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
             <div 
               className="w-80 border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
-              style={{ backgroundColor: '#0E0E0E' }}
+              style={{ backgroundColor: COLORS.background.secondary }}
             >
               {/* Header */}
               <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
@@ -389,8 +391,8 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                         backgroundOpacity: 100,
                         backgroundBlur: 0,
                         generalTextColor: '#ffffff', // Balance and general text
-                        balanceTextColor: '#ec397a', // Loss color (trading red)
-                        pnlTextColor: '#2fe3ac' // Profit color (trading green)
+                        balanceTextColor: COLORS.status.error as string, // Loss color (trading red)
+                        pnlTextColor: COLORS.status.success as string // Profit color (trading green)
                       });
                     }}
                     className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors" style={{fontSize: '12px'}}
@@ -405,11 +407,11 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
                     className="px-4 py-2 font-medium rounded transition-colors"
                     style={{ 
                       backgroundColor: signatureColor,
-                      color: '#09090B',
+                      color: COLORS.text.onPrimary,
                       fontSize: '12px'
                     }}
                   >
-                    <span style={{ color: '#09090B' }}>Apply</span>
+                    <span style={{ color: COLORS.text.onPrimary }}>Apply</span>
                   </button>
                 </div>
               </div>

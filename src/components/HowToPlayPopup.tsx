@@ -10,7 +10,6 @@ interface HowToPlayPopupProps {
 }
 
 export default function HowToPlayPopup({ isOpen, onClose, triggerRef }: HowToPlayPopupProps) {
-  console.log('HowToPlayPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const popupRef = useRef<HTMLDivElement>(null);

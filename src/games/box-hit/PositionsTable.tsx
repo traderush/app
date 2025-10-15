@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useAppStore, useTradingStore } from '@/stores';
-import { TRADING_COLORS } from '@/lib/constants/trading';
+import { COLORS } from '@/styles/theme';
 import { Contract, Position } from '@/types/game';
 
 
@@ -130,8 +130,8 @@ const PositionsTable = React.memo(function PositionsTable({
                       <td>{position.time}</td>
                       <td>${position.size.toFixed(2)}</td>
                       <td className="font-medium" style={{ color: signatureColor }}>{position.multiplier.toFixed(1)}x</td>
-                      <td style={{ color: position.equity.includes('-') ? TRADING_COLORS.negative : TRADING_COLORS.positive }}>{position.equity}</td>
-                      <td style={{ color: parseFloat(position.hit) >= 50 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>{position.hit}</td>
+                      <td style={{ color: position.equity.includes('-') ? COLORS.trading.negative : COLORS.trading.positive }}>{position.equity}</td>
+                      <td style={{ color: parseFloat(position.hit) >= 50 ? COLORS.trading.positive : COLORS.trading.negative }}>{position.hit}</td>
                     <td>
                       <div className="h-4 w-24 relative">
                         <div 
@@ -188,8 +188,8 @@ const PositionsTable = React.memo(function PositionsTable({
                       <td>{position.time}</td>
                       <td>${position.size.toFixed(2)}</td>
                       <td className="font-medium" style={{ color: signatureColor }}>{position.multiplier.toFixed(1)}x</td>
-                      <td style={{ color: position.equity === '$0.00' ? TRADING_COLORS.negative : TRADING_COLORS.positive }}>{position.equity}</td>
-                      <td style={{ color: parseFloat(position.hit) >= 50 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>{position.hit}</td>
+                      <td style={{ color: position.equity === '$0.00' ? COLORS.trading.negative : COLORS.trading.positive }}>{position.equity}</td>
+                      <td style={{ color: parseFloat(position.hit) >= 50 ? COLORS.trading.positive : COLORS.trading.negative }}>{position.hit}</td>
                     <td>
                       <div className="h-4 w-24 relative">
                         <div 
@@ -209,8 +209,8 @@ const PositionsTable = React.memo(function PositionsTable({
                       <span className="px-2 py-1 rounded text-xs font-normal" style={{ 
                         fontSize: '12px', 
                         fontWeight: '400',
-                          backgroundColor: position.result === 'Won' ? `${TRADING_COLORS.positive}20` : `${TRADING_COLORS.negative}20`,
-                          color: position.result === 'Won' ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                          backgroundColor: position.result === 'Won' ? `${COLORS.trading.positive}20` : `${COLORS.trading.negative}20`,
+                          color: position.result === 'Won' ? COLORS.trading.positive : COLORS.trading.negative
                       }}>
                           {position.result}
                       </span>

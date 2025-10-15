@@ -130,42 +130,12 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       const missedBoxes = gameRef.current.getMissedBoxes();
       const selectedSquares = gameRef.current.getSelectedSquares();
       
-      console.log('🔍 Canvas: Hit/Miss status:', {
-        hitBoxes: hitBoxes,
-        missedBoxes: missedBoxes,
-        selectedSquares: selectedSquares,
-        positionsSize: positions.size,
-        contractsLength: contracts.length,
-        hitMissedUpdateTrigger
-      });
       
       // Pass ALL positions (including resolved ones) to parent for proper history tracking
-      console.log('🔄 Syncing to parent - all positions:', { 
-        totalPositions: positions.size,
-        selectedSquares: selectedSquares.length,
-        hitBoxes: hitBoxes.length, 
-        missedBoxes: missedBoxes.length,
-        positionsDetail: Array.from(positions.entries()).map(([id, p]) => ({ 
-          id, 
-          contractId: p.contractId, 
-          amount: p.amount,
-          isHit: hitBoxes.includes(p.contractId),
-          isMissed: missedBoxes.includes(p.contractId)
-        }))
-      });
       
-      console.log('🔄 Calling onPositionsChange with:', {
-        positionsSize: positions.size,
-        contractsLength: contracts.length,
-        hitBoxesLength: hitBoxes.length,
-        missedBoxesLength: missedBoxes.length,
-        hasCallback: !!onPositionsChange
-      });
       
       if (onPositionsChange) {
         onPositionsChange(positions, contracts, hitBoxes, missedBoxes);
-      } else {
-        console.log('❌ onPositionsChange callback not provided');
       }
     }
   }, [positions, contracts, onPositionsChange, hitMissedUpdateTrigger]);
@@ -191,24 +161,18 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
     const handleContractResolved = (data: unknown) => {
       const msg = data as WebSocketMessage;
-      console.log('🔔 Contract resolved event:', msg);
       if (msg.payload && gameRef.current) {
         const { contractId, outcome } = msg.payload as { contractId: string; outcome: string };
-        console.log('📋 Contract ID:', contractId, 'Outcome:', outcome);
 
         if (outcome === 'hit') {
-          console.log('➡️ Calling markContractAsHit');
           gameRef.current.markContractAsHit(contractId);
           setHitMissedUpdateTrigger(prev => prev + 1); // Trigger position sync
         } else if (outcome === 'miss') {
-          console.log('➡️ Calling markContractAsMissed');
           gameRef.current.markContractAsMissed(contractId);
           setHitMissedUpdateTrigger(prev => prev + 1); // Trigger position sync
         } else {
-          console.log('⚠️ Unknown outcome:', outcome);
         }
       } else {
-        console.log('⚠️ Missing payload or gameRef:', { hasPayload: !!msg.payload, hasGameRef: !!gameRef.current });
       }
     };
 
@@ -258,12 +222,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
           updateBalance(balance);
         }
         
-        console.log('Trade result:', {
-          contractId,
-          won,
-          profit,
-          newBalance: balance,
-        });
       }
     };
 
@@ -382,7 +340,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     if (!contracts.length) {
       const now = Date.now();
       if (now - lastCanvasDebugLog.current > 2000) {
-        console.log('🔍 Canvas: No contracts received from backend');
         lastCanvasDebugLog.current = now;
       }
       return multipliers; // Return empty - GridGame will generate empty boxes to fill viewport
@@ -393,11 +350,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     const msPerDataPoint = 100; // Each data point represents 100ms
 
     if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
-      console.log('🔍 Canvas: Processing contracts', {
-        totalContracts: contracts.length,
-        currentTime: currentTimeMs,
-        dataPointCount: dataPointCount,
-      });
       lastCanvasDebugLog.current = currentTimeMs;
     }
 
@@ -739,14 +691,11 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   // Update GridGame config when showProbabilities, showOtherPlayers or minMultiplier change (live updates without restart)
   useEffect(() => {
     if (gameRef.current && isStarted) {
-      console.log('🎮 Canvas: Updating GridGame config:', { showProbabilities, showOtherPlayers, minMultiplier });
       gameRef.current.updateConfig({
         showProbabilities,
         showOtherPlayers,
         minMultiplier
       });
-    } else {
-      console.log('🎮 Canvas: Cannot update config - game not ready:', { hasGame: !!gameRef.current, isStarted });
     }
   }, [showProbabilities, showOtherPlayers, minMultiplier, isStarted]);
 
@@ -922,15 +871,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         const bestMult = multipliers.length > 0 ? Math.max(...multipliers) : 0;
         const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
         
-        console.log('📊 Canvas: Selection changed:', {
-          totalSelected: selectedSquares.length,
-          activeSelections: activeSelections.length,
-          hitBoxes: hitBoxes.length,
-          missedBoxes: missedBoxes.length,
-          bestMultiplier: bestMult,
-          multipliers,
-          averagePrice: avgPrice
-        });
         
         // Emit to parent for immediate right panel update (only active selections)
         if (onSelectionChange) {
@@ -939,7 +879,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       };
 
       game.on('squareSelected', ({ squareId }: { squareId: string }) => {
-        console.log('Square selected (double-clicked):', squareId);
         updateSelectionStats();
 
         // Find the contract details to understand column mapping

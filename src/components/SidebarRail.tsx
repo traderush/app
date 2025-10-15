@@ -80,7 +80,6 @@ const SidebarRail = React.memo(function SidebarRail({
           <button
             ref={howToPlayButtonRef}
             onClick={() => {
-              console.log('How to Play button clicked');
               onHowToPlayOpen?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
@@ -92,7 +91,6 @@ const SidebarRail = React.memo(function SidebarRail({
           <button
             ref={newsUpdatesButtonRef}
             onClick={() => {
-              console.log('News & Updates button clicked');
               onNewsUpdatesOpen?.();
             }}
             className="relative grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
@@ -111,7 +109,6 @@ const SidebarRail = React.memo(function SidebarRail({
           <button
             ref={rewardsButtonRef}
             onClick={() => {
-              console.log('Rewards button clicked');
               onRewardsOpen?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
@@ -134,11 +131,13 @@ const SidebarRail = React.memo(function SidebarRail({
               loading="lazy"
               onClick={() => onPlayerClick?.({
                 id: 'top1',
-                name: 'Top Player 1',
+                username: 'Top Player 1',
+                profit: 0,
+                trades: 0,
+                winRate: 0,
                 address: '0x1234...5678',
                 avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
-                game: 'Box Hit',
-                isOnline: true
+                level: 1
               })}
             />
             {/* Rank indicator circle */}
@@ -167,11 +166,13 @@ const SidebarRail = React.memo(function SidebarRail({
               loading="lazy"
               onClick={() => onPlayerClick?.({
                 id: 'top2',
-                name: 'Top Player 2',
+                username: 'Top Player 2',
+                profit: 0,
+                trades: 0,
+                winRate: 0,
                 address: '0x2345...6789',
                 avatar: 'https://pbs.twimg.com/profile_images/1848910264051052546/Mu18BSYv_400x400.jpg',
-                game: 'Box Hit',
-                isOnline: true
+                level: 1
               })}
             />
             {/* Rank indicator circle */}
@@ -200,11 +201,13 @@ const SidebarRail = React.memo(function SidebarRail({
               loading="lazy"
               onClick={() => onPlayerClick?.({
                 id: 'top3',
-                name: 'Top Player 3',
+                username: 'Top Player 3',
+                profit: 0,
+                trades: 0,
+                winRate: 0,
                 address: '0x3456...7890',
                 avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
-                game: 'Box Hit',
-                isOnline: true
+                level: 1
               })}
             />
             {/* Rank indicator circle */}

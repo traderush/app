@@ -10,7 +10,6 @@ interface RewardsPopupProps {
 }
 
 export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPopupProps) {
-  console.log('RewardsPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState(2); // Default to middle point
   const [copied, setCopied] = useState(false);

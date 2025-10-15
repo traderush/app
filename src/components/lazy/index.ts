@@ -2,64 +2,27 @@
 
 import { createLazyComponent } from '../LazyWrapper';
 
-// Lazy load heavy components
-export const LazyChartCanvas = createLazyComponent(
-  () => import('../ChartCanvas')
-);
-
-export const LazyGameCanvas = createLazyComponent(
-  () => import('../../games/box-hit/GameCanvas')
-);
-
-export const LazyPriceFeedManager = createLazyComponent(
-  () => import('../../games/box-hit/PriceFeedManager')
-);
-
-export const LazyPositionsTable = createLazyComponent(
-  () => import('../../games/box-hit/PositionsTable')
-);
-
-export const LazyRightPanel = createLazyComponent(
-  () => import('../../games/box-hit/RightPanel')
-);
-
-// Lazy load popup components
+// Critical popups (preloaded)
 export const LazyDepositPopup = createLazyComponent(
-  () => import('../DepositPopup')
+  () => import('../DepositPopup'),
+  true // preload
 );
 
 export const LazyNotificationsModal = createLazyComponent(
-  () => import('../NotificationsModal')
+  () => import('../NotificationsModal'),
+  true // preload
 );
 
 export const LazySettingsPopup = createLazyComponent(
-  () => import('../SettingsPopup')
+  () => import('../SettingsPopup'),
+  true // preload
 );
 
-export const LazyHowToPlayPopup = createLazyComponent(
-  () => import('../HowToPlayPopup')
-);
-
-export const LazyNewsUpdatesPopup = createLazyComponent(
-  () => import('../NewsUpdatesPopup')
-);
-
-export const LazyRewardsPopup = createLazyComponent(
-  () => import('../RewardsPopup')
-);
-
-export const LazyPnLTrackerPopup = createLazyComponent(
-  () => import('../PnLTrackerPopup')
-);
-
-export const LazyCustomizePopup = createLazyComponent(
-  () => import('../CustomizePopup')
-);
-
-export const LazyWatchlistPopup = createLazyComponent(
-  () => import('../WatchlistPopup')
-);
-
-export const LazyPlayerTrackerPopup = createLazyComponent(
-  () => import('../PlayerTrackerPopup')
-);
+// Secondary popups (load on demand)
+export const LazyHowToPlayPopup = createLazyComponent(() => import('../HowToPlayPopup'));
+export const LazyNewsUpdatesPopup = createLazyComponent(() => import('../NewsUpdatesPopup'));
+export const LazyRewardsPopup = createLazyComponent(() => import('../RewardsPopup'));
+export const LazyPnLTrackerPopup = createLazyComponent(() => import('../PnLTrackerPopup'));
+export const LazyCustomizePopup = createLazyComponent(() => import('../CustomizePopup'));
+export const LazyWatchlistPopup = createLazyComponent(() => import('../WatchlistPopup'));
+export const LazyPlayerTrackerPopup = createLazyComponent(() => import('../PlayerTrackerPopup'));

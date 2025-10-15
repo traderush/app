@@ -10,7 +10,6 @@ interface NewsUpdatesPopupProps {
 }
 
 export default function NewsUpdatesPopup({ isOpen, onClose, triggerRef }: NewsUpdatesPopupProps) {
-  console.log('NewsUpdatesPopup render - isOpen:', isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const popupRef = useRef<HTMLDivElement>(null);
