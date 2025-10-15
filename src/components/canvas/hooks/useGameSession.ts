@@ -25,9 +25,9 @@ export function useGameSession({
   enabled,
 }: UseGameSessionProps): UseGameSessionReturn {
   const [isJoined, setIsJoined] = useState(false);
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [userBalance, setUserBalance] = useState(0);
-  const [positions, setPositions] = useState<Map<string, any>>(new Map());
+  const [positions, setPositions] = useState<Map<string, Position>>(new Map());
 
   // Get userStore functions
   const settleTrade = useTradingStore((state) => state.settleTrade);
@@ -169,11 +169,11 @@ export function useGameSession({
       const amount = (msg.payload as any)?.amount || (msg as any).amount;
       const tradeId = (msg.payload as any)?.tradeId || (msg as any).tradeId;
       
-      const position = {
+      const position: Position = {
+        id: tradeId,
         contractId: contractId,
         amount: amount,
-        timestamp: (msg as any).timestamp || Date.now(),
-        tradeId: tradeId,
+        placedAt: new Date((msg as any).timestamp || Date.now()),
       };
       
       console.log('📋 Adding position to map:', { tradeId, position });
@@ -229,8 +229,8 @@ export function useGameSession({
       if (position) {
         const amount = position.amount;
         
-        // Use the original tradeId from the position, not the settlement tradeId
-        const originalTradeId = position.tradeId || tradeId;
+        // Use the position ID as the trade ID
+        const originalTradeId = position.id;
         
         // Settle the trade in userStore (this will update stats and PnL)
         settleTrade(originalTradeId, won ? 'win' : 'loss', payout);

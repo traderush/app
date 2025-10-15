@@ -71,7 +71,7 @@ class WebSocketService {
           // Wait for auth confirmation
           const authHandler = (msg: WebSocketMessage) => {
             if (msg.type === 'connected') {
-              this.userId = (msg as any).userId;
+              this.userId = (msg.payload as { userId: string }).userId;
               this.isAuthenticated = true;
               this.off('connected', authHandler);
               
@@ -250,7 +250,7 @@ class WebSocketService {
   private handleMessage(message: WebSocketMessage): void {
     // Store session ID when game is joined
     if (message.type === 'game_joined') {
-      this.sessionId = (message as any).sessionId;
+      this.sessionId = (message.payload as { sessionId: string }).sessionId;
     }
 
     // Call all registered handlers for this message type

@@ -201,7 +201,7 @@ export default function RightPanel({ isTradingMode, onTradingModeChange, selecte
                 </button>
           ))}
               <button
-                onClick={() => {/* TODO: Open custom input popover */}}
+                onClick={() => {/* Custom input popover - placeholder for future feature */}}
                 onKeyDown={(e) => handleKeyDown(e, quickBetAmounts.length)}
                 onFocus={() => setActiveCell(quickBetAmounts.length)}
                 onBlur={() => setActiveCell(null)}
