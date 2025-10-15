@@ -54,17 +54,14 @@ export default function ClientView() {
   const previousPositionsRef = useRef<Map<string, Position>>(new Map());
   const previousCountRef = useRef(0);
 
-  // Optimized store subscriptions - single selectors to reduce re-renders
+  // Individual store subscriptions to prevent object recreation on every render
   const gameSettings = useGameStore((state) => state.gameSettings);
-  const uiState = useUIStore((state) => ({
-    favoriteAssets: state.favoriteAssets,
-    isAssetDropdownOpen: state.isAssetDropdownOpen,
-    signatureColor: state.signatureColor
-  }));
+  const favoriteAssets = useUIStore((state) => state.favoriteAssets);
+  const isAssetDropdownOpen = useUIStore((state) => state.isAssetDropdownOpen);
+  const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Destructure for easier access
   const { minMultiplier, showOtherPlayers, showProbabilities, timeframe, selectedAsset } = gameSettings;
-  const { favoriteAssets, isAssetDropdownOpen, signatureColor } = uiState;
 
   // Store actions - use refs to completely avoid dependency cycles
   const updateGameSettingsRef = useRef(useGameStore.getState().updateGameSettings);
