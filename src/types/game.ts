@@ -54,11 +54,7 @@ export interface WebSocketMessage {
   [key: string]: unknown; // Allow additional properties
 }
 
-export interface WebSocketService {
-  send: (message: { type: string; payload?: unknown }) => void;
-  on: (event: string, handler: (data: unknown) => void) => void;
-  off: (event: string, handler: (data: unknown) => void) => void;
-}
+// WebSocketService interface removed - now using WebSocketManager
 
 export interface TradePlacement {
   contractId: string;

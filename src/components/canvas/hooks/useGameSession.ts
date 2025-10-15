@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore, useTradingStore } from '@/stores';
 import { playHitSound } from '@/lib/sound/SoundManager';
-import { Contract, Position, WebSocketService, WebSocketMessage } from '@/types/game';
-// New unified WebSocket service (Phase 2 migration)
-import { WebSocketManager } from '@/lib/websocket';
+import { Contract, Position, WebSocketMessage } from '@/types/game';
+// Unified WebSocket service
+import { UseWebSocketManagerReturn } from '@/lib/websocket';
 
 interface UseGameSessionProps {
   gameMode: 'box_hit' | 'towers';
   timeframe: number;
-  ws: WebSocketService | WebSocketManager | null;
+  ws: Pick<UseWebSocketManagerReturn, 'send' | 'on' | 'off'> | null;
   enabled: boolean;
 }
 
@@ -20,13 +20,9 @@ interface UseGameSessionReturn {
   handleTradePlace: (contractId: string, amount: number) => void;
 }
 
-// Helper functions to work with both WebSocket types
-const isWebSocketManager = (ws: any): ws is WebSocketManager => {
+// Helper function for WebSocket manager
+const isWebSocketManager = (ws: any): ws is Pick<UseWebSocketManagerReturn, 'send' | 'on' | 'off'> => {
   return ws && typeof ws.send === 'function' && typeof ws.on === 'function' && typeof ws.off === 'function';
-};
-
-const isWebSocketService = (ws: any): ws is WebSocketService => {
-  return ws && typeof ws.sendMessage === 'function' && typeof ws.onMessage === 'function';
 };
 
 export function useGameSession({

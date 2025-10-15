@@ -6,8 +6,7 @@ import { useEffect, useMemo, useRef, useState, memo, useCallback } from 'react';
 import { GridGame } from '../../lib/canvasLogic/games/GridGame';
 import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
-import { useWebSocket } from './hooks/useWebSocket';
-// New unified WebSocket service (Phase 2 migration)
+// Unified WebSocket service
 import { useWebSocketManager } from '@/lib/websocket';
 import { useAppStore, useTradingStore, useConnectionStore } from '@/stores';
 import { Contract, Position, WebSocketMessage } from '@/types/game';
@@ -95,7 +94,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   // Get backend connection setter from store
   const setBackendConnected = useConnectionStore((state) => state.setBackendConnected);
 
-  // Phase 2: Use new unified WebSocket manager
+  // Unified WebSocket manager
   const { isConnected, isConnecting, connect, disconnect, send, on, off } =
     useWebSocketManager({
       autoConnect: false,
