@@ -2,7 +2,7 @@
 
 import { GameType } from '@/types';
 import { TimeFrame, getTimeframeConfig } from '@/types/timeframe';
-import { useEffect, useMemo, useRef, useState, memo } from 'react';
+import { useEffect, useMemo, useRef, useState, memo, useCallback } from 'react';
 import { GridGame } from '../../lib/canvasLogic/games/GridGame';
 import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
@@ -301,39 +301,45 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     }
   }, [isConnected, configLoaded, selectedTimeframe, send, on, off]);
 
-  // Handle price updates
+  // Handle price updates - shared function for both WebSocket and mock data
+  const handlePriceUpdate = useCallback((data: { price: number; timestamp?: number }) => {
+    if (typeof data.price === 'number' && data.price > 0) {
+      setCurrentPrice(data.price);
+      
+      // Notify parent of price update (for header display)
+      if (onPriceUpdate) {
+        onPriceUpdate(data.price);
+      }
+
+      // Update canvas game with new price
+      if (gameRef.current) {
+        gameRef.current.addPriceData({
+          price: data.price,
+          timestamp: data.timestamp || Date.now(),
+        });
+        // Increment data point count to stay in sync with GridGame
+        setDataPointCount((prev) => prev + 1);
+      }
+    }
+  }, [onPriceUpdate]);
+
+  // Handle price updates from WebSocket
   useEffect(() => {
     if (isConnected) {
-      const handlePriceUpdate = (data: unknown) => {
+      const handleWebSocketPriceUpdate = (data: unknown) => {
         const msg = data as WebSocketMessage;
         if (msg.payload && typeof (msg.payload as { price: number }).price === 'number') {
-          const newPrice = (msg.payload as { price: number }).price;
-          setCurrentPrice(newPrice);
-          
-          // Notify parent of price update (for header display)
-          if (onPriceUpdate) {
-            onPriceUpdate(newPrice);
-          }
-
-          // Update canvas game with new price
-          if (gameRef.current) {
-            gameRef.current.addPriceData({
-              price: newPrice,
-              timestamp: Date.now(),
-            });
-            // Increment data point count to stay in sync with GridGame
-            setDataPointCount((prev) => prev + 1);
-          }
+          handlePriceUpdate(msg.payload as { price: number });
         }
       };
 
-      on('price_update', handlePriceUpdate);
+      on('price_update', handleWebSocketPriceUpdate);
 
       return () => {
-        off('price_update', handlePriceUpdate);
+        off('price_update', handleWebSocketPriceUpdate);
       };
     }
-  }, [isConnected, on, off]);
+  }, [isConnected, on, off, handlePriceUpdate]);
 
   // Track data point count for accurate world coordinate calculation
   const [dataPointCount, setDataPointCount] = useState(0);

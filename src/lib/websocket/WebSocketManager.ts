@@ -135,6 +135,7 @@ export class WebSocketManager {
         };
 
         this.ws.onerror = (event) => {
+          console.error('[WebSocketManager] WebSocket connection error:', event);
           const error = new Error('WebSocket connection error');
           this.handleConnectionError(error);
           reject(error);
