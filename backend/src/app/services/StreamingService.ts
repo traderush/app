@@ -37,6 +37,7 @@ export class StreamingService {
   private sessionManager: SessionManager;
   private subscriptions: Set<() => void> = new Set();
   private lastPrice: number = 0;
+  private userBalances: Map<string, number> = new Map(); // Track user balances for change calculation
 
   constructor(
     router: MessageRouter,
@@ -143,9 +144,16 @@ export class StreamingService {
    * Handle balance updates
    */
   private handleBalanceUpdate(userId: string, balance: number): void {
+    // Calculate balance change
+    const previousBalance = this.userBalances.get(userId) || 0;
+    const change = balance - previousBalance;
+    
+    // Update stored balance
+    this.userBalances.set(userId, balance);
+
     const payload: BalanceUpdatePayload = {
       balance,
-      change: 0, // TODO: Track balance changes
+      change,
       reason: 'trade'
     };
 

@@ -37,6 +37,7 @@ export class MessageRouter {
   private connectionManager: ConnectionManager;
   private services: HandlerServices;
   private middleware: MessageMiddleware[] = [];
+  private requestCounts: Map<string, { count: number; resetTime: number }> = new Map();
 
   constructor(connectionManager: ConnectionManager, services: HandlerServices) {
     this.connectionManager = connectionManager;
@@ -93,11 +94,13 @@ export class MessageRouter {
         throw new UnauthorizedError('Authentication required');
       }
 
-      // Apply rate limiting
-      // TODO: Implement rate limiting when needed
-      // if (context.userId) {
-      //   this.connectionManager.checkRateLimit(context.userId, message.type);
-      // }
+      // Basic DDoS protection - prevent excessive requests
+      if (context.userId) {
+        const isAllowed = this.checkDDoSProtection(context.userId);
+        if (!isAllowed) {
+          throw new Error('Too many requests. Please slow down.');
+        }
+      }
 
       // Get handler
       const handler = this.handlers.get(message.type);
@@ -201,6 +204,35 @@ export class MessageRouter {
   }
 
   /**
+   * Basic DDoS protection - prevent excessive requests per user
+   */
+  private checkDDoSProtection(userId: string): boolean {
+    const now = Date.now();
+    const windowMs = 60 * 1000; // 1 minute window
+    const maxRequests = 1000; // Very generous limit for normal usage
+    
+    const current = this.requestCounts.get(userId);
+    
+    if (!current || now > current.resetTime) {
+      // Reset or initialize request count
+      this.requestCounts.set(userId, {
+        count: 1,
+        resetTime: now + windowMs
+      });
+      return true;
+    }
+    
+    if (current.count >= maxRequests) {
+      return false;
+    }
+    
+    // Increment count
+    current.count++;
+    this.requestCounts.set(userId, current);
+    return true;
+  }
+
+  /**
    * Get router statistics
    */
   getStats() {
@@ -208,6 +240,7 @@ export class MessageRouter {
       registeredHandlers: this.handlers.size,
       middlewareCount: this.middleware.length,
       handlers: Array.from(this.handlers.keys()),
+      activeUsers: this.requestCounts.size,
     };
   }
 }

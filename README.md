@@ -3,9 +3,9 @@
 A high-performance, real-time cryptocurrency trading platform with live price data, canvas-based visualizations, and sophisticated trading mechanics.
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15-black)
-![Zustand](https://img.shields.io/badge/Zustand-4.0-orange)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)
+![Next.js](https://img.shields.io/badge/Next.js-15.5-black)
+![Zustand](https://img.shields.io/badge/Zustand-5.0-orange)
 
 ## 🚀 Features
 

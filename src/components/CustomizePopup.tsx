@@ -9,6 +9,18 @@ interface CustomizePopupProps {
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
+/**
+ * CustomizePopup Component
+ * 
+ * Allows users to customize the application theme, specifically the signature color
+ * used throughout the UI for buttons, highlights, and accents. The popup provides
+ * both a color picker and preset color options for quick theme customization.
+ * 
+ * @param isOpen - Whether the popup is currently visible
+ * @param onClose - Callback function when popup should be closed
+ * @param triggerRef - Reference to the button that triggered the popup (for positioning)
+ * @returns JSX element for the customization popup modal
+ */
 export default function CustomizePopup({ isOpen, onClose, triggerRef }: CustomizePopupProps) {
   const signatureColor = useAppStore((state) => state.signatureColor);
   const setSignatureColor = useAppStore((state) => state.setSignatureColor);

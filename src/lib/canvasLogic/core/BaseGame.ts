@@ -54,7 +54,7 @@ export abstract class BaseGame extends EventEmitter {
     this.canvas.style.top = '0';
     this.canvas.style.left = '0';
     this.canvas.style.zIndex = '1'; // Ensure canvas is visible
-    this.canvas.style.backgroundColor = 'rgba(0,255,0,0.1)'; // Temporary green background for debugging
+    // Canvas background is transparent by default for proper rendering
 
     const ctx = this.canvas.getContext('2d', {
       alpha: false,
