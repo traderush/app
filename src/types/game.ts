@@ -46,8 +46,10 @@ export interface MultiplierBox {
 }
 
 export interface WebSocketMessage {
+  messageId: string;
   type: string;
   payload?: unknown;
+  timestamp: number;
   data?: unknown;
   [key: string]: unknown; // Allow additional properties
 }

@@ -135,7 +135,6 @@ export class WebSocketManager {
         };
 
         this.ws.onerror = (event) => {
-          console.error('[WebSocketManager] WebSocket connection error:', event);
           const error = new Error('WebSocket connection error');
           this.handleConnectionError(error);
           reject(error);
@@ -173,24 +172,22 @@ export class WebSocketManager {
    * Send a message through WebSocket
    */
   send(message: { type: string; payload?: unknown }): void {
+    // Add messageId and timestamp if not present (required by backend)
+    const fullMessage = {
+      messageId: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      timestamp: Date.now(),
+      type: message.type,
+      payload: message.payload,
+    } as WebSocketMessage;
+
     if (!this.isConnected || !this.ws) {
       // Queue message for later if not connected
-      this.messageQueue.push({
-        type: message.type,
-        payload: message.payload,
-        timestamp: Date.now(),
-      } as WebSocketMessage);
+      this.messageQueue.push(fullMessage);
       return;
     }
 
     try {
-      const wsMessage = {
-        type: message.type,
-        payload: message.payload,
-        timestamp: Date.now(),
-      } as WebSocketMessage;
-      
-      this.ws.send(JSON.stringify(wsMessage));
+      this.ws.send(JSON.stringify(fullMessage));
     } catch (error) {
       console.error('Failed to send WebSocket message:', error);
       this.options.onError(error as Error);
@@ -333,8 +330,13 @@ export class WebSocketManager {
   private processMessageQueue(): void {
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
-      if (message) {
-        this.send({ type: message.type, payload: message.payload });
+      if (message && this.isConnected && this.ws) {
+        try {
+          this.ws.send(JSON.stringify(message));
+        } catch (error) {
+          console.error('Failed to send queued WebSocket message:', error);
+          this.options.onError(error as Error);
+        }
       }
     }
   }
