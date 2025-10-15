@@ -4,7 +4,7 @@ import { useGameStore } from './gameStore';
 import { usePriceStore } from './priceStore';
 import { useUserStore } from './userStore';
 import { useUIStore } from './uiStore';
-import { WebSocketMessage } from '@/types/websocket';
+import { WebSocketMessage } from '@/types/game';
 
 // WebSocket message handler hook
 export const useWebSocketHandler = () => {
@@ -29,20 +29,22 @@ export const useWebSocketHandler = () => {
 
     switch (message.type) {
       case 'connected':
-        setUser(message.payload.userId, message.payload.username);
-        updateBalance(message.payload.balance);
+        const connectedPayload = message.payload as { userId: string; username: string; balance: number };
+        setUser(connectedPayload.userId, connectedPayload.username);
+        updateBalance(connectedPayload.balance);
         setConnected(true);
         setError(null);
         break;
 
       case 'price_update':
+        const pricePayload = message.payload as { timestamp: number; price: number };
         addPricePoint({
-          t: message.payload.timestamp,
-          p: message.payload.price,
+          t: pricePayload.timestamp,
+          p: pricePayload.price,
         });
         updateStats({
-          currentPrice: message.payload.price,
-          lastUpdate: message.payload.timestamp,
+          currentPrice: pricePayload.price,
+          lastUpdate: pricePayload.timestamp,
         });
         break;
 
@@ -55,17 +57,24 @@ export const useWebSocketHandler = () => {
         break;
 
       case 'trade_placed':
-        updateBalance(message.payload.balance);
+        const tradePayload = message.payload as { 
+          balance: number; 
+          contractId: string; 
+          amount: number; 
+          position: { timestamp: number } 
+        };
+        updateBalance(tradePayload.balance);
         addTrade({
-          id: message.payload.contractId,
-          contractId: message.payload.contractId,
-          amount: message.payload.amount,
-          placedAt: new Date(message.payload.position.timestamp),
+          id: tradePayload.contractId,
+          contractId: tradePayload.contractId,
+          amount: tradePayload.amount,
+          placedAt: new Date(tradePayload.position.timestamp),
         });
         break;
 
       case 'balance_update':
-        updateBalance(message.payload.balance);
+        const balancePayload = message.payload as { balance: number };
+        updateBalance(balancePayload.balance);
         break;
 
       case 'box_hit':
@@ -75,7 +84,8 @@ export const useWebSocketHandler = () => {
         break;
 
       case 'error':
-        setError(message.payload.message);
+        const errorPayload = message.payload as { message: string };
+        setError(errorPayload.message);
         break;
 
       default:

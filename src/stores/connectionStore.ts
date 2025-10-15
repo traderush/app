@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { WebSocketMessage } from '@/types/game';
 import { subscribeWithSelector } from 'zustand/middleware';
 
 export interface ConnectionStatus {
@@ -11,11 +12,7 @@ export interface ConnectionStatus {
   isBackendConnected: boolean;
 }
 
-export interface WebSocketMessage {
-  type: string;
-  payload: any;
-  timestamp: number;
-}
+// WebSocketMessage interface is now imported from @/types/game
 
 interface ConnectionState {
   // Connection Status

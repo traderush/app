@@ -21,7 +21,7 @@ export type { GameCell, GamePosition, GameSettings, GameStats } from './gameStor
 export type { WatchedPlayer, PlayerStats, PlayerPreferences } from './playerStore';
 export type { ModalState, ToastNotification, UITheme, UILayout, UISettings } from './uiStore';
 export type { PricePoint, PriceDataConfig, WebSocketConnection, PriceStats } from './priceStore';
-export type { ConnectionStatus, WebSocketMessage } from './connectionStore';
+export type { ConnectionStatus } from './connectionStore';
 export type { Trade, UserProfile, UserStats } from './userStore';
 
 // Store utilities

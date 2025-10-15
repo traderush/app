@@ -10,6 +10,8 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useUIStore } from '@/stores/uiStore';
 import { useUserStore } from '@/stores/userStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { Contract, Position, WebSocketMessage } from '@/types/game';
+import { handleCanvasError, handleWebSocketError } from '@/lib/errorHandler';
 
 /**
  * Props for the Canvas component (Mock Backend Trading View)
@@ -31,7 +33,7 @@ interface CanvasProps {
   externalIsStarted?: boolean;
   onExternalStartChange?: (isStarted: boolean) => void;
   externalTimeframe?: number;
-  onPositionsChange?: (positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => void;
+  onPositionsChange?: (positions: Map<string, Position>, contracts: Contract[], hitBoxes: string[], missedBoxes: string[]) => void;
   betAmount?: number;
   onPriceUpdate?: (price: number) => void;
   onSelectionChange?: (count: number, best: number, multipliers: number[], averagePrice?: number | null) => void;
@@ -89,7 +91,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   
   // Get balance update function from user store
   const updateBalance = useUserStore((state) => state.updateBalance);
-  const addTrade = useUserStore((state) => state.addTrade);
   
   // Get backend connection setter from store
   const setBackendConnected = useConnectionStore((state) => state.setBackendConnected);
@@ -107,15 +108,8 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       enabled: isConnected,
     });
 
-  // Debug WebSocket connection status and update backend connection status
+  // Update backend connection status
   useEffect(() => {
-    console.log('🔍 Canvas WebSocket status:', {
-      isConnected,
-      isJoined,
-      positionsSize: positions?.size || 0,
-      contractsLength: contracts?.length || 0,
-      positions: positions ? Array.from(positions.entries()) : []
-    });
     
     // Update backend connection status in the global store
     setBackendConnected(isConnected);
@@ -197,10 +191,11 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   useEffect(() => {
     if (!isConnected) return;
 
-    const handleContractResolved = (msg: any) => {
+    const handleContractResolved = (data: unknown) => {
+      const msg = data as WebSocketMessage;
       console.log('🔔 Contract resolved event:', msg);
       if (msg.payload && gameRef.current) {
-        const { contractId, outcome } = msg.payload;
+        const { contractId, outcome } = msg.payload as { contractId: string; outcome: string };
         console.log('📋 Contract ID:', contractId, 'Outcome:', outcome);
 
         if (outcome === 'hit') {
@@ -219,9 +214,15 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       }
     };
 
-    const handleTradeResult = (msg: any) => {
+    const handleTradeResult = (data: unknown) => {
+      const msg = data as WebSocketMessage;
       if (msg.payload) {
-        const { contractId, won, payout, profit, balance } = msg.payload;
+        const { contractId, won, profit, balance } = msg.payload as { 
+          contractId: string; 
+          won: boolean; 
+          profit: number; 
+          balance: number; 
+        };
         const message = won
           ? `Trade Won  +$${Math.abs(profit).toFixed(2)}`
           : `Trade Lost -$${Math.abs(profit).toFixed(2)}`;
@@ -294,9 +295,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         },
       });
 
-      const handleGameConfig = (msg: any) => {
+      const handleGameConfig = (data: unknown) => {
+        const msg = data as WebSocketMessage;
         if (msg.type === 'game_config' && msg.payload) {
-          const { config } = msg.payload;
+          const { config } = msg.payload as { config: { priceStep: number; timeStep: number; basePrice: number } };
           setPriceStep(config.priceStep);
           setTimeStep(config.timeStep);
           setBasePrice(config.basePrice);
@@ -323,9 +325,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   // Handle price updates
   useEffect(() => {
     if (isConnected) {
-      const handlePriceUpdate = (msg: any) => {
-        if (msg.payload && typeof msg.payload.price === 'number') {
-          const newPrice = msg.payload.price;
+      const handlePriceUpdate = (data: unknown) => {
+        const msg = data as WebSocketMessage;
+        if (msg.payload && typeof (msg.payload as { price: number }).price === 'number') {
+          const newPrice = (msg.payload as { price: number }).price;
           setCurrentPrice(newPrice);
           
           // Notify parent of price update (for header display)
@@ -424,14 +427,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
       console.log('🔍 Canvas: Filtered visible contracts', {
         visibleCount: visibleContracts.length,
-        futureContracts: visibleContracts.filter(c => c.startTime > currentTimeMs).length,
-        pastContracts: visibleContracts.filter(c => c.endTime <= currentTimeMs).length,
       });
     }
 
-    let skippedOld = 0;
-    let skippedFuture = 0;
-    let processedCount = 0;
+    // Process visible contracts
 
     visibleContracts.forEach((contract) => {
       // Calculate grid position based on time
@@ -444,17 +443,13 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       // Skip very old contracts (beyond columnsBehind config)
       const tfConfig = getTimeframeConfig(selectedTimeframe);
       if (timeSinceEnd > timeStep * tfConfig.ironCondor.columnsBehind) {
-        skippedOld++;
         return;
       }
 
       // Also skip contracts that are too far in the future (more than numXsquares columns)
       if (col >= numXsquares) {
-        skippedFuture++;
         return;
       }
-
-      processedCount++;
 
       // Calculate row based on price
       const priceCenter = (contract.lowerStrike + contract.upperStrike) / 2;
@@ -495,7 +490,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         height: height,
         totalBets: contract.totalVolume,
         userBet: positions.has(contract.contractId)
-          ? positions.get(contract.contractId).amount
+          ? positions.get(contract.contractId)?.amount || 0
           : 0,
         timestampRange: {
           start: contract.startTime,
@@ -515,16 +510,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       };
     });
 
-    if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
-      console.log('🔍 Canvas: Final multipliers result', {
-        processed: processedCount,
-        skippedOld: skippedOld,
-        skippedFuture: skippedFuture,
-        totalMultipliers: Object.keys(multipliers).length,
-        futureMultipliers: Object.values(multipliers).filter((m: any) => m.isClickable).length,
-        pastMultipliers: Object.values(multipliers).filter((m: any) => m.status === 'passed').length,
-      });
-    }
 
     return multipliers;
   }, [
@@ -1026,7 +1011,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       setDataPointCount(0);
 
       // Initialize with base price from config to match the test UI
-      const initialPrice = currentPrice || basePrice;
 
       console.log(
         'Initializing game with basePrice:',
@@ -1085,10 +1069,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         setIsStarted(true);
       }
     } catch (error) {
-      console.error('Failed to connect to server:', error);
-      alert(
-        'Failed to connect to server. Please ensure the backend is running.'
-      );
+      handleWebSocketError(error instanceof Error ? error : new Error(String(error)), {
+        action: 'Canvas connection',
+        component: 'Canvas'
+      });
     }
   };
 
@@ -1161,9 +1145,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     <div 
       className="flex h-full w-full" 
       style={{ backgroundColor: '#0E0E0E', position: 'relative', overflow: 'hidden' }}
-      onMouseDown={(e) => e.stopPropagation()}
-      onMouseMove={(e) => e.stopPropagation()}
-      onMouseUp={(e) => e.stopPropagation()}
     >
       <div className="flex h-full w-full flex-col">
         {/* Header - hidden when externally controlled */}

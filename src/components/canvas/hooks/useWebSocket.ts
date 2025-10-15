@@ -46,7 +46,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     });
 
     ws.onError((error) => {
-      console.error('WebSocket error:', error);
       setIsConnecting(false);
     });
 
@@ -68,7 +67,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     try {
       await ws.connect(customUsername || username);
     } catch (error) {
-      console.error('Failed to connect:', error);
       setIsConnecting(false);
     }
   }, [ws, username, isConnected, isConnecting]);

@@ -69,9 +69,9 @@ class WebSocketService {
           });
           
           // Wait for auth confirmation
-          const authHandler = (msg: any) => {
+          const authHandler = (msg: WebSocketMessage) => {
             if (msg.type === 'connected') {
-              this.userId = msg.userId;
+              this.userId = (msg as any).userId;
               this.isAuthenticated = true;
               this.off('connected', authHandler);
               
@@ -197,7 +197,7 @@ class WebSocketService {
     this.isAuthenticated = false;
   }
 
-  send(message: any): void {
+  send(message: WebSocketMessage): void {
     // Add messageId and timestamp if not present
     const fullMessage = {
       messageId: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
@@ -240,17 +240,17 @@ class WebSocketService {
   }
 
   once(messageType: string, handler: MessageHandler): void {
-    const onceHandler = (message: any) => {
+    const onceHandler = (message: WebSocketMessage) => {
       handler(message);
       this.off(messageType, onceHandler);
     };
     this.on(messageType, onceHandler);
   }
 
-  private handleMessage(message: any): void {
+  private handleMessage(message: WebSocketMessage): void {
     // Store session ID when game is joined
     if (message.type === 'game_joined') {
-      this.sessionId = message.sessionId;
+      this.sessionId = (message as any).sessionId;
     }
 
     // Call all registered handlers for this message type

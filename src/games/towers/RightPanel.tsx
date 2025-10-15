@@ -2,14 +2,10 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Filter, ChevronRight, Edit3, ExternalLink } from 'lucide-react';
 import { useUIStore } from '@/stores';
+import { TRADING_COLORS } from '@/lib/constants/trading';
 
 const ORANGE = '#FA5616';
 
-/** centralized trading colors */
-const TRADING_COLORS = {
-  positive: '#2fe3ac',  // Green for positive values (gains, up movements)
-  negative: '#ec397a',  // Red for negative values (losses, down movements)
-} as const;
 
 interface RightPanelProps {
   isTradingMode: boolean;

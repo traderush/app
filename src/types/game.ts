@@ -1,83 +1,88 @@
-// Import contract types
-import { IronCondorId, SpreadCallId, SpreadPutId, TimeFrame } from './contracts';
-import { GameType } from './gameType';
+/** Game-related type definitions */
 
-// Box/Grid element types
-export interface GridBox {
-  x: number;
-  y: number;
-  id: IronCondorId; // Now uses Iron Condor contract ID
-  gridX: number;
-  gridY: number;
-  multiplier: number;
-  totalTrades: number;
-  userTrade?: number;
-  contractId: IronCondorId;
+export interface Contract {
+  contractId: string;
+  returnMultiplier: number;
+  lowerStrike: number;
+  upperStrike: number;
+  startTime: number;
+  endTime: number;
+  isActive: boolean;
+  totalVolume: number;
+  type?: string; // Optional type field for filtering
 }
 
-// Tower element types
-export interface Tower {
-  id: SpreadCallId | SpreadPutId; // Now uses Spread contract ID
-  columnX: number;
-  type: 'top' | 'bottom'; // top = call spread, bottom = put spread
-  priceThreshold: number;
-  multiplier: number;
-  totalTrades: number;
-  userTrade?: number;
+export interface Position {
+  id: string;
+  contractId: string;
+  amount: number;
+  placedAt: Date;
+  result?: 'win' | 'loss';
+  payout?: number;
+  settledAt?: Date;
+}
+
+export interface MultiplierBox {
+  value: number;
+  x: number;
+  y: number;
   worldX: number;
   worldY: number;
   width: number;
   height: number;
-  timestampRange: {
+  totalBets: number;
+  userBet?: number;
+  timestampRange?: {
     start: number;
     end: number;
   };
-  contractId: SpreadCallId | SpreadPutId;
-}
-
-// Circle (for sketch/cobra games)
-export interface Circle {
-  x: number;
-  y: number;
-  id: string;
-  marked: boolean;
-  passed?: boolean;
-  missed?: boolean;
-  isNew?: boolean;
-}
-
-// Game state types
-export interface GameState {
-  marker: Marker;
-  globalOffset: GlobalOffset;
-  selectedCircles: Circle[];
-  selectedTimeframe: TimeFrame;
-  gameType: GameType;
-}
-
-export interface Marker {
-  x: number;
-  y: number;
-  active: boolean;
-  price: number;
-  logs: { x: number; y: number; price: number | null }[];
-}
-
-export interface Market {
-  price: number;
-  range: {
-    minPrice: number;
-    maxPrice: number;
+  priceRange?: {
+    min: number;
+    max: number;
   };
+  status?: 'hit' | 'missed' | 'passed' | 'expired';
+  isClickable?: boolean;
+  isEmpty?: boolean;
 }
 
-export interface GlobalOffset {
-  y: number;
-  x: number;
+export interface WebSocketMessage {
+  type: string;
+  payload?: unknown;
+  data?: unknown;
+  [key: string]: unknown; // Allow additional properties
 }
 
-export interface TrailPoint {
-  y: number;
-  x: number;
-  price: number;
+export interface WebSocketService {
+  send: (message: { type: string; payload?: unknown }) => void;
+  on: (event: string, handler: (data: unknown) => void) => void;
+  off: (event: string, handler: (data: unknown) => void) => void;
+}
+
+export interface TradePlacement {
+  contractId: string;
+  amount: number;
+}
+
+export interface GameSessionState {
+  isJoined: boolean;
+  contracts: Contract[];
+  userBalance: number;
+  positions: Map<string, Position>;
+}
+
+export interface GameConfig {
+  theme?: {
+    colors?: {
+      primary?: string;
+    };
+  };
+  fps?: number;
+  dpr?: number;
+}
+
+export interface GameState {
+  isRunning: boolean;
+  isPaused: boolean;
+  score: number;
+  time: number;
 }

@@ -1,5 +1,6 @@
 import { Theme, defaultTheme } from '../config/theme';
 import { EventEmitter } from '../utils/EventEmitter';
+import { GameState } from '@/types/game';
 
 export interface GameConfig {
   theme?: Theme;
@@ -9,11 +10,11 @@ export interface GameConfig {
   fps?: number;
 }
 
-export interface GameState {
-  isRunning: boolean;
-  isPaused: boolean;
-  score: number;
-  time: number;
+// Remove duplicate GameState interface since it's now imported from types/game.ts
+
+interface BaseGameWithObserver extends BaseGame {
+  _mutationObserver?: MutationObserver | null;
+  _destroyed?: boolean;
 }
 
 export abstract class BaseGame extends EventEmitter {
@@ -95,7 +96,7 @@ export abstract class BaseGame extends EventEmitter {
       observer.observe(this.container, { childList: true, subtree: true });
       
       // Store observer to disconnect later
-      (this as any)._mutationObserver = observer;
+      (this as BaseGameWithObserver)._mutationObserver = observer;
     } catch (error) {
       console.error('Failed to append canvas:', error);
     }
@@ -143,9 +144,7 @@ export abstract class BaseGame extends EventEmitter {
     this.canvas.style.height = `${this.height}px`;
 
     // Reset any existing transform before applying DPR scale to avoid compounding
-    if ((this.ctx as any).setTransform) {
-      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    }
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(this.dpr, this.dpr);
 
     this.emit('resize', { width: this.width, height: this.height });
@@ -279,10 +278,10 @@ export abstract class BaseGame extends EventEmitter {
 
   public destroy(): void {
     // Prevent multiple destroy calls
-    if ((this as any)._destroyed) {
+    if ((this as BaseGameWithObserver)._destroyed) {
       return;
     }
-    (this as any)._destroyed = true;
+    (this as BaseGameWithObserver)._destroyed = true;
 
     this.stop();
 
@@ -296,11 +295,12 @@ export abstract class BaseGame extends EventEmitter {
     }
 
     // Disconnect mutation observer
-    if ((this as any)._mutationObserver) {
+    const observer = (this as BaseGameWithObserver)._mutationObserver;
+    if (observer) {
       try {
-        (this as any)._mutationObserver.disconnect();
+        observer.disconnect();
       } catch {}
-      (this as any)._mutationObserver = null;
+      (this as BaseGameWithObserver)._mutationObserver = null;
     }
 
     // Remove canvas

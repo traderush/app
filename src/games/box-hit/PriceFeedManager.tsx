@@ -149,7 +149,7 @@ const PriceFeedManager = React.memo(function PriceFeedManager({
   };
 
   // Extract price from exchange message
-  const extractPriceFromMessage = (data: any, exchange: string): number | null => {
+  const extractPriceFromMessage = (data: unknown, exchange: string): number | null => {
     try {
       switch (exchange) {
         case 'binance':

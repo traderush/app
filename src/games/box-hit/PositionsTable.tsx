@@ -1,41 +1,20 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useUIStore, useUserStore } from '@/stores';
+import { TRADING_COLORS } from '@/lib/constants/trading';
+import { Contract, Position } from '@/types/game';
 
-/** centralized trading colors */
-const TRADING_COLORS = {
-  positive: '#2fe3ac',  // Green for positive values (gains, up movements)
-  negative: '#ec397a',  // Red for negative values (losses, down movements)
-} as const;
 
 interface PositionsTableProps {
-  selectedCount: number;
-  selectedMultipliers: number[];
   betAmount: number;
   currentBTCPrice: number;
-  onPositionHit?: (positionId: string) => void;
-  onPositionMiss?: (positionId: string) => void;
-  hitBoxes?: string[]; // Array of contract IDs that were successfully hit
-  missedBoxes?: string[]; // Array of contract IDs that were missed
-  realPositions?: Map<string, any>; // Real backend positions (for mock backend mode)
-  contracts?: any[]; // Backend contracts (for mock backend mode)
 }
 
-// Stable empty array to prevent infinite loops
-const EMPTY_ARRAY: number[] = [];
-const EMPTY_STRING_ARRAY: string[] = [];
+// PositionsTable component for displaying trading positions
 
 const PositionsTable = React.memo(function PositionsTable({ 
-  selectedCount, 
-  selectedMultipliers, 
   betAmount, 
-  currentBTCPrice, 
-  onPositionHit, 
-  onPositionMiss, 
-  hitBoxes = EMPTY_STRING_ARRAY, 
-  missedBoxes = EMPTY_STRING_ARRAY, 
-  realPositions, 
-  contracts = EMPTY_ARRAY as any[] 
+  currentBTCPrice
 }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
   const signatureColor = useUIStore((state) => state.signatureColor);
@@ -43,7 +22,6 @@ const PositionsTable = React.memo(function PositionsTable({
   // Get userStore data for accurate positions tracking
   const activeTrades = useUserStore((state) => state.activeTrades);
   const tradeHistory = useUserStore((state) => state.tradeHistory);
-  const balance = useUserStore((state) => state.balance);
   
   // Convert userStore data to positions format for display
   const activePositions = useMemo(() => {

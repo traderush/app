@@ -1,6 +1,6 @@
 // WebSocket message types for the new architecture
 import { IronCondorId, SpreadCallId, SpreadPutId, TimeFrame, SpreadTimeframe, ContractId } from './contracts';
-import { GridBox, Tower } from './game';
+// Note: GridBox and Tower types are not exported from game.ts, removing this import
 import { GameType } from './gameType';
 
 // Base message structure
@@ -62,14 +62,14 @@ export interface PriceUpdateMessage extends WSMessage<{
 // Multiplier messages (updated with contract IDs)
 export interface BoxMultipliersMessage extends WSMessage<{
   timeframe: TimeFrame;
-  multipliers: GridBox[];
+  multipliers: any[]; // TODO: Define proper GridBox type
 }> {
   type: 'box_multipliers';
 }
 
 export interface TowerMultipliersMessage extends WSMessage<{
   timeframe: SpreadTimeframe;
-  multipliers: Tower[];
+  multipliers: any[]; // TODO: Define proper Tower type
 }> {
   type: 'tower_multipliers';
 }

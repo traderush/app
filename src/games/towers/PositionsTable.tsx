@@ -1,12 +1,8 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useUIStore } from '@/stores';
+import { TRADING_COLORS } from '@/lib/constants/trading';
 
-/** centralized trading colors */
-const TRADING_COLORS = {
-  positive: '#2fe3ac',  // Green for positive values (gains, up movements)
-  negative: '#ec397a',  // Red for negative values (losses, down movements)
-} as const;
 
 interface PositionsTableProps {
   selectedCount: number;
@@ -162,7 +158,6 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
           const existingMultipliers = new Set(prev.map(p => p.multiplier));
           const filteredNewPositions = newPositions.filter(pos => !existingMultipliers.has(pos.multiplier));
           
-          console.log('Adding new positions:', filteredNewPositions.length, 'Total positions:', prev.length + filteredNewPositions.length);
           return [...prev, ...filteredNewPositions];
         });
       }
@@ -171,7 +166,6 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
       const selectedMultipliersSet = new Set(stableSelectedMultipliers);
       setActivePositions(prev => {
         const filtered = prev.filter(pos => selectedMultipliersSet.has(pos.multiplier));
-        console.log('Filtering positions:', prev.length, '->', filtered.length, 'Removed:', prev.length - filtered.length);
         return filtered;
       });
       

@@ -1,12 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { TRADING_COLORS } from '@/lib/constants/trading';
 
-/** centralized trading colors */
-const TRADING_COLORS = {
-  positive: '#2fe3ac',  // Green for positive values (gains, up movements)
-  negative: '#ec397a',  // Red for negative values (losses, down movements)
-} as const;
 
 /** helpers */
 type Pt = { t: number; p: number };

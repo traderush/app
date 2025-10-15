@@ -1,23 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUserStore } from '@/stores/userStore';
 import { playHitSound } from '@/lib/sound/SoundManager';
+import { Contract, Position, WebSocketService, WebSocketMessage } from '@/types/game';
 
 interface UseGameSessionProps {
   gameMode: 'box_hit' | 'towers';
   timeframe: number;
-  ws: {
-    send: (message: any) => void;
-    on: (event: string, handler: (data: any) => void) => void;
-    off: (event: string, handler: (data: any) => void) => void;
-  } | null;
+  ws: WebSocketService | null;
   enabled: boolean;
 }
 
 interface UseGameSessionReturn {
   isJoined: boolean;
-  contracts: any[];
+  contracts: Contract[];
   userBalance: number;
-  positions: Map<string, any>;
+  positions: Map<string, Position>;
   handleTradePlace: (contractId: string, amount: number) => void;
 }
 
@@ -51,17 +48,7 @@ export function useGameSession({
   // Handle trade placement
   const handleTradePlace = useCallback(
     (contractId: string, amount: number) => {
-      console.log('🔍 handleTradePlace called:', {
-        contractId,
-        amount,
-        hasWs: !!wsRef.current,
-        isJoined,
-        enabled
-      });
-      
       if (wsRef.current && isJoined) {
-        console.log('✅ Sending place_trade message:', { contractId, amount });
-        
         // Add trade to userStore immediately when placed
         addTrade({
           contractId: contractId,
@@ -69,17 +56,9 @@ export function useGameSession({
           placedAt: new Date(),
         });
         
-        console.log('➕ Trade added to userStore:', { contractId, amount });
-        
         wsRef.current.send({
           type: 'place_trade',
           payload: { contractId, amount },
-        });
-      } else {
-        console.log('❌ Cannot place trade:', {
-          hasWs: !!wsRef.current,
-          isJoined,
-          enabled
         });
       }
     },
@@ -104,29 +83,31 @@ export function useGameSession({
     let mounted = true;
 
     // Event handlers
-    const handleGameJoined = (msg: any) => {
+    const handleGameJoined = (data: unknown) => {
+      const msg = data as WebSocketMessage;
       if (!mounted) return;
       console.log('[useGameSession] Game joined:', {
         timeframe,
-        hasContracts: !!(msg.payload?.contracts || msg.contracts),
-        contractCount: (msg.payload?.contracts || msg.contracts || []).length,
+        hasContracts: !!((msg.payload as any)?.contracts || (msg as any).contracts),
+        contractCount: ((msg.payload as any)?.contracts || (msg as any).contracts || []).length,
       });
       setIsJoined(true);
       isJoinedRef.current = true;
-      if (msg.payload && msg.payload.contracts) {
-        setContracts(msg.payload.contracts);
-      } else if (msg.contracts) {
-        setContracts(msg.contracts);
+      if (msg.payload && (msg.payload as any).contracts) {
+        setContracts((msg.payload as any).contracts);
+      } else if ((msg as any).contracts) {
+        setContracts((msg as any).contracts);
       }
       // Set initial balance from game_joined message
-      if (msg.payload && typeof msg.payload.balance === 'number') {
-        setUserBalance(msg.payload.balance);
-      } else if (typeof msg.balance === 'number') {
-        setUserBalance(msg.balance);
+      if (msg.payload && typeof (msg.payload as any).balance === 'number') {
+        setUserBalance((msg.payload as any).balance);
+      } else if (typeof (msg as any).balance === 'number') {
+        setUserBalance((msg as any).balance);
       }
     };
 
-    const handleContractUpdate = (msg: any) => {
+    const handleContractUpdate = (data: unknown) => {
+      const msg = data as WebSocketMessage;
       if (!mounted) return;
       const now = Date.now();
       const timestamp = new Date().toISOString();
@@ -134,12 +115,12 @@ export function useGameSession({
       // Only log first update
       if (!contractsReceived.current) {
         contractsReceived.current = true;
-        const firstContract = (msg.payload?.contracts ||
-          msg.contracts ||
+        const firstContract = ((msg.payload as any)?.contracts ||
+          (msg as any).contracts ||
           [])[0];
         console.log('[useGameSession] First contract update:', {
-          updateType: msg.payload?.updateType,
-          contractCount: (msg.payload?.contracts || msg.contracts || []).length,
+          updateType: (msg.payload as any)?.updateType,
+          contractCount: ((msg.payload as any)?.contracts || (msg as any).contracts || []).length,
           firstContract: firstContract
             ? {
                 ...firstContract,
@@ -157,9 +138,9 @@ export function useGameSession({
         });
       }
 
-      if (msg.payload && msg.payload.contracts) {
-        const contracts = msg.payload.contracts;
-        const updateType = msg.payload.updateType;
+      if (msg.payload && (msg.payload as any).contracts) {
+        const contracts = (msg.payload as any).contracts;
+        const updateType = (msg.payload as any).updateType;
 
         if (updateType === 'new') {
           // Append new contracts to existing ones
@@ -168,29 +149,30 @@ export function useGameSession({
           // Replace all contracts (initial load or full update)
           setContracts(contracts);
         }
-      } else if (msg.contracts) {
-        setContracts(msg.contracts);
+      } else if ((msg as any).contracts) {
+        setContracts((msg as any).contracts);
       }
     };
 
-    const handleTradeConfirmed = (msg: any) => {
+    const handleTradeConfirmed = (data: unknown) => {
+      const msg = data as WebSocketMessage;
       if (!mounted) return;
       console.log('✅ Trade confirmed event:', msg);
-      if (msg.payload && typeof msg.payload.balance === 'number') {
-        setUserBalance(msg.payload.balance);
-      } else if (typeof msg.balance === 'number') {
-        setUserBalance(msg.balance);
+      if (msg.payload && typeof (msg.payload as any).balance === 'number') {
+        setUserBalance((msg.payload as any).balance);
+      } else if (typeof (msg as any).balance === 'number') {
+        setUserBalance((msg as any).balance);
       }
       
       // Extract contractId from payload or root level
-      const contractId = msg.payload?.contractId || msg.contractId;
-      const amount = msg.payload?.amount || msg.amount;
-      const tradeId = msg.payload?.tradeId || msg.tradeId;
+      const contractId = (msg.payload as any)?.contractId || (msg as any).contractId;
+      const amount = (msg.payload as any)?.amount || (msg as any).amount;
+      const tradeId = (msg.payload as any)?.tradeId || (msg as any).tradeId;
       
       const position = {
         contractId: contractId,
         amount: amount,
-        timestamp: msg.timestamp || Date.now(),
+        timestamp: (msg as any).timestamp || Date.now(),
         tradeId: tradeId,
       };
       
@@ -207,18 +189,19 @@ export function useGameSession({
       });
     };
 
-    const handleTradeResult = (msg: any) => {
+    const handleTradeResult = (data: unknown) => {
+      const msg = data as WebSocketMessage;
       if (!mounted) return;
       console.log('🎯 Trade result received:', msg);
       
       // Extract data from message
       const payload = msg.payload || msg;
-      const tradeId = payload.tradeId;
-      const contractId = payload.contractId;
-      const won = payload.won;
-      const payout = payload.payout || 0;
-      const profit = payload.profit || 0;
-      const balance = payload.balance;
+      const tradeId = (payload as any).tradeId;
+      const contractId = (payload as any).contractId;
+      const won = (payload as any).won;
+      const payout = (payload as any).payout || 0;
+      const profit = (payload as any).profit || 0;
+      const balance = (payload as any).balance;
       
       console.log('🎯 Processing trade result:', {
         tradeId,
@@ -289,12 +272,13 @@ export function useGameSession({
       }
     };
 
-    const handleBalanceUpdate = (msg: any) => {
+    const handleBalanceUpdate = (data: unknown) => {
+      const msg = data as WebSocketMessage;
       if (!mounted) return;
       console.log('Balance update:', msg);
-      if (msg.payload && typeof msg.payload.balance === 'number') {
-        console.log('Setting balance to:', msg.payload.balance);
-        setUserBalance(msg.payload.balance);
+      if (msg.payload && typeof (msg.payload as any).balance === 'number') {
+        console.log('Setting balance to:', (msg.payload as any).balance);
+        setUserBalance((msg.payload as any).balance);
       }
     };
 

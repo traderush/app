@@ -7,6 +7,7 @@ import {
   SquareRenderOptions,
 } from '../rendering/SquareRenderer';
 import { playSelectionSound } from '@/lib/sound/SoundManager';
+import { MultiplierBox } from '@/types/game';
 
 export interface PriceData {
   price: number;
@@ -1557,7 +1558,7 @@ export class GridGame extends BaseGame {
     this.ctx.restore();
   }
 
-  private isBoxClickable(box: any): boolean {
+  private isBoxClickable(box: MultiplierBox): boolean {
     // Get current X position based on data points
     const pixelsPerPoint = this.config.pixelsPerPoint;
     const currentWorldX = (this.totalDataPoints - 1) * pixelsPerPoint;
