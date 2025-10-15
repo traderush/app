@@ -54,44 +54,36 @@ export default function ClientView() {
   const previousPositionsRef = useRef<Map<string, Position>>(new Map());
   const previousCountRef = useRef(0);
 
-  // Global store subscriptions - individual subscriptions to prevent infinite loops
-  const minMultiplier = useGameStore((state) => state.gameSettings.minMultiplier);
-  const showOtherPlayers = useGameStore((state) => state.gameSettings.showOtherPlayers);
-  const showProbabilities = useGameStore((state) => state.gameSettings.showProbabilities);
-  const timeframe = useGameStore((state) => state.gameSettings.timeframe);
-  const selectedAsset = useGameStore((state) => state.gameSettings.selectedAsset);
+  // Optimized store subscriptions - single selectors to reduce re-renders
+  const gameSettings = useGameStore((state) => state.gameSettings);
+  const uiState = useUIStore((state) => ({
+    favoriteAssets: state.favoriteAssets,
+    isAssetDropdownOpen: state.isAssetDropdownOpen,
+    signatureColor: state.signatureColor
+  }));
   
-  const favoriteAssets = useUIStore((state) => state.favoriteAssets);
-  const isAssetDropdownOpen = useUIStore((state) => state.isAssetDropdownOpen);
-  const signatureColor = useUIStore((state) => state.signatureColor);
+  // Destructure for easier access
+  const { minMultiplier, showOtherPlayers, showProbabilities, timeframe, selectedAsset } = gameSettings;
+  const { favoriteAssets, isAssetDropdownOpen, signatureColor } = uiState;
 
-  // Store actions - use refs to avoid infinite loops
-  const updateGameSettingsRef = useRef(useGameStore.getState().updateGameSettings);
-  const toggleFavoriteAssetRef = useRef(useUIStore.getState().toggleFavoriteAsset);
-  const setAssetDropdownOpenRef = useRef(useUIStore.getState().setAssetDropdownOpen);
-  const addTradeRef = useRef(useUserStore.getState().addTrade);
-  const settleTradeRef = useRef(useUserStore.getState().settleTrade);
-
-  // Update refs when store actions change
-  useEffect(() => {
-    updateGameSettingsRef.current = useGameStore.getState().updateGameSettings;
-    toggleFavoriteAssetRef.current = useUIStore.getState().toggleFavoriteAsset;
-    setAssetDropdownOpenRef.current = useUIStore.getState().setAssetDropdownOpen;
-    addTradeRef.current = useUserStore.getState().addTrade;
-    settleTradeRef.current = useUserStore.getState().settleTrade;
-  }, []); // Empty dependency array to run only once
+  // Simplified store actions - direct access for better performance
+  const updateGameSettings = useGameStore.getState().updateGameSettings;
+  const toggleFavoriteAsset = useUIStore.getState().toggleFavoriteAsset;
+  const setAssetDropdownOpen = useUIStore.getState().setAssetDropdownOpen;
+  const addTrade = useUserStore.getState().addTrade;
+  const settleTrade = useUserStore.getState().settleTrade;
   
   // Memoized setter functions for stable references
-  const setShowProbabilities = useCallback((show: boolean) => updateGameSettingsRef.current({ showProbabilities: show }), []);
-  const setShowOtherPlayers = useCallback((show: boolean) => updateGameSettingsRef.current({ showOtherPlayers: show }), []);
-  const setMinMultiplier = useCallback((mult: number) => updateGameSettingsRef.current({ minMultiplier: mult }), []);
-  const setTimeframe = useCallback((ms: number) => updateGameSettingsRef.current({ timeframe: ms }), []);
-  const setSelectedAsset = useCallback((asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => updateGameSettingsRef.current({ selectedAsset: asset }), []);
+  const setShowProbabilities = useCallback((show: boolean) => updateGameSettings({ showProbabilities: show }), [updateGameSettings]);
+  const setShowOtherPlayers = useCallback((show: boolean) => updateGameSettings({ showOtherPlayers: show }), [updateGameSettings]);
+  const setMinMultiplier = useCallback((mult: number) => updateGameSettings({ minMultiplier: mult }), [updateGameSettings]);
+  const setTimeframe = useCallback((ms: number) => updateGameSettings({ timeframe: ms }), [updateGameSettings]);
+  const setSelectedAsset = useCallback((asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => updateGameSettings({ selectedAsset: asset }), [updateGameSettings]);
   
   const toggleFavorite = useCallback((asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO', event: React.MouseEvent) => {
     event.stopPropagation();
-    toggleFavoriteAssetRef.current(asset);
-  }, []);
+    toggleFavoriteAsset(asset);
+  }, [toggleFavoriteAsset]);
 
   // Handle mock backend positions and contracts update
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, Position>, contracts: Contract[], hitBoxes: string[], missedBoxes: string[]) => {
@@ -103,7 +95,7 @@ export default function ClientView() {
       positions.forEach((position, positionId) => {
         if (!previousPositions.has(positionId)) {
           const tradeId = `trade_${position.contractId}`;
-          addTradeRef.current({
+          addTrade({
             id: tradeId,
             contractId: position.contractId,
             amount: betAmount,
@@ -120,7 +112,7 @@ export default function ClientView() {
           if (contract) {
             const payout = betAmount * (contract.returnMultiplier || 1);
             const tradeId = `trade_${contractId}`;
-            settleTradeRef.current(tradeId, 'win', payout);
+            settleTrade(tradeId, 'win', payout);
           }
         }
       });
@@ -128,7 +120,7 @@ export default function ClientView() {
       // Track missed positions (settle as losses)
       missedBoxes.forEach((contractId) => {
         const tradeId = `trade_${contractId}`;
-        settleTradeRef.current(tradeId, 'loss', 0);
+        settleTrade(tradeId, 'loss', 0);
       });
 
       // Update local state
@@ -145,7 +137,7 @@ export default function ClientView() {
         action: 'handleMockBackendPositionsChange'
       });
     }
-  }, [betAmount]);
+  }, [betAmount, addTrade, settleTrade]);
 
   // Handle mock backend selection changes
   const handleMockBackendSelectionChange = useCallback((count: number, bestMultiplier: number, multipliers: number[], averagePrice?: number | null) => {
@@ -182,7 +174,7 @@ export default function ClientView() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('.asset-dropdown') && isAssetDropdownOpen) {
-        setAssetDropdownOpenRef.current(false);
+        setAssetDropdownOpen(false);
       }
     };
 
@@ -190,7 +182,7 @@ export default function ClientView() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isAssetDropdownOpen]);
+  }, [isAssetDropdownOpen, setAssetDropdownOpen]);
 
       return (
       <>
@@ -214,7 +206,7 @@ export default function ClientView() {
               <div className="relative asset-dropdown">
                 <div 
                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setAssetDropdownOpenRef.current(!isAssetDropdownOpen)}
+                onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
                 title="Select asset"
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
@@ -252,7 +244,7 @@ export default function ClientView() {
                         onClick={() => {
                         if (key === 'DEMO') {
                           setSelectedAsset(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO');
-                          setAssetDropdownOpenRef.current(false);
+                          setAssetDropdownOpen(false);
                         }
                         }}
                       title={
