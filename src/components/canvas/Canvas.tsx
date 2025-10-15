@@ -7,9 +7,7 @@ import { GridGame } from '../../lib/canvasLogic/games/GridGame';
 import { TimeframeSelector } from './components/TimeframeSelector';
 import { useGameSession } from './hooks/useGameSession';
 import { useWebSocket } from './hooks/useWebSocket';
-import { useUIStore } from '@/stores/uiStore';
-import { useUserStore } from '@/stores/userStore';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { useAppStore, useTradingStore, useConnectionStore } from '@/stores';
 import { Contract, Position, WebSocketMessage } from '@/types/game';
 import { handleCanvasError, handleWebSocketError } from '@/lib/errorHandler';
 
@@ -87,10 +85,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   const contractsRef = useRef<any[]>([]);
   
   // Get signature color from UI store
-  const signatureColor = useUIStore((state) => state.signatureColor);
+  const signatureColor = useAppStore((state) => state.signatureColor);
   
-  // Get balance update function from user store
-  const updateBalance = useUserStore((state) => state.updateBalance);
+  // Get balance update function from app store
+  const updateBalance = useAppStore((state) => state.updateBalance);
   
   // Get backend connection setter from store
   const setBackendConnected = useConnectionStore((state) => state.setBackendConnected);

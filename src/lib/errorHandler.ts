@@ -5,7 +5,7 @@
  * using the existing UI store toast notification system.
  */
 
-import { useUIStore } from '@/stores/uiStore';
+import { useAppStore } from '@/stores/appStore';
 
 export type ErrorType = 'error' | 'warning' | 'info' | 'success';
 
@@ -69,8 +69,8 @@ class ErrorHandler {
     const toastTitle = title || this.getDefaultTitle(type);
     const toastMessage = this.formatErrorMessage(errorObj.message, context);
 
-    // Use the UI store's notification system
-    const addNotification = useUIStore.getState().addNotification;
+    // Use the app store's notification system
+    const addNotification = useAppStore.getState().addNotification;
     addNotification({
       type,
       title: toastTitle,

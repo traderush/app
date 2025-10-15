@@ -2,7 +2,20 @@
 import React, { useEffect } from 'react';
 import { Play, Globe, Gift, Settings, Volume2, VolumeX, Coins } from 'lucide-react';
 import clsx from 'clsx';
-import { useUIStore, usePlayerStore, type WatchedPlayer } from '@/stores';
+import { useAppStore, useTradingStore } from '@/stores';
+
+// Define WatchedPlayer interface locally for now
+interface WatchedPlayer {
+  id: string;
+  username: string;
+  profit: number;
+  trades: number;
+  winRate: number;
+  avatar?: string;
+  level?: number;
+  lastActive?: Date;
+  address?: string;
+}
 
 // WatchedPlayer interface is now imported from usePlayerData hook
 
@@ -37,9 +50,9 @@ const SidebarRail = React.memo(function SidebarRail({
   watchedPlayers = [],
   onSoundToggle
 }: SidebarRailProps) {
-  const signatureColor = useUIStore((state) => state.signatureColor);
-  const settings = useUIStore((state) => state.settings);
-  const storeWatchedPlayers = usePlayerStore((state) => state.watchedPlayers);
+  const signatureColor = useAppStore((state) => state.signatureColor);
+  const settings = useAppStore((state) => state.settings);
+  const storeWatchedPlayers = useTradingStore((state) => state.watchedPlayers);
   const [isClient, setIsClient] = React.useState(false);
 
   // Use store players if not provided via props
@@ -223,41 +236,28 @@ const SidebarRail = React.memo(function SidebarRail({
           {isClient && displayPlayers.map((player) => (
             <div key={player.id} className="relative">
               <img 
-                src={player.avatar}
-                alt={player.name} 
-                className={`w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity ${
-                  !player.isOnline ? 'opacity-50' : ''
-                }`}
+                src={player.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(player.username)}&background=random`}
+                alt={player.username} 
+                className="w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
                 style={{ 
                   borderRadius: '4px',
-                  border: `1px solid ${player.isOnline ? signatureColor : '#6B7280'}`
+                  border: `1px solid ${signatureColor}`
                 }}
-                title={player.name}
+                title={`${player.username} - ${player.profit > 0 ? '+' : ''}${player.profit.toFixed(2)}`}
                 loading="lazy"
                 onClick={() => onPlayerClick?.(player)}
               />
-              {/* Game indicator circle - only show if player is online */}
-              {player.isOnline && (
+              {/* Level indicator circle */}
+              {player.level && (
                 <div 
                   className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
                   style={{ 
                     backgroundColor: signatureColor,
                     border: '1px solid #09090B'
                   }}
-                  title="Box Hit Game"
+                  title={`Level ${player.level}`}
                 >
-                  <svg 
-                    width="10" 
-                    height="10" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="#09090B" 
-                    strokeWidth="2.5"
-                    className="target-icon"
-                  >
-                    <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
-                    <rect x="8" y="8" width="8" height="8" rx="1" ry="1"/>
-                  </svg>
+                  <span className="text-[10px] font-bold" style={{ color: '#09090B' }}>{player.level}</span>
                 </div>
               )}
             </div>

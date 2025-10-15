@@ -1,19 +1,16 @@
 import { create } from 'zustand';
 import { WebSocketMessage } from '@/types/game';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { devtools } from 'zustand/middleware';
 
 export interface ConnectionStatus {
   isWebSocketConnected: boolean;
   connectedExchanges: string[];
   lastUpdateTime: number | null;
-  currentBTCPrice: number;
-  currentETHPrice: number;
-  currentSOLPrice: number;
   isBackendConnected: boolean;
 }
 
-// WebSocketMessage interface is now imported from @/types/game
-
+// Simplified Connection State - focused only on connection management
 interface ConnectionState {
   // Connection Status
   isConnected: boolean;
@@ -26,21 +23,6 @@ interface ConnectionState {
   isWebSocketConnected: boolean;
   connectedExchanges: string[];
   lastUpdateTime: number | null;
-  
-  // Prices
-  currentBTCPrice: number;
-  currentETHPrice: number;
-  currentSOLPrice: number;
-  
-  // 24h Market Stats
-  btc24hChange: number;
-  btc24hVolume: number;
-  btc24hHigh: number;
-  btc24hLow: number;
-  eth24hChange: number;
-  eth24hVolume: number;
-  sol24hChange: number;
-  sol24hVolume: number;
   
   // Backend API
   isBackendConnected: boolean;
@@ -62,27 +44,9 @@ interface ConnectionState {
   removeConnectedExchange: (exchange: string) => void;
   setLastUpdateTime: (time: number) => void;
   
-  // Price actions
-  setCurrentPrices: (btc: number, eth: number, sol: number) => void;
-  updatePrice: (asset: 'BTC' | 'ETH' | 'SOL', price: number) => void;
-  
-  // Market stats actions
-  set24hStats: (stats: {
-    btc24hChange?: number;
-    btc24hVolume?: number;
-    btc24hHigh?: number;
-    btc24hLow?: number;
-    eth24hChange?: number;
-    eth24hVolume?: number;
-    sol24hChange?: number;
-    sol24hVolume?: number;
-  }) => void;
-  
   // Backend actions
   setBackendConnected: (connected: boolean) => void;
-  
-  // Message actions
-  setLastMessage: (message: WebSocketMessage) => void;
+  setLastMessage: (message: WebSocketMessage | null) => void;
   
   // Complex actions
   updateConnectionStatus: (updates: Partial<ConnectionStatus>) => void;
@@ -98,23 +62,13 @@ const initialState = {
   isWebSocketConnected: false,
   connectedExchanges: [],
   lastUpdateTime: null,
-  currentBTCPrice: 0, // No preset value - will be set when data loads
-  currentETHPrice: 0, // No preset value - will be set when data loads
-  currentSOLPrice: 0, // No preset value - will be set when data loads
-  btc24hChange: 0,
-  btc24hVolume: 0,
-  btc24hHigh: 0,
-  btc24hLow: 0,
-  eth24hChange: 0,
-  eth24hVolume: 0,
-  sol24hChange: 0,
-  sol24hVolume: 0,
   isBackendConnected: false,
   lastMessage: null,
 };
 
 export const useConnectionStore = create<ConnectionState>()(
-  subscribeWithSelector((set) => ({
+  devtools(
+    subscribeWithSelector((set) => ({
     ...initialState,
     
     // Basic connection actions
@@ -153,33 +107,10 @@ export const useConnectionStore = create<ConnectionState>()(
     setLastUpdateTime: (time) =>
       set({ lastUpdateTime: time }),
     
-    // Price actions
-    setCurrentPrices: (btc, eth, sol) =>
-      set({
-        currentBTCPrice: btc,
-        currentETHPrice: eth,
-        currentSOLPrice: sol,
-        lastUpdateTime: Date.now(),
-      }),
-    
-    updatePrice: (asset, price) =>
-      set((state) => ({
-        [`current${asset}Price`]: price,
-        lastUpdateTime: Date.now(),
-      } as Partial<ConnectionState>)),
-    
-    // Market stats actions
-    set24hStats: (stats) =>
-      set((state) => ({
-        ...state,
-        ...stats,
-      })),
-    
     // Backend actions
     setBackendConnected: (connected) =>
       set({ isBackendConnected: connected }),
     
-    // Message actions
     setLastMessage: (message) =>
       set({ lastMessage: message, lastUpdateTime: Date.now() }),
     
@@ -189,6 +120,7 @@ export const useConnectionStore = create<ConnectionState>()(
     
     resetConnection: () =>
       set(initialState),
-  }))
+  })),
+  { name: 'ConnectionStore' }
+)
 );
-

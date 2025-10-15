@@ -1,4 +1,4 @@
-import { useUIStore } from '@/stores/uiStore';
+import { useAppStore } from '@/stores';
 
 // Global audio context management
 let globalAudioContext: AudioContext | null = null;
@@ -48,7 +48,7 @@ const createSound = async (frequency: number, duration: number, type: Oscillator
 
 // Sound effect functions
 export const playSelectionSound = async () => {
-  const soundEnabled = useUIStore.getState().settings.soundEnabled;
+  const soundEnabled = useAppStore.getState().settings.soundEnabled;
   console.log('🔊 playSelectionSound called, soundEnabled:', soundEnabled);
   if (!soundEnabled) {
     console.log('🔊 Selection sound disabled, skipping');
@@ -59,7 +59,7 @@ export const playSelectionSound = async () => {
 };
 
 export const playHitSound = async () => {
-  const soundEnabled = useUIStore.getState().settings.soundEnabled;
+  const soundEnabled = useAppStore.getState().settings.soundEnabled;
   console.log('🔊 playHitSound called, soundEnabled:', soundEnabled);
   if (!soundEnabled) {
     console.log('🔊 Hit sound disabled, skipping');
@@ -72,17 +72,17 @@ export const playHitSound = async () => {
 
 // Sound toggle function
 export const toggleSound = () => {
-  const currentState = useUIStore.getState();
+  const currentState = useAppStore.getState();
   const oldState = currentState.settings.soundEnabled;
   console.log('🔊 toggleSound called, current state:', oldState);
   currentState.toggleSound();
-  const newState = useUIStore.getState().settings.soundEnabled;
+  const newState = useAppStore.getState().settings.soundEnabled;
   console.log('🔊 Sound toggled from', oldState ? 'ON' : 'OFF', 'to', newState ? 'ON' : 'OFF');
 };
 
 // Get sound enabled state
 export const getSoundEnabled = () => {
-  return useUIStore.getState().settings.soundEnabled;
+  return useAppStore.getState().settings.soundEnabled;
 };
 
 // Initialize global sound functions on client side

@@ -2,29 +2,27 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Search, Trash2 } from 'lucide-react';
-
-interface WatchedPlayer {
-  id: string;
-  name: string;
-  address: string;
-  avatar: string;
-  game: string;
-  isOnline: boolean;
-}
+import { useTradingStore } from '@/stores';
+import type { WatchedPlayer } from '@/stores/tradingStore';
+import { useShallow } from 'zustand/react/shallow';
 
 interface WatchlistPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  watchedPlayers: WatchedPlayer[];
-  setWatchedPlayers: React.Dispatch<React.SetStateAction<WatchedPlayer[]>>;
 }
 
 const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
   isOpen,
-  onClose,
-  watchedPlayers,
-  setWatchedPlayers
+  onClose
 }) => {
+  // Optimized: Batch player-related subscriptions to prevent unnecessary re-renders during frequent updates
+  const { watchedPlayers } = useTradingStore(
+    useShallow((state) => ({
+      watchedPlayers: state.watchedPlayers,
+    }))
+  );
+  const addWatchedPlayer = useTradingStore((state) => state.addWatchedPlayer);
+  const removeWatchedPlayer = useTradingStore((state) => state.removeWatchedPlayer);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -69,36 +67,40 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
   // Demo players for suggestions
   const allDemoPlayers = [
     {
-      id: 'demo1',
-      name: 'CryptoTrader',
-      address: '0x1234...5678',
+      username: 'CryptoTrader',
+      profit: 1250,
+      trades: 45,
+      winRate: 67,
       avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg',
-      game: 'Box Hit',
-      isOnline: true
+      level: 15,
+      address: '0x1234...5678'
     },
     {
-      id: 'demo2',
-      name: 'DeFiMaster',
-      address: '0x2345...6789',
+      username: 'DeFiMaster',
+      profit: 890,
+      trades: 32,
+      winRate: 59,
       avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png',
-      game: 'Box Hit',
-      isOnline: false
+      level: 12,
+      address: '0x2345...6789'
     },
     {
-      id: 'demo3',
-      name: 'BlockchainPro',
-      address: '0x3456...7890',
+      username: 'BlockchainPro',
+      profit: 2100,
+      trades: 78,
+      winRate: 72,
       avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg',
-      game: 'Box Hit',
-      isOnline: true
+      level: 18,
+      address: '0x3456...7890'
     },
     {
-      id: 'demo4',
-      name: 'TradingGuru',
-      address: '0x4567...8901',
+      username: 'TradingGuru',
+      profit: -150,
+      trades: 12,
+      winRate: 25,
       avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg',
-      game: 'Box Hit',
-      isOnline: false
+      level: 8,
+      address: '0x4567...8901'
     }
   ];
 
@@ -112,25 +114,26 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
 
   // Generate random suggestions (exclude already added players)
   const getRandomSuggestions = () => {
-    const addedNames = watchedPlayers.map(p => p.name);
-    const availablePlayers = allDemoPlayers.filter(p => !addedNames.includes(p.name));
+    const addedNames = watchedPlayers.map(p => p.username);
+    const availablePlayers = allDemoPlayers.filter(p => !addedNames.includes(p.username));
     
     // If we have fewer than 4 available demo players, generate random ones
     if (availablePlayers.length < 4) {
       const randomPlayers = [];
-      const usedNames = new Set([...addedNames, ...availablePlayers.map(p => p.name)]);
+      const usedNames = new Set([...addedNames, ...availablePlayers.map(p => p.username)]);
       
       while (randomPlayers.length < 4 && randomPlayers.length < randomNames.length) {
         const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
         if (!usedNames.has(randomName)) {
           usedNames.add(randomName);
           randomPlayers.push({
-            id: `random_${Date.now()}_${Math.random().toString(16).substr(2, 4)}`,
-            name: randomName,
-            address: '0x' + Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4),
+            username: randomName,
+            profit: Math.floor(Math.random() * 2000) - 500,
+            trades: Math.floor(Math.random() * 100) + 1,
+            winRate: Math.floor(Math.random() * 80) + 20,
             avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
-            game: 'Box Hit',
-            isOnline: Math.random() > 0.5
+            level: Math.floor(Math.random() * 25) + 1,
+            address: '0x' + Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4)
           });
         }
       }
@@ -144,32 +147,29 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
   const demoPlayers = getRandomSuggestions();
 
   const handleRemovePlayer = (playerId: string) => {
-    setWatchedPlayers(prev => prev.filter(player => player.id !== playerId));
+    removeWatchedPlayer(playerId);
   };
 
   const handleAddWallet = () => {
     if (searchQuery.trim() && watchedPlayers.length < 5) {
       // Mock adding new wallet
-      const newPlayer: WatchedPlayer = {
-        id: Date.now().toString(),
-        name: searchQuery.trim(),
-        address: '0x' + Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4),
-        avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', // Default avatar
-        game: 'Box Hit',
-        isOnline: Math.random() > 0.5
+      const newPlayer = {
+        username: searchQuery.trim(),
+        profit: Math.floor(Math.random() * 2000) - 500,
+        trades: Math.floor(Math.random() * 100) + 1,
+        winRate: Math.floor(Math.random() * 80) + 20,
+        avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
+        level: Math.floor(Math.random() * 25) + 1,
+        address: '0x' + Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4)
       };
-      setWatchedPlayers(prev => [...prev, newPlayer]);
+      addWatchedPlayer(newPlayer);
       setSearchQuery('');
     }
   };
 
-  const handleAddDemoPlayer = (demoPlayer: WatchedPlayer) => {
+  const handleAddDemoPlayer = (demoPlayer: any) => {
     if (watchedPlayers.length < 5) {
-      const newPlayer: WatchedPlayer = {
-        ...demoPlayer,
-        id: Date.now().toString() + Math.random().toString(16).substr(2, 4)
-      };
-      setWatchedPlayers(prev => [...prev, newPlayer]);
+      addWatchedPlayer(demoPlayer);
     }
   };
 
@@ -247,8 +247,8 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
             <div className="grid grid-cols-12 gap-4 pb-3 border-b border-zinc-800/70 text-zinc-400 text-xs font-medium">
               <div className="col-span-4">Player</div>
               <div className="col-span-2">Address</div>
-              <div className="col-span-2">Game</div>
-              <div className="col-span-2">Status</div>
+              <div className="col-span-2">Profit</div>
+              <div className="col-span-2">Level</div>
               <div className="col-span-2">Actions</div>
             </div>
 
@@ -260,21 +260,15 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
                   <div className="col-span-4 flex items-center gap-2">
                     <div className="relative">
                       <img
-                        src={player.avatar}
-                        alt={player.name}
+                        src={player.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(player.username)}&background=random`}
+                        alt={player.username}
                         className="w-8 h-8 rounded object-cover"
                         style={{ borderRadius: '4px' }}
                       />
-                      {/* Online indicator */}
-                      <div
-                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-[#0E0E0E] ${
-                          player.isOnline ? 'bg-green-500' : 'bg-zinc-500'
-                        }`}
-                      />
                     </div>
                     <div>
-                      <div className="text-white font-medium text-xs">{player.name}</div>
-                      <div className="text-zinc-400 text-xs">{player.name}...</div>
+                      <div className="text-white font-medium text-xs">{player.username}</div>
+                      <div className="text-zinc-400 text-xs">{player.address}</div>
                     </div>
                   </div>
 
@@ -283,21 +277,21 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
                     {player.address}
                   </div>
 
-                  {/* Game */}
+                  {/* Profit */}
                   <div className="col-span-2">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-300">
-                      {player.game}
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                      player.profit > 0
+                        ? 'bg-green-900/30 text-green-400'
+                        : 'bg-red-900/30 text-red-400'
+                    }`}>
+                      {player.profit > 0 ? '+' : ''}${player.profit.toFixed(2)}
                     </span>
                   </div>
 
-                  {/* Status */}
+                  {/* Level */}
                   <div className="col-span-2">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                      player.isOnline
-                        ? 'bg-green-900/30 text-green-400'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}>
-                      {player.isOnline ? 'Online' : 'Offline'}
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-300">
+                      Level {player.level || 1}
                     </span>
                   </div>
 
@@ -327,23 +321,23 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
           <div className="p-3 border-t border-zinc-800/70">
             <h3 className="text-white text-xs font-medium mb-2">Suggested Players</h3>
             <div className="grid grid-cols-2 gap-1.5">
-              {demoPlayers.map((player) => (
-                <div key={player.id} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 rounded hover:bg-zinc-900/50 transition-colors">
+              {demoPlayers.map((player, index) => (
+                <div key={index} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 rounded hover:bg-zinc-900/50 transition-colors">
                   <img
                     src={player.avatar}
-                    alt={player.name}
+                    alt={player.username}
                     className="w-5 h-5 rounded object-cover"
                     style={{ borderRadius: '4px' }}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-white text-xs font-medium truncate">{player.name}</div>
+                    <div className="text-white text-xs font-medium truncate">{player.username}</div>
                     <div className="text-zinc-400 text-xs truncate">{player.address}</div>
                   </div>
                   <button
                     onClick={() => handleAddDemoPlayer(player)}
-                    disabled={watchedPlayers.length >= 5 || watchedPlayers.some(p => p.name === player.name)}
+                    disabled={watchedPlayers.length >= 5 || watchedPlayers.some(p => p.username === player.username)}
                     className="text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors"
-                    title={watchedPlayers.some(p => p.name === player.name) ? "Already added" : "Add to watchlist"}
+                    title={watchedPlayers.some(p => p.username === player.username) ? "Already added" : "Add to watchlist"}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="12" y1="5" x2="12" y2="19"/>

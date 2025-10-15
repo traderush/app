@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUIStore } from '@/stores/uiStore';
-import { ToastNotification } from '@/stores/uiStore';
+import { useAppStore, ToastNotification } from '@/stores/appStore';
 
 /**
  * Global Toast Component
@@ -11,8 +10,8 @@ import { ToastNotification } from '@/stores/uiStore';
  * Replaces inline toast logic throughout the application.
  */
 export default function GlobalToast() {
-  const notifications = useUIStore((state) => state.notifications);
-  const removeNotification = useUIStore((state) => state.removeNotification);
+  const notifications = useAppStore((state) => state.notifications);
+  const removeNotification = useAppStore((state) => state.removeNotification);
   const [visibleToasts, setVisibleToasts] = useState<Map<string, boolean>>(new Map());
 
   // Auto-remove notifications after their duration

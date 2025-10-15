@@ -9,8 +9,7 @@ import ScrollableGameTabs, { type GameTab } from './ScrollableGameTabs';
 // Lazy load popup components
 const NotificationsPopup = React.lazy(() => import('./NotificationsModal'));
 const DepositPopup = React.lazy(() => import('./DepositPopup'));
-import { useUIStore } from '@/stores';
-import { useUserStore } from '@/stores/userStore';
+import { useAppStore, useTradingStore } from '@/stores';
 
 const gameTabs: GameTab[] = [
   { href: '/box-hit', label: 'Box Hit' },
@@ -41,8 +40,8 @@ interface NavbarProps {
 
 const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, notificationsButtonRef, onSettingsOpen, settingsButtonRef, onProfileOpen }: NavbarProps) {
   const path = usePathname();
-  const signatureColor = useUIStore((state) => state.signatureColor);
-  const balance = useUserStore((state) => state.balance);
+  const signatureColor = useAppStore((state) => state.signatureColor);
+  const balance = useAppStore((state) => state.balance);
 
   return (
     <>

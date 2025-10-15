@@ -2,19 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Copy, Star, Share, Search, Calendar, ExternalLink } from 'lucide-react';
-import { useUIStore } from '@/stores';
+import { useAppStore } from '@/stores';
+import type { WatchedPlayer } from '@/stores/tradingStore';
 
 interface PlayerTrackerPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  player: {
-    id: string;
-    name: string;
-    address: string;
-    avatar: string;
-    game: string;
-    isOnline: boolean;
-  } | null;
+  player: WatchedPlayer | null;
 }
 
 const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
@@ -22,7 +16,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
   onClose,
   player
 }) => {
-  const signatureColor = useUIStore((state) => state.signatureColor);
+  const signatureColor = useAppStore((state) => state.signatureColor);
   const [selectedTimeframe, setSelectedTimeframe] = useState('Max');
   const [activeTab, setActiveTab] = useState('Activity');
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; pnl: string; date: string } | null>(null);

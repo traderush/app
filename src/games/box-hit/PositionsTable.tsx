@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useUIStore, useUserStore } from '@/stores';
+import { useAppStore, useTradingStore } from '@/stores';
 import { TRADING_COLORS } from '@/lib/constants/trading';
 import { Contract, Position } from '@/types/game';
 
@@ -17,11 +17,11 @@ const PositionsTable = React.memo(function PositionsTable({
   currentBTCPrice
 }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
-  const signatureColor = useUIStore((state) => state.signatureColor);
+  const signatureColor = useAppStore((state) => state.signatureColor);
   
-  // Get userStore data for accurate positions tracking
-  const activeTrades = useUserStore((state) => state.activeTrades);
-  const tradeHistory = useUserStore((state) => state.tradeHistory);
+  // Get tradingStore data for accurate positions tracking
+  const activeTrades = useTradingStore((state) => state.activeTrades);
+  const tradeHistory = useTradingStore((state) => state.tradeHistory);
   
   // Convert userStore data to positions format for display
   const activePositions = useMemo(() => {
@@ -47,7 +47,7 @@ const PositionsTable = React.memo(function PositionsTable({
       .slice(-10) // Last 10 trades
       .map(trade => ({
         id: trade.id,
-        time: trade.settledAt!.toLocaleTimeString(),
+        time: new Date(trade.settledAt!).toLocaleTimeString(),
         size: trade.amount,
         equity: trade.result === 'win' ? `$${(trade.payout || 0).toFixed(2)}` : `$0.00`,
         hit: trade.result === 'win' ? 'Won' : 'Lost',

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useConnectionStore } from './connectionStore';
-import { useGameStore } from './gameStore';
-import { usePriceStore } from './priceStore';
-import { useUserStore } from './userStore';
-import { useUIStore } from './uiStore';
+import { useAppStore } from './appStore';
+import { useTradingStore } from './tradingStore';
 import { WebSocketMessage } from '@/types/game';
+import { useShallow } from 'zustand/react/shallow';
 
 // WebSocket message handler hook
 export const useWebSocketHandler = () => {
@@ -13,16 +12,15 @@ export const useWebSocketHandler = () => {
   const setError = useConnectionStore((state) => state.setError);
   const setConnecting = useConnectionStore((state) => state.setConnecting);
   
-  const updateBalance = useUserStore((state) => state.updateBalance);
-  const setUser = useUserStore((state) => state.setUser);
-  const addTrade = useUserStore((state) => state.addTrade);
-  const removeTrade = useUserStore((state) => state.removeTrade);
+  const updateBalance = useAppStore((state) => state.updateBalance);
+  const setUser = useAppStore((state) => state.setUser);
+  const addTrade = useTradingStore((state) => state.addTrade);
+  const removeTrade = useTradingStore((state) => state.removeTrade);
   
-  const addPricePoint = usePriceStore((state) => state.addPricePoint);
-  const updateStats = usePriceStore((state) => state.updateStats);
+  const addPricePoint = useTradingStore((state) => state.addPricePoint);
+  const updatePriceStats = useTradingStore((state) => state.updatePriceStats);
   
-  // Note: These methods don't exist yet in gameStore - using placeholders
-  const updateGameSettings = useGameStore((state) => state.updateGameSettings);
+  const updateGameSettings = useAppStore((state) => state.updateGameSettings);
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     setLastMessage(message);
@@ -42,7 +40,7 @@ export const useWebSocketHandler = () => {
           t: pricePayload.timestamp,
           p: pricePayload.price,
         });
-        updateStats({
+        updatePriceStats({
           currentPrice: pricePayload.price,
           lastUpdate: pricePayload.timestamp,
         });
@@ -99,17 +97,17 @@ export const useWebSocketHandler = () => {
     setError,
     addTrade,
     addPricePoint,
-    updateStats,
+    updatePriceStats,
     updateGameSettings,
   ]);
 
   return { handleMessage };
 };
 
-// Game session hook (simplified version compatible with current gameStore)
+// Game session hook (simplified version compatible with current appStore)
 export const useGameSession = () => {
-  const timeframe = useGameStore((state) => state.gameSettings.timeframe);
-  const updateGameSettings = useGameStore((state) => state.updateGameSettings);
+  const timeframe = useAppStore((state) => state.gameSettings.timeframe);
+  const updateGameSettings = useAppStore((state) => state.updateGameSettings);
 
   const startGame = useCallback((type: string, timeMs: number) => {
     updateGameSettings({ timeframe: timeMs });
@@ -150,10 +148,10 @@ export const useConnectionStatus = () => {
   };
 };
 
-// Price data hook with derived state (compatible with current priceStore)
+// Price data hook with derived state (compatible with current tradingStore)
 export const usePriceData = () => {
-  const priceData = usePriceStore((state) => state.priceData);
-  const stats = usePriceStore((state) => state.stats);
+  const priceData = useTradingStore((state) => state.priceData);
+  const stats = useTradingStore((state) => state.priceStats);
 
   const currentPrice = stats.currentPrice || (priceData.length > 0 ? priceData[priceData.length - 1].p : 0);
   const priceHistory = priceData;
@@ -178,10 +176,10 @@ export const usePriceData = () => {
 
 // Modal management hook
 export const useModalManager = () => {
-  const modals = useUIStore((state) => state.modals);
-  const openModal = useUIStore((state) => state.openModal);
-  const closeModal = useUIStore((state) => state.closeModal);
-  const closeAllModals = useUIStore((state) => state.closeAllModals);
+  const modals = useAppStore((state) => state.modals);
+  const openModal = useAppStore((state) => state.openModal);
+  const closeModal = useAppStore((state) => state.closeModal);
+  const closeAllModals = useAppStore((state) => state.closeAllModals);
 
   const isAnyModalOpen = Object.values(modals).some(Boolean);
 
@@ -196,10 +194,76 @@ export const useModalManager = () => {
 
 // Signature color hook (replaces SignatureColorContext)
 export const useSignatureColor = () => {
-  const signatureColor = useUIStore((state) => state.signatureColor);
-  const setSignatureColor = useUIStore((state) => state.setSignatureColor);
+  const signatureColor = useAppStore((state) => state.signatureColor);
+  const setSignatureColor = useAppStore((state) => state.setSignatureColor);
   
   return { signatureColor, setSignatureColor };
+};
+
+// Performance-optimized hooks for trading game components
+export const useOptimizedAppStore = () => {
+  // Common batched selections for UI components
+  const uiState = useAppStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      theme: state.theme,
+      settings: state.settings,
+      signatureColor: state.signatureColor,
+    }))
+  );
+
+  const userState = useAppStore(
+    useShallow((state) => ({
+      user: state.user,
+      isAuthenticated: state.isAuthenticated,
+      balance: state.balance,
+      balanceHistory: state.balanceHistory,
+    }))
+  );
+
+  const modalState = useAppStore(
+    useShallow((state) => ({
+      modals: state.modals,
+    }))
+  );
+
+  return {
+    ...uiState,
+    ...userState,
+    ...modalState,
+  };
+};
+
+export const useOptimizedTradingStore = () => {
+  // Common batched selections for trading components
+  const gameState = useTradingStore(
+    useShallow((state) => ({
+      gameStats: state.gameStats,
+      tradeHistory: state.tradeHistory,
+      activeTrades: state.activeTrades,
+    }))
+  );
+
+  const priceState = useTradingStore(
+    useShallow((state) => ({
+      priceData: state.priceData,
+      priceStats: state.priceStats,
+    }))
+  );
+
+  const playerState = useTradingStore(
+    useShallow((state) => ({
+      watchedPlayers: state.watchedPlayers,
+      selectedPlayer: state.selectedPlayer,
+      isPlayerTrackerOpen: state.isPlayerTrackerOpen,
+    }))
+  );
+
+  return {
+    ...gameState,
+    ...priceState,
+    ...playerState,
+  };
 };
 
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useUserStore } from '@/stores/userStore';
+import { useAppStore, useTradingStore } from '@/stores';
 import { playHitSound } from '@/lib/sound/SoundManager';
 import { Contract, Position, WebSocketService, WebSocketMessage } from '@/types/game';
 
@@ -30,9 +30,9 @@ export function useGameSession({
   const [positions, setPositions] = useState<Map<string, any>>(new Map());
 
   // Get userStore functions
-  const settleTrade = useUserStore((state) => state.settleTrade);
-  const updateBalance = useUserStore((state) => state.updateBalance);
-  const addTrade = useUserStore((state) => state.addTrade);
+  const settleTrade = useTradingStore((state) => state.settleTrade);
+  const updateBalance = useAppStore((state) => state.updateBalance);
+  const addTrade = useTradingStore((state) => state.addTrade);
 
   // Track initialization to prevent duplicate joins
   const initRef = useRef(false);

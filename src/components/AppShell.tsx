@@ -16,37 +16,50 @@ const LazyWatchlistPopup = React.lazy(() => import('./WatchlistPopup'));
 const LazyPlayerTrackerPopup = React.lazy(() => import('./PlayerTrackerPopup'));
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import CustomSlider from '@/components/CustomSlider';
-import { useUIStore, usePlayerStore, useModal } from '@/stores';
+import { useAppStore, useTradingStore } from '@/stores';
+import { useShallow } from 'zustand/react/shallow';
 
 const AppShellContent = React.memo(function AppShellContent({ children }: { children: React.ReactNode }) {
-  // Get signature color from UI store
-  const signatureColor = useUIStore((state) => state.signatureColor);
+  // Get signature color from app store
+  const signatureColor = useAppStore((state) => state.signatureColor);
   
   // Static connection status for demo purposes
   const isWebSocketConnected = true; // Demo mode - always connected
   const isBackendConnected = true; // Demo mode - always connected
   
-  // UI store - subscribe to specific values only
-  const layout = useUIStore((state) => state.layout);
-  const updateLayout = useUIStore((state) => state.updateLayout);
+  // App store - optimized batched subscriptions to prevent unnecessary re-renders
+  const { layout, modals } = useAppStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      modals: state.modals,
+    }))
+  );
+  const updateLayout = useAppStore((state) => state.updateLayout);
+  const openModal = useAppStore((state) => state.openModal);
+  const closeModal = useAppStore((state) => state.closeModal);
   
-  // Player store - subscribe to specific values only
-  const watchedPlayers = usePlayerStore((state) => state.watchedPlayers);
-  const selectedPlayer = usePlayerStore((state) => state.selectedPlayer);
-  const setSelectedPlayer = usePlayerStore((state) => state.setSelectedPlayer);
-  const setIsPlayerTrackerOpen = usePlayerStore((state) => state.setIsPlayerTrackerOpen);
+  // Trading store - optimized for player tracking
+  const { watchedPlayers, selectedPlayer, isPlayerTrackerOpen } = useTradingStore(
+    useShallow((state) => ({
+      watchedPlayers: state.watchedPlayers,
+      selectedPlayer: state.selectedPlayer,
+      isPlayerTrackerOpen: state.isPlayerTrackerOpen,
+    }))
+  );
+  const setSelectedPlayer = useTradingStore((state) => state.setSelectedPlayer);
+  const setIsPlayerTrackerOpen = useTradingStore((state) => state.setIsPlayerTrackerOpen);
   
-  // Modal hooks
-  const depositModal = useModal('deposit');
-  const notificationsModal = useModal('notifications');
-  const settingsModal = useModal('settings');
-  const howToPlayModal = useModal('howToPlay');
-  const newsUpdatesModal = useModal('newsUpdates');
-  const rewardsModal = useModal('rewards');
-  const pnLTrackerModal = useModal('pnLTracker');
-  const customizeModal = useModal('customize');
-  const pnLCustomizeModal = useModal('pnLCustomize');
-  const watchlistModal = useModal('watchlist');
+  // Modal hooks - using app store modals
+  const depositModal = { isOpen: modals.deposit?.isOpen || false, open: () => openModal('deposit'), close: () => closeModal('deposit'), data: modals.deposit?.data };
+  const notificationsModal = { isOpen: modals.notifications?.isOpen || false, open: () => openModal('notifications'), close: () => closeModal('notifications'), data: modals.notifications?.data };
+  const settingsModal = { isOpen: modals.settings?.isOpen || false, open: () => openModal('settings'), close: () => closeModal('settings'), data: modals.settings?.data };
+  const howToPlayModal = { isOpen: modals.howToPlay?.isOpen || false, open: () => openModal('howToPlay'), close: () => closeModal('howToPlay'), data: modals.howToPlay?.data };
+  const newsUpdatesModal = { isOpen: modals.newsUpdates?.isOpen || false, open: () => openModal('newsUpdates'), close: () => closeModal('newsUpdates'), data: modals.newsUpdates?.data };
+  const rewardsModal = { isOpen: modals.rewards?.isOpen || false, open: () => openModal('rewards'), close: () => closeModal('rewards'), data: modals.rewards?.data };
+  const pnLTrackerModal = { isOpen: modals.pnLTracker?.isOpen || false, open: () => openModal('pnLTracker'), close: () => closeModal('pnLTracker'), data: modals.pnLTracker?.data };
+  const customizeModal = { isOpen: modals.customize?.isOpen || false, open: () => openModal('customize'), close: () => closeModal('customize'), data: modals.customize?.data };
+  const pnLCustomizeModal = { isOpen: modals.pnLCustomize?.isOpen || false, open: () => openModal('pnLCustomize'), close: () => closeModal('pnLCustomize'), data: modals.pnLCustomize?.data };
+  const watchlistModal = { isOpen: modals.watchlist?.isOpen || false, open: () => openModal('watchlist'), close: () => closeModal('watchlist'), data: modals.watchlist?.data };
   
   // Memoized callbacks to prevent Footer re-renders
   const handlePnLTrackerToggle = React.useCallback(() => {
@@ -92,11 +105,13 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
             onProfileOpen={() => {
               setSelectedPlayer({
                 id: 'personal',
-                name: 'Personal Profile',
-                address: '0x1234...5678',
+                username: 'Personal Profile',
+                profit: 0,
+                trades: 0,
+                winRate: 0,
                 avatar: 'https://i.imgflip.com/2/1vq853.jpg',
-                game: 'Box Hit',
-                isOnline: true
+                level: 1,
+                address: '0x1234...5678'
               });
               setIsPlayerTrackerOpen(true);
             }}
@@ -408,19 +423,13 @@ const AppShellContent = React.memo(function AppShellContent({ children }: { chil
           <LazyWatchlistPopup
             isOpen={watchlistModal.isOpen}
             onClose={() => watchlistModal.close()}
-            watchedPlayers={watchedPlayers}
-            setWatchedPlayers={(players) => {
-              const currentPlayers = usePlayerStore.getState().watchedPlayers;
-              const newPlayers = typeof players === 'function' ? players(currentPlayers) : players;
-              usePlayerStore.getState().setWatchedPlayers(newPlayers);
-            }}
           />
         </React.Suspense>
 
         {/* Player Tracker Popup */}
         <React.Suspense fallback={<div className="fixed inset-0 bg-black/60 z-[1000]" />}>
           <LazyPlayerTrackerPopup
-            isOpen={usePlayerStore.getState().isPlayerTrackerOpen}
+            isOpen={isPlayerTrackerOpen}
             onClose={() => {
               setIsPlayerTrackerOpen(false);
               setSelectedPlayer(null);

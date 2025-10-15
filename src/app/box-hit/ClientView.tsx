@@ -5,8 +5,7 @@ import RightPanel from '@/games/box-hit/RightPanel';
 import PositionsTable from '@/games/box-hit/PositionsTable';
 import CustomSlider from '@/components/CustomSlider';
 import { cleanupSoundManager } from '@/lib/sound/SoundManager';
-import { useGameStore, useUIStore } from '@/stores';
-import { useUserStore } from '@/stores/userStore';
+import { useAppStore, useTradingStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { logger } from '@/utils/logger';
 import Canvas from '@/components/canvas/Canvas';
@@ -44,39 +43,49 @@ export default function ClientView() {
   const [mockBackendContracts, setMockBackendContracts] = useState<Contract[]>([]);
   const [mockBackendHitBoxes, setMockBackendHitBoxes] = useState<string[]>([]);
   const [mockBackendMissedBoxes, setMockBackendMissedBoxes] = useState<string[]>([]);
-  const [mockBackendCurrentPrice, setMockBackendCurrentPrice] = useState(100);
   const [mockBackendSelectedCount, setMockBackendSelectedCount] = useState(0);
   const [mockBackendSelectedMultipliers, setMockBackendSelectedMultipliers] = useState<number[]>([]);
   const [mockBackendBestMultiplier, setMockBackendBestMultiplier] = useState(0);
   const [mockBackendSelectedAveragePrice, setMockBackendSelectedAveragePrice] = useState<number | null>(null);
-
+  
   // Keep track of previous positions using a ref to avoid infinite loops
   const previousPositionsRef = useRef<Map<string, Position>>(new Map());
   const previousCountRef = useRef(0);
 
-  // Individual store subscriptions to prevent object recreation on every render
-  const gameSettings = useGameStore((state) => state.gameSettings);
-  const favoriteAssets = useUIStore((state) => state.favoriteAssets);
-  const isAssetDropdownOpen = useUIStore((state) => state.isAssetDropdownOpen);
-  const signatureColor = useUIStore((state) => state.signatureColor);
+  // Consolidated store subscriptions to prevent object recreation on every render
+  const gameSettings = useAppStore((state) => state.gameSettings);
+  const favoriteAssets = useAppStore((state) => state.favoriteAssets);
+  const isAssetDropdownOpen = useAppStore((state) => state.isAssetDropdownOpen);
+  const signatureColor = useAppStore((state) => state.signatureColor);
   
   // Destructure for easier access
   const { minMultiplier, showOtherPlayers, showProbabilities, timeframe, selectedAsset } = gameSettings;
+  
+  // Get real-time price from trading store
+  const currentPrice = useTradingStore((state) => state.priceStats.currentPrice);
+  
+  // Memoized expensive computations to prevent unnecessary recalculations
+  const selectedAssetData = useMemo(() => ASSET_DATA[selectedAsset], [selectedAsset]);
+  const favoriteAssetsArray = useMemo(() => Array.from(favoriteAssets), [favoriteAssets]);
+  const timeframeOption = useMemo(() => 
+    TIMEFRAME_OPTIONS.find(option => option === timeframe) || TIMEFRAME_OPTIONS[2], 
+    [timeframe]
+  );
 
   // Store actions - use refs to completely avoid dependency cycles
-  const updateGameSettingsRef = useRef(useGameStore.getState().updateGameSettings);
-  const toggleFavoriteAssetRef = useRef(useUIStore.getState().toggleFavoriteAsset);
-  const setAssetDropdownOpenRef = useRef(useUIStore.getState().setAssetDropdownOpen);
-  const addTradeRef = useRef(useUserStore.getState().addTrade);
-  const settleTradeRef = useRef(useUserStore.getState().settleTrade);
+  const updateGameSettingsRef = useRef(useAppStore.getState().updateGameSettings);
+  const toggleFavoriteAssetRef = useRef(useAppStore.getState().toggleFavoriteAsset);
+  const setAssetDropdownOpenRef = useRef(useAppStore.getState().setAssetDropdownOpen);
+  const addTradeRef = useRef(useTradingStore.getState().addTrade);
+  const settleTradeRef = useRef(useTradingStore.getState().settleTrade);
 
   // Update refs when store actions change - run only once
   useEffect(() => {
-    updateGameSettingsRef.current = useGameStore.getState().updateGameSettings;
-    toggleFavoriteAssetRef.current = useUIStore.getState().toggleFavoriteAsset;
-    setAssetDropdownOpenRef.current = useUIStore.getState().setAssetDropdownOpen;
-    addTradeRef.current = useUserStore.getState().addTrade;
-    settleTradeRef.current = useUserStore.getState().settleTrade;
+    updateGameSettingsRef.current = useAppStore.getState().updateGameSettings;
+    toggleFavoriteAssetRef.current = useAppStore.getState().toggleFavoriteAsset;
+    setAssetDropdownOpenRef.current = useAppStore.getState().setAssetDropdownOpen;
+    addTradeRef.current = useTradingStore.getState().addTrade;
+    settleTradeRef.current = useTradingStore.getState().settleTrade;
   }, []); // Empty dependency array to run only once
   
   // Memoized setter functions for stable references - no dependencies to prevent infinite loops
@@ -90,53 +99,53 @@ export default function ClientView() {
     event.stopPropagation();
     toggleFavoriteAssetRef.current(asset);
   }, []);
-
+  
   // Handle mock backend positions and contracts update
   const handleMockBackendPositionsChange = useCallback((positions: Map<string, Position>, contracts: Contract[], hitBoxes: string[], missedBoxes: string[]) => {
     try {
-      // Track new positions in userStore
-      const previousPositions = previousPositionsRef.current;
+    // Track new positions in userStore
+    const previousPositions = previousPositionsRef.current;
 
-      // Find new positions that weren't in the previous state
-      positions.forEach((position, positionId) => {
-        if (!previousPositions.has(positionId)) {
-          const tradeId = `trade_${position.contractId}`;
+    // Find new positions that weren't in the previous state
+    positions.forEach((position, positionId) => {
+      if (!previousPositions.has(positionId)) {
+        const tradeId = `trade_${position.contractId}`;
           addTradeRef.current({
-            id: tradeId,
-            contractId: position.contractId,
-            amount: betAmount,
-            placedAt: new Date(),
-          });
-        }
-      });
+          id: tradeId,
+          contractId: position.contractId,
+          amount: betAmount,
+          placedAt: new Date(),
+        });
+      }
+    });
 
-      // Track hit positions (settle as wins)
-      hitBoxes.forEach((contractId) => {
-        const position = Array.from(positions.values()).find(p => p.contractId === contractId);
-        if (position) {
-          const contract = contracts.find(c => c.contractId === contractId);
-          if (contract) {
-            const payout = betAmount * (contract.returnMultiplier || 1);
-            const tradeId = `trade_${contractId}`;
+    // Track hit positions (settle as wins)
+    hitBoxes.forEach((contractId) => {
+      const position = Array.from(positions.values()).find(p => p.contractId === contractId);
+      if (position) {
+        const contract = contracts.find(c => c.contractId === contractId);
+      if (contract) {
+          const payout = betAmount * (contract.returnMultiplier || 1);
+          const tradeId = `trade_${contractId}`;
             settleTradeRef.current(tradeId, 'win', payout);
           }
-        }
-      });
+      }
+    });
 
-      // Track missed positions (settle as losses)
-      missedBoxes.forEach((contractId) => {
+    // Track missed positions (settle as losses)
+    missedBoxes.forEach((contractId) => {
         const tradeId = `trade_${contractId}`;
         settleTradeRef.current(tradeId, 'loss', 0);
       });
 
       // Update local state
-      setMockBackendPositions(positions);
-      setMockBackendContracts(contracts);
-      setMockBackendHitBoxes(hitBoxes);
-      setMockBackendMissedBoxes(missedBoxes);
+    setMockBackendPositions(positions);
+    setMockBackendContracts(contracts);
+    setMockBackendHitBoxes(hitBoxes);
+    setMockBackendMissedBoxes(missedBoxes);
 
-      // Update the ref for next comparison
-      previousPositionsRef.current = new Map(positions);
+    // Update the ref for next comparison
+    previousPositionsRef.current = new Map(positions);
     } catch (error) {
       handleCanvasError(error instanceof Error ? error : new Error(String(error)), {
         component: 'ClientView',
@@ -148,13 +157,13 @@ export default function ClientView() {
   // Handle mock backend selection changes
   const handleMockBackendSelectionChange = useCallback((count: number, bestMultiplier: number, multipliers: number[], averagePrice?: number | null) => {
     try {
-      setMockBackendSelectedCount(count);
+    setMockBackendSelectedCount(count);
       setMockBackendBestMultiplier(bestMultiplier);
-      setMockBackendSelectedMultipliers(multipliers);
-      setMockBackendSelectedAveragePrice(averagePrice || null);
+    setMockBackendSelectedMultipliers(multipliers);
+    setMockBackendSelectedAveragePrice(averagePrice || null);
 
-      // Update previous count for future comparisons
-      previousCountRef.current = count;
+    // Update previous count for future comparisons
+    previousCountRef.current = count;
     } catch (error) {
       handleCanvasError(error instanceof Error ? error : new Error(String(error)), {
         component: 'ClientView',
@@ -164,7 +173,7 @@ export default function ClientView() {
   }, []);
 
   const handleTradingModeChange = useCallback((tradingMode: boolean) => {
-    setIsCanvasStarted(tradingMode);
+      setIsCanvasStarted(tradingMode);
   }, []);
 
   const handlePositionHit = useCallback((positionId: string) => {
@@ -202,8 +211,8 @@ export default function ClientView() {
               {/* Asset Icon */}
               <div className="rounded-lg overflow-hidden" style={{ width: '28px', height: '28px' }}>
                 <img 
-                src={ASSET_DATA[selectedAsset].icon} 
-                alt={ASSET_DATA[selectedAsset].name} 
+                src={selectedAssetData.icon} 
+                alt={selectedAssetData.name} 
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -216,7 +225,7 @@ export default function ClientView() {
                 title="Select asset"
                 >
                   <div className="text-white leading-none" style={{ fontSize: '18px', fontWeight: 500 }}>
-                  {ASSET_DATA[selectedAsset].symbol}
+                  {selectedAssetData.symbol}
                   </div>
                   <svg 
                     className={`w-4 h-4 text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`} 
@@ -266,14 +275,14 @@ export default function ClientView() {
                         >
                           <svg 
                             className={`w-3.5 h-3.5 transition-colors ${
-                              favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') 
+                              favoriteAssetsArray.includes(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') 
                                 ? 'text-yellow-400 fill-current' 
                                 : 'text-zinc-500 fill-none'
                             }`} 
                             fill="currentColor" 
                             viewBox="0 0 24 24"
                             stroke="currentColor"
-                            strokeWidth={favoriteAssets.has(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') ? 0 : 1.5}
+                            strokeWidth={favoriteAssetsArray.includes(key as 'BTC' | 'ETH' | 'SOL' | 'DEMO') ? 0 : 1.5}
                           >
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                           </svg>
@@ -328,7 +337,7 @@ export default function ClientView() {
               
               {/* Current Value */}
                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                ${(selectedAsset === 'DEMO' ? mockBackendCurrentPrice : ASSET_DATA[selectedAsset].price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                ${(selectedAsset === 'DEMO' ? currentPrice : selectedAssetData.price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               </div>
               
               {/* 24h Change */}
@@ -336,9 +345,9 @@ export default function ClientView() {
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
                 <div className="font-medium leading-none" style={{ 
                   fontSize: '18px',
-                  color: (selectedAsset === 'DEMO' ? 2.5 : ASSET_DATA[selectedAsset].change24h) >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
+                  color: (selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative
                 }}>
-                  {(selectedAsset === 'DEMO' ? 2.5 : ASSET_DATA[selectedAsset].change24h) >= 0 ? '+' : ''}{(selectedAsset === 'DEMO' ? 2.5 : ASSET_DATA[selectedAsset].change24h).toFixed(2)}%
+                  {(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? '+' : ''}{(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h).toFixed(2)}%
                 </div>
               </div>
               
@@ -346,7 +355,7 @@ export default function ClientView() {
               <div className="leading-none">
                 <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
                 <div className="text-white leading-none" style={{ fontSize: '18px' }}>
-                  {selectedAsset === 'DEMO' ? '45.20B' : ASSET_DATA[selectedAsset].volume24h}
+                  {selectedAsset === 'DEMO' ? '45.20B' : selectedAssetData.volume24h}
                 </div>
               </div>
             </div>
@@ -483,11 +492,16 @@ export default function ClientView() {
                     onSelectionChange={handleMockBackendSelectionChange}
                     betAmount={betAmount}
                     onPriceUpdate={(price) => {
-                      // Update mock backend current price through the hook
-                      // This will be handled by the Canvas component directly
+                      // Update real-time price in trading store
+                      useTradingStore.getState().updatePriceStats({
+                        currentPrice: price,
+                        priceChange24h: 0,
+                        priceChangePercent24h: 0,
+                        volume24h: 0,
+                      });
                     }}
                     showProbabilities={showProbabilities}
-                    showOtherPlayers={showOtherPlayers}
+                  showOtherPlayers={showOtherPlayers}
                     minMultiplier={minMultiplier}
                   />
                 </div>
@@ -495,7 +509,7 @@ export default function ClientView() {
           
           <PositionsTable 
             betAmount={betAmount}
-            currentBTCPrice={mockBackendCurrentPrice}
+            currentBTCPrice={currentPrice}
           />
           </div>
         </div>
@@ -507,12 +521,12 @@ export default function ClientView() {
           selectedCount={mockBackendSelectedCount}
           bestMultiplier={mockBackendBestMultiplier}
           selectedMultipliers={mockBackendSelectedMultipliers}
-          currentBTCPrice={mockBackendCurrentPrice}
+          currentBTCPrice={currentPrice}
           averagePositionPrice={mockBackendSelectedAveragePrice || null}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
-          dailyHigh={mockBackendCurrentPrice + 2}
-          dailyLow={mockBackendCurrentPrice - 2}
+          dailyHigh={currentPrice + 2}
+          dailyLow={currentPrice - 2}
         />
       </div>
       {/* Toast notifications are now handled by the centralized GlobalToast component */}

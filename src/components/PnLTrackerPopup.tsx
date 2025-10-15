@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X, Pencil, RotateCcw } from 'lucide-react';
-import { useUserStore } from '@/stores/userStore';
+import { useTradingStore, useAppStore } from '@/stores';
+import { useShallow } from 'zustand/react/shallow';
 
 interface PnLTrackerPopupProps {
   isOpen: boolean;
@@ -30,20 +31,28 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   onCustomizeClose,
   customization
 }) => {
-  // Get live data from userStore
-  const balance = useUserStore((state) => state.balance);
-  const stats = useUserStore((state) => state.stats);
-  const tradeHistory = useUserStore((state) => state.tradeHistory);
-  const balanceHistory = useUserStore((state) => state.balanceHistory);
-  const resetStats = useUserStore((state) => state.resetStats);
+  // Get live data from stores - optimized for frequent updates
+  const { balance, balanceHistory } = useAppStore(
+    useShallow((state) => ({
+      balance: state.balance,
+      balanceHistory: state.balanceHistory,
+    }))
+  );
+  const { stats, tradeHistory } = useTradingStore(
+    useShallow((state) => ({
+      stats: state.gameStats,
+      tradeHistory: state.tradeHistory,
+    }))
+  );
+  const resetStats = useTradingStore((state) => state.resetStats);
   
   // Calculate live PnL data
   const [pnlData, setPnlData] = useState({
     balance: balance,
-    totalPnL: stats.totalProfit,
+    totalPnL: stats.netProfit,
     todayPnL: 0, // Will calculate from today's trades
     winRate: stats.winRate,
-    totalTrades: stats.totalTrades,
+    totalTrades: stats.totalBets,
     winningTrades: stats.totalWins,
     losingTrades: stats.totalLosses,
     bestWin: 0,
@@ -80,8 +89,8 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
     console.log('📊 PnL Tracker updating with data:', {
       balance,
       stats: {
-        totalProfit: stats.totalProfit,
-        totalTrades: stats.totalTrades,
+        netProfit: stats.netProfit,
+        totalBets: stats.totalBets,
         totalWins: stats.totalWins,
         totalLosses: stats.totalLosses,
         winRate: stats.winRate
@@ -161,8 +170,8 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
     console.log('📊 Actual total PnL calculation:', {
       settledTradesCount: settledTrades.length,
       actualTotalPnL,
-      statsTotalProfit: stats.totalProfit,
-      difference: actualTotalPnL - stats.totalProfit
+      statsNetProfit: stats.netProfit,
+      difference: actualTotalPnL - stats.netProfit
     });
 
     setPnlData({
@@ -170,7 +179,7 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       totalPnL: actualTotalPnL, // Use calculated total PnL instead of stats
       todayPnL: todayPnL,
       winRate: stats.winRate,
-      totalTrades: stats.totalTrades,
+      totalTrades: stats.totalBets,
       winningTrades: stats.totalWins,
       losingTrades: stats.totalLosses,
       bestWin: bestWin,
@@ -191,7 +200,7 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
     }));
     
     setRecentTrades(recentTradeData);
-  }, [isOpen, balance, stats, tradeHistory, balanceHistory]);
+  }, [isOpen, balance, balanceHistory, stats, tradeHistory]);
 
   // Handle dragging and resizing
   const handleMouseDown = (e: React.MouseEvent) => {
