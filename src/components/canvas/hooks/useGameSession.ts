@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore, useTradingStore } from '@/stores';
 import { playHitSound } from '@/lib/sound/SoundManager';
 import { Contract, Position, WebSocketService, WebSocketMessage } from '@/types/game';
+// New unified WebSocket service (Phase 2 migration)
+import { WebSocketManager } from '@/lib/websocket';
 
 interface UseGameSessionProps {
   gameMode: 'box_hit' | 'towers';
