@@ -8,7 +8,7 @@ import { WebSocketManager } from '@/lib/websocket';
 interface UseGameSessionProps {
   gameMode: 'box_hit' | 'towers';
   timeframe: number;
-  ws: WebSocketService | null;
+  ws: WebSocketService | WebSocketManager | null;
   enabled: boolean;
 }
 
@@ -19,6 +19,15 @@ interface UseGameSessionReturn {
   positions: Map<string, Position>;
   handleTradePlace: (contractId: string, amount: number) => void;
 }
+
+// Helper functions to work with both WebSocket types
+const isWebSocketManager = (ws: any): ws is WebSocketManager => {
+  return ws && typeof ws.send === 'function' && typeof ws.on === 'function' && typeof ws.off === 'function';
+};
+
+const isWebSocketService = (ws: any): ws is WebSocketService => {
+  return ws && typeof ws.sendMessage === 'function' && typeof ws.onMessage === 'function';
+};
 
 export function useGameSession({
   gameMode,
