@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import type { WebSocketMessage } from '@/types/websocket';
 
 export interface ConnectionStatus {
   isWebSocketConnected: boolean;
@@ -9,12 +10,6 @@ export interface ConnectionStatus {
   currentETHPrice: number;
   currentSOLPrice: number;
   isBackendConnected: boolean;
-}
-
-export interface WebSocketMessage {
-  type: string;
-  payload: any;
-  timestamp: number;
 }
 
 interface ConnectionState {
@@ -166,7 +161,7 @@ export const useConnectionStore = create<ConnectionState>()(
       }),
     
     updatePrice: (asset, price) =>
-      set((state) => ({
+      set(() => ({
         [`current${asset}Price`]: price,
         lastUpdateTime: Date.now(),
       } as Partial<ConnectionState>)),
@@ -194,4 +189,3 @@ export const useConnectionStore = create<ConnectionState>()(
       set(initialState),
   }))
 );
-

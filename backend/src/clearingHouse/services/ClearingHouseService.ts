@@ -1,344 +1,546 @@
 import { EventEmitter } from 'events';
-import { CLEARING_HOUSE_CONFIG } from '../config/clearingHouseConfig';
+import { randomUUID } from 'crypto';
+import { ProductTypeHooks } from '../core/product';
 import {
-  TimeFrame,
-  IronCondorTimeframes,
-} from '../../config/timeframeConfig';
-import {
-  IronCondorContract,
-  MESSAGES,
-  PricePoint,
-  SpreadContract,
-  SpreadTimeframes,
-  Transaction,
-} from '../types';
-import { BalanceService } from './BalanceService';
-import { IronCondorOrderbook } from './IronCondorOrderbook';
-import { PriceFeedService } from './PriceFeedService';
-import { SpreadOrderbook } from './SpreadOrderbook';
+  AccountId,
+  ClearingHouseEvent,
+  ClockTickContext,
+  FillOrderPayload,
+  Order,
+  OrderId,
+  OrderbookId,
+  OrderbookConfig,
+  PlaceOrderPayload,
+  SettlementInstruction,
+  Timestamp,
+  UpdateOrderPayload,
+} from '../core/types';
+import { BalanceService } from '../core/BalanceService';
+import { InMemorySettlementQueue } from '../core/SettlementQueue';
+import { MarginService } from '../core/MarginService';
+import { OrderService } from '../core/OrderService';
+import { OrderbookStore } from '../core/OrderbookStore';
+import { PositionService } from '../core/PositionService';
+import { ProductRegistry } from '../core/ProductRegistry';
+import { PriceService } from './PriceService';
 
 /**
- * ClearingHouseService manages financial derivatives clearing operations
- * Handles iron condor and spread option contracts
+ * Minimal clearing house facade that provides product registration,
+ * orderbook management, and game-facing orchestration.
  */
 export class ClearingHouseService extends EventEmitter {
-  private balanceService: BalanceService;
-  private priceFeedService: PriceFeedService;
-
-  private ironCondorOrderbooks: Map<TimeFrame, IronCondorOrderbook> =
-    new Map();
-  private spreadOrderbooks: Map<TimeFrame, SpreadOrderbook> = new Map();
-
-  private currentPrice: number = CLEARING_HOUSE_CONFIG.constants.initialPrice;
-
-  private transactions: Transaction[] = [];
-  private dataPointCount: number = 0;
-  private priceUnsubscribe: (() => void) | null = null;
+  readonly products: ProductRegistry;
+  readonly balances: BalanceService;
+  readonly positions: PositionService;
+  readonly orderbooks: OrderbookStore;
+  readonly margin: MarginService;
+  readonly orders: OrderService;
+  private readonly settlements: InMemorySettlementQueue;
+  private readonly clockSeq = new Map<OrderbookId, number>();
+  readonly balanceService: BalanceService;
+  private lastObservedPrice = 100;
+  private readonly orderbookPrices = new Map<OrderbookId, number>();
+  private readonly clockTimers = new Map<OrderbookId, NodeJS.Timeout>();
+  private priceService?: PriceService;
+  private priceFeedRunning = false;
 
   constructor() {
     super();
-    for (const tf of IronCondorTimeframes) {
-      const orderbook = new IronCondorOrderbook(tf);
-      this.ironCondorOrderbooks.set(tf, orderbook);
-    }
+    this.products = new ProductRegistry();
+    this.balances = new BalanceService({ defaultStartingBalance: 0 });
+    this.positions = new PositionService();
+    this.orderbooks = new OrderbookStore(this.products);
+    this.margin = new MarginService(this.balances);
+    this.orders = new OrderService(this.orderbooks, this.margin, this.positions);
+    this.settlements = new InMemorySettlementQueue();
+    this.balanceService = this.balances;
 
-    // Initialize Spread orderbooks for each timeframe
-    for (const tf of SpreadTimeframes) {
-      const orderbook = new SpreadOrderbook(tf);
-      this.spreadOrderbooks.set(tf, orderbook);
-    }
+    this.bindCoreEvents();
+    this.forwardRuntimeEvents();
 
-    this.balanceService = new BalanceService();
-
-    this.balanceService.on(MESSAGES.BALANCE_UPDATE, (data) => {
-      this.emit(MESSAGES.BALANCE_UPDATE, {
-        userId: data.userId,
-        balance: data.newBalance,
-        change: data.change,
-        type: data.type,
+    this.balanceService.on('balance_event', (event) => {
+      this.emit('balance_update', {
+        userId: event.accountId,
+        balance: event.snapshot.available,
+        change: event.delta ?? 0,
+        type: event.type,
       });
     });
-
-    this.priceFeedService = new PriceFeedService();
-
-    // Configure Iron Condor orderbooks
-    for (const [timeframe, orderbook] of this.ironCondorOrderbooks.entries()) {
-      orderbook.setDependencies(this.priceFeedService, this.balanceService);
-
-      // Forward contract events with proper financial terminology
-      orderbook.on('contract_exercised', (data) => {
-        this.emit('iron_condor_exercised', data);
-        // Record settlement transactions
-        if (data.settlements) {
-          data.settlements.forEach((settlement: any) => {
-            this.recordTransaction({
-              userId: settlement.userId,
-              type: 'settlement',
-              amount: settlement.payout,
-              contractId: data.contractId,
-              returnMultiplier: data.returnMultiplier,
-              timestamp: data.timestamp,
-            });
-          });
-        }
-      });
-      orderbook.on('contract_expired', (data) =>
-        this.emit('iron_condor_expired', data)
-      );
-      orderbook.on('contracts_updated', (data) => {
-        this.emit('iron_condor_contracts_updated', data);
-      });
-      orderbook.on('contracts_generated', (data) => {
-        this.emit('iron_condor_contracts_generated', { ...data, timeframe });
-      });
-    }
-
-    // Configure Spread orderbooks
-    for (const orderbook of this.spreadOrderbooks.values()) {
-      orderbook.setDependencies(this.priceFeedService, this.balanceService);
-
-      // Forward spread events with proper financial terminology
-      orderbook.on('spread_triggered', (data) => {
-        this.emit('spread_triggered', data);
-        // Record settlement transactions
-        if (data.settlements) {
-          data.settlements.forEach((settlement: any) => {
-            this.recordTransaction({
-              userId: settlement.userId,
-              type: 'settlement',
-              amount: settlement.payout,
-              timestamp: data.timestamp,
-            });
-          });
-        }
-      });
-      orderbook.on('spread_expired', (data) =>
-        this.emit('spread_expired', data)
-      );
-      orderbook.on('spread_contracts_generated', (data) =>
-        this.emit('spread_contracts_generated', data)
-      );
-    }
-
-    this.priceFeedService.on(MESSAGES.PRICE_UPDATE, (price: PricePoint) => {
-      this.onPriceUpdate(price.price, price.timestamp);
-      this.emit(MESSAGES.PRICE_UPDATE, price);
-    });
   }
 
-  onPriceUpdate(price: number, timestamp: number): void {
-    this.currentPrice = price;
-    this.dataPointCount++;
+  initializeUser(accountId: string): void {
+    this.balances.ensureAccount(accountId);
+  }
 
-    // Let each orderbook handle its own price update and outcomes
-    for (const orderbook of this.ironCondorOrderbooks.values()) {
-      orderbook.onPriceUpdate(price, timestamp);
-    }
+  getUserBalance(accountId: string): number {
+    return this.balances.snapshotFor(accountId).available;
+  }
 
-    for (const orderbook of this.spreadOrderbooks.values()) {
-      orderbook.onPriceUpdate(price, timestamp);
+  registerProductType(hooks: ProductTypeHooks): void {
+    this.products.register(hooks);
+  }
+
+  createOrderbook(config: OrderbookConfig): void {
+    this.orderbooks.create(config);
+    this.clockSeq.set(config.orderbookId, 0);
+    if (this.priceFeedRunning) {
+      this.startClockForOrderbook(config.orderbookId);
+      this.priceService?.registerOrderbook(config.orderbookId);
     }
   }
 
-  /**
-   * Place an iron condor position
-   */
-  placeIronCondorPosition(
-    userId: string,
-    contractId: string,
-    amount: number,
-    timeframe: TimeFrame
-  ): boolean {
-    const orderbook = this.ironCondorOrderbooks.get(timeframe);
-    if (!orderbook) {
-      console.log(
-        `[ClearingHouse] Position rejected - invalid timeframe: ${timeframe}`
-      );
-      return false;
-    }
-
-    // Check balance first
-    if (!this.balanceService.hasBalance(userId, amount)) {
-      console.log(`[ClearingHouse] Position rejected - insufficient balance`);
-      this.emit('position_rejected', {
-        userId,
-        contractId,
-        reason: 'Insufficient balance',
-        amount,
-      });
-      return false;
-    }
-
-    // Try to place position in orderbook
-    const success = orderbook.placePosition(contractId, userId, amount);
-
-    if (!success) {
-      console.log(`[ClearingHouse] Position rejected - contract not available`);
-      this.emit('position_rejected', {
-        userId,
-        contractId,
-        reason: 'Contract not available',
-        amount,
-      });
-      return false;
-    }
-
-    // Deduct balance
-    const newBalance = this.balanceService.debit(userId, amount);
-
-    this.recordTransaction({
-      userId,
-      type: 'position',
-      amount: -amount,
-      contractId,
-      timestamp: Date.now(),
-    });
-
-    // Get contract details for confirmation
-    const contract = orderbook.getContractById(contractId);
-    if (contract) {
-      const confirmData = {
-        userId,
-        contractId,
-        amount,
-        balance: newBalance,
-        returnMultiplier: contract.returnMultiplier,
-      };
-      console.log(`[ClearingHouse] Iron Condor position placed:`, confirmData);
-      this.emit('iron_condor_position_confirmed', confirmData);
-    }
-
-    return true;
+  placeMakerOrder(payload: PlaceOrderPayload, now: number = Date.now()): Order {
+    return this.placeOrder(payload, now);
   }
 
-  /**
-   * Place a spread position
-   */
-  placeSpreadPosition(
-    userId: string,
-    contractId: string,
-    amount: number,
-    timeframe: TimeFrame
-  ): { success: boolean; error?: string } {
-    const orderbook = this.spreadOrderbooks.get(timeframe);
-    if (!orderbook) {
-      return { success: false, error: 'Invalid timeframe' };
-    }
-
-    // Check balance first
-    if (!this.balanceService.hasBalance(userId, amount)) {
-      return { success: false, error: 'Insufficient balance' };
-    }
-
-    // Try to place position in orderbook
-    const success = orderbook.placePosition(contractId, userId, amount);
-
-    if (!success) {
-      return { success: false, error: 'Contract not active' };
-    }
-
-    // Deduct balance
-    const newBalance = this.balanceService.debit(userId, amount);
-
-    this.recordTransaction({
-      userId,
-      type: 'position',
-      amount: -amount,
-      timestamp: Date.now(),
-    });
-
-    // Get contract details for confirmation
-    const contract = orderbook.getContractById(contractId);
-    if (contract) {
-      this.emit('spread_position_placed', {
-        userId,
-        contractId,
-        amount,
-        balance: newBalance,
-        returnMultiplier: contract.returnMultiplier,
-        spreadType: contract.spreadType,
-      });
-
-      console.log(
-        `[ClearingHouse] SPREAD POSITION: User ${userId} placed $${amount} on ${contract.spreadType} spread ${contractId} (${contract.returnMultiplier}x) - New balance: $${newBalance}`
-      );
-    }
-
-    return { success: true };
+  updateMakerOrder(payload: UpdateOrderPayload, now: number = Date.now()): Order {
+    return this.updateOrder(payload, now);
   }
 
-  private recordTransaction(transaction: Transaction): void {
-    this.transactions.push(transaction);
-
-    // Emit balance update
-    this.emit(MESSAGES.BALANCE_UPDATE, {
-      userId: transaction.userId,
-      balance: this.balanceService.getBalance(transaction.userId),
-      transaction,
-    });
+  cancelMakerOrder(
+    payload: { orderId: string; makerId: string },
+    now: number = Date.now()
+  ): Order {
+    return this.cancelOrder(payload, now);
   }
 
-  getUserBalance(userId: string): number {
-    return this.balanceService.getBalance(userId);
+  fillOrder(payload: FillOrderPayload): void {
+    this.fillOrderInternal(payload);
   }
 
-  initializeUser(userId: string): void {
-    const balance = this.balanceService.initializeUser(userId);
-    console.log(
-      `[ClearingHouse] User ${userId} initialized with balance: $${balance}`
-    );
+  clockTick(context: Omit<ClockTickContext, 'clockSeq'>): void {
+    this.recordPrice(context.orderbookId, context.price);
+    this.processClockTick({ ...context });
+    this.executeSettlement();
   }
 
-  /**
-   * Get active iron condor contracts for a timeframe
-   */
-  getActiveIronCondorContracts(
-    timeframe: TimeFrame
-  ): IronCondorContract[] {
-    const orderbook = this.ironCondorOrderbooks.get(timeframe);
-    if (!orderbook) return [];
-    const contracts = Array.from(orderbook.getActiveContracts().values());
-    return contracts;
+  getCurrentPrice(orderbookId?: OrderbookId): number {
+    return this.getLastKnownPrice(orderbookId);
   }
 
-  /**
-   * Get active spread contracts for a timeframe
-   */
-  getActiveSpreadContracts(timeframe: TimeFrame): SpreadContract[] {
-    const orderbook = this.spreadOrderbooks.get(timeframe);
-    if (!orderbook) {
-      return [];
-    }
-    return Array.from(orderbook.getActiveContracts().values());
+  getOrderbookConfig(orderbookId: OrderbookId): OrderbookConfig {
+    return this.orderbooks.get(orderbookId).config;
   }
 
-  getDataPointCount(): number {
-    return this.dataPointCount;
-  }
-
-  getCurrentPrice(): number {
-    return this.currentPrice;
-  }
-
-  // Price feed management methods
   startPriceFeed(): void {
-    this.priceFeedService.start();
-    console.log('[ClearingHouse] Price feed started');
+    if (this.priceFeedRunning) {
+      this.emit('price_feed_status', { running: true });
+      return;
+    }
+
+    const orderbooks = this.orderbooks.list();
+    if (!orderbooks.length) {
+      this.emit('price_feed_status', {
+        running: false,
+        reason: 'no_orderbooks',
+      });
+      return;
+    }
+
+    if (!this.priceService) {
+      this.priceService = new PriceService(this);
+    }
+
+    const started = this.priceService.start();
+    if (!started || !this.priceService.isRunning()) {
+      this.emit('price_feed_status', {
+        running: false,
+        reason: 'price_service_unavailable',
+      });
+      return;
+    }
+
+    this.priceFeedRunning = true;
+    this.startClocks(orderbooks.map((orderbook) => orderbook.config.orderbookId));
+    this.emit('price_feed_status', { running: true });
   }
 
   stopPriceFeed(): void {
-    this.priceFeedService.stop();
-    console.log('[ClearingHouse] Price feed stopped');
+    if (!this.priceFeedRunning) {
+      return;
+    }
+
+    this.stopClocks();
+    this.priceService?.stop();
+    this.priceFeedRunning = false;
+    this.emit('price_feed_status', { running: false });
   }
 
-  // Cleanup method
   destroy(): void {
     this.stopPriceFeed();
-    if (this.priceUnsubscribe) {
-      this.priceUnsubscribe();
-      this.priceUnsubscribe = null;
-    }
     this.removeAllListeners();
-    console.log('[ClearingHouse] Service destroyed');
+  }
+
+  handlePriceUpdate(orderbookId: OrderbookId, price: number, timestamp: number = Date.now()): void {
+    this.recordPrice(orderbookId, price);
+    this.emit('price_update', { orderbookId, price, ts: timestamp });
+  }
+
+  private placeOrder(payload: PlaceOrderPayload, now: Timestamp): Order {
+    const result = this.orders.placeOrder(payload, now);
+    if (!result.success || !result.order) {
+      throw new Error(result.reason ?? 'order_placement_failed');
+    }
+    return result.order;
+  }
+
+  private updateOrder(payload: UpdateOrderPayload, now: Timestamp): Order {
+    const result = this.orders.updateOrder(payload, now);
+    if (!result.success || !result.order) {
+      throw new Error(result.reason ?? 'order_update_failed');
+    }
+    return result.order;
+  }
+
+  private cancelOrder(payload: { orderId: string; makerId: string }, now: Timestamp): Order {
+    const result = this.orders.cancelOrder(payload, now);
+    if (!result.success || !result.order) {
+      throw new Error(result.reason ?? 'order_cancel_failed');
+    }
+    return result.order;
+  }
+
+  private fillOrderInternal(payload: FillOrderPayload): void {
+    const result = this.orders.fillOrder(payload);
+    if (!result.success || !result.positionId) {
+      throw new Error(result.reason ?? 'fill_failed');
+    }
+  }
+
+  private processClockTick(context: Omit<ClockTickContext, 'clockSeq'>): void {
+    const { orderbookId, now, price } = context;
+    const seq = (this.clockSeq.get(orderbookId) ?? 0) + 1;
+    this.clockSeq.set(orderbookId, seq);
+
+    this.emitEvent({
+      type: 'clock_tick',
+      orderbookId,
+      windowStart: now,
+      windowEnd: now + this.orderbooks.get(orderbookId).config.timeframeMs,
+      reason: 'tick',
+      price,
+      clockSeq: seq,
+      ts: now,
+    });
+
+    this.orderbooks.withLock(orderbookId, seq, (orderbook) => {
+      const advanceResult = orderbook.advance(now);
+      if (advanceResult.droppedOrderIds.length) {
+        advanceResult.droppedOrderIds.forEach((orderId) => {
+          this.orders.forgetOrder(orderId);
+          this.margin.releaseOrder(orderId);
+        });
+        this.emitEvent({
+          type: 'column_dropped',
+          orderbookId,
+          windowStart: now,
+          windowEnd: now,
+          droppedOrderIds: advanceResult.droppedOrderIds,
+          clockSeq: seq,
+          ts: now,
+        });
+      }
+
+      const orders = orderbook.ordersWithPendingPositions(now);
+      for (const order of orders) {
+        const positionsDue = orderbook.pendingPositionsDue(order, now);
+        const product = this.products.get(order.productTypeId);
+
+        for (const positionRef of positionsDue) {
+          const position = this.positions.get(positionRef.positionId);
+          if (!position) {
+            orderbook.resolvePendingPosition(order.id, positionRef.positionId);
+            continue;
+          }
+
+          const hit = product.verifyHit(order, position, price);
+          if (!hit) {
+            continue;
+          }
+
+          this.positions.markHit(position.id, price, now);
+          orderbook.resolvePendingPosition(order.id, position.id);
+          this.emitEvent({
+            type: 'verification_hit',
+            orderbookId,
+            positionId: position.id,
+            orderId: order.id,
+            price,
+            triggerTs: now,
+            clockSeq: seq,
+            ts: now,
+          });
+
+          const changes = product.payout(order, position, price);
+          this.enqueueSettlement({
+            positionId: position.id,
+            orderId: order.id,
+            orderbookId,
+            productTypeId: order.productTypeId,
+            balanceChanges: changes,
+            clockSeq: seq,
+            priceAtHit: price,
+            triggerTimestamp: now,
+          });
+        }
+      }
+    });
+
+    this.flushMarginViolations(seq, orderbookId, now);
+  }
+
+  private executeSettlement(): void {
+    while (this.settlements.size() > 0) {
+      const instruction = this.settlements.dequeue();
+      if (!instruction) {
+        break;
+      }
+      const position = this.positions.get(instruction.positionId);
+      this.balances.applyChangeset(
+        instruction.balanceChanges,
+        `settlement:${instruction.positionId}`
+      );
+      this.positions.settle(instruction.positionId, Date.now());
+      this.emitEvent({
+        type: 'payout_settled',
+        orderbookId: instruction.orderbookId,
+        positionId: instruction.positionId,
+        amount: instruction.balanceChanges.credits.reduce(
+          (total, change) => total + change.delta,
+          0
+        ),
+        makerId: position?.makerId ?? '',
+        userId: position?.userId ?? '',
+        clockSeq: instruction.clockSeq,
+        ts: Date.now(),
+      });
+    }
+  }
+
+  private enqueueSettlement(instruction: SettlementInstruction): void {
+    const hasChanges =
+      instruction.balanceChanges.credits.length ||
+      instruction.balanceChanges.debits.length;
+    if (!hasChanges) {
+      return;
+    }
+    this.settlements.enqueue(instruction);
+  }
+
+  private flushMarginViolations(clockSeq: number, orderbookId: OrderbookId, ts: Timestamp): void {
+    const violations = this.margin.collectViolations();
+    violations.forEach((violation) => {
+      this.emitEvent({
+        type: 'margin_violation',
+        violation,
+        orderbookId,
+        clockSeq,
+        ts,
+      });
+    });
+  }
+
+  private bindCoreEvents(): void {
+    this.orders.on('order_placed', (order: Order) => {
+      this.emitEvent({
+        type: 'order_placed',
+        order,
+        collateralLocked: order.collateralRequired,
+        orderbookId: order.orderbookId,
+        ts: order.timePlaced,
+        clockSeq: this.clockSeq.get(order.orderbookId) ?? 0,
+      });
+    });
+    this.orders.on(
+      'order_updated',
+      ({
+        current,
+        previous,
+        delta,
+      }: {
+        current: Order;
+        previous: Order;
+        delta: Partial<Order>;
+      }) => {
+        this.emitEvent({
+          type: 'order_updated',
+          order: current,
+          delta,
+          previousVersion: previous.version,
+          orderbookId: current.orderbookId,
+          ts: Date.now(),
+          clockSeq: this.clockSeq.get(current.orderbookId) ?? 0,
+        });
+      }
+    );
+    this.orders.on('order_cancelled', (order: Order, ts: Timestamp) => {
+      this.emitEvent({
+        type: 'order_cancelled',
+        orderId: order.id,
+        reason: 'maker_cancelled',
+        orderbookId: order.orderbookId,
+        ts,
+        clockSeq: this.clockSeq.get(order.orderbookId) ?? 0,
+      });
+    });
+    this.orders.on(
+      'order_cancel_only',
+      ({
+        order,
+        reason,
+        cancelRequiredBy,
+        timestamp,
+      }: {
+        order: Order;
+        reason: string;
+        cancelRequiredBy: Timestamp;
+        timestamp: Timestamp;
+      }) => {
+        this.emitEvent({
+          type: 'order_cancel_only',
+          orderId: order.id,
+          reason,
+          cancelRequiredBy,
+          orderbookId: order.orderbookId,
+          ts: timestamp,
+          clockSeq: this.clockSeq.get(order.orderbookId) ?? 0,
+        });
+      }
+    );
+    this.orders.on(
+      'order_filled',
+      ({
+        order,
+        position,
+        fillSize,
+        priceAtFill,
+      }: {
+        order: Order;
+        position: { id: string; userId: string };
+        fillSize: number;
+        priceAtFill?: number;
+      }) => {
+        this.emitEvent({
+          type: 'order_filled',
+          orderId: order.id,
+          positionId: position.id,
+          fillSize,
+          fillPrice: priceAtFill,
+          userId: position.userId,
+          orderbookId: order.orderbookId,
+          ts: Date.now(),
+          clockSeq: this.clockSeq.get(order.orderbookId) ?? 0,
+        });
+      }
+    );
+    this.orders.on(
+      'order_rejected',
+      ({
+        orderbookId,
+        orderId,
+        makerId,
+        userId,
+        reason,
+        constraint,
+        timestamp,
+      }: {
+        orderbookId: OrderbookId;
+        orderId?: OrderId;
+        makerId: AccountId;
+        userId?: AccountId;
+        reason: string;
+        constraint?: Record<string, unknown>;
+        timestamp: Timestamp;
+      }) => {
+        this.emitEvent({
+          type: 'order_rejected',
+          orderId,
+          makerId,
+          userId,
+          rejectionReason: reason,
+          violatedConstraint: constraint,
+          orderbookId,
+          ts: timestamp,
+          clockSeq: this.clockSeq.get(orderbookId) ?? 0,
+        });
+      }
+    );
+  }
+
+  private emitEvent<
+    T extends {
+      type: string;
+      orderbookId: OrderbookId;
+      ts: Timestamp;
+      clockSeq: number;
+      sourceTs?: Timestamp;
+    }
+  >(event: T): void {
+    const { type, orderbookId, ts, clockSeq, sourceTs, ...rest } = event;
+    const envelope: ClearingHouseEvent = {
+      eventId: randomUUID(),
+      orderbookId,
+      ts,
+      clockSeq,
+      ...(sourceTs !== undefined ? { sourceTs } : {}),
+      payload: {
+        type,
+        ...(rest as Record<string, unknown>),
+      } as any,
+    };
+    this.emit('event', envelope);
+  }
+
+  private getLastKnownPrice(orderbookId?: OrderbookId): number {
+    if (orderbookId) {
+      const price = this.orderbookPrices.get(orderbookId);
+      if (price !== undefined) {
+        return price;
+      }
+    }
+    return this.lastObservedPrice;
+  }
+
+  private recordPrice(orderbookId: OrderbookId, price: number): void {
+    this.orderbookPrices.set(orderbookId, price);
+    this.lastObservedPrice = price;
+  }
+
+  private startClocks(orderbookIds?: OrderbookId[]): void {
+    const ids =
+      orderbookIds ??
+      this.orderbooks.list().map((orderbook) => orderbook.config.orderbookId);
+    ids.forEach((orderbookId) => this.startClockForOrderbook(orderbookId));
+  }
+
+  private startClockForOrderbook(orderbookId: OrderbookId): void {
+    if (this.clockTimers.has(orderbookId)) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const price = this.getLastKnownPrice(orderbookId);
+      this.clockTick({ orderbookId, now, price });
+    }, 1000);
+
+    this.clockTimers.set(orderbookId, interval);
+  }
+
+  private stopClocks(): void {
+    this.clockTimers.forEach((interval) => clearInterval(interval));
+    this.clockTimers.clear();
+  }
+
+  private forwardRuntimeEvents(): void {
+    this.positions.on('position_opened', (position) => {
+      this.emit('position_opened', position);
+    });
+    this.positions.on('position_settled', (position) => {
+      this.emit('position_settled', position);
+    });
+    this.positions.on('position_hit', (position) => {
+      this.emit('position_hit', position);
+    });
   }
 }

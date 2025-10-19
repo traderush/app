@@ -1,13 +1,11 @@
-/**
- * Central export for clearing house functionality
- */
-
-// Export all types
-export * from './types';
-export * from './types/messages';
-
-// Export configuration
-export { CLEARING_HOUSE_CONFIG } from './config/clearingHouseConfig';
-
-// Export API
 export { ClearingHouseAPI, clearingHouseAPI } from './ClearingHouseAPI';
+export type { IronCondorContractView } from './ClearingHouseAPI';
+export { ClearingHouseService } from './services/ClearingHouseService';
+export * from './core/types';
+export { ProductRegistry } from './core/ProductRegistry';
+export type { ProductTypeHooks } from './core/product';
+export { NullProductType } from './core/product';
+export { ensureIronCondorBootstrap } from './setup/ironCondorBootstrap';
+export { launchClearingHouse, shutdownClearingHouse } from './launch';
+export { CLEARING_HOUSE_CONFIG } from './config';
+export { MarketType, TimeFrame, IronCondorTimeframes, SpreadTimeframes } from './types';

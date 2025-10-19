@@ -1,15 +1,14 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { X, Paintbrush, RotateCcw } from 'lucide-react';
+import { X, RotateCcw } from 'lucide-react';
 import { useUIStore } from '@/stores';
 
 interface CustomizePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
-export default function CustomizePopup({ isOpen, onClose, triggerRef }: CustomizePopupProps) {
+export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps) {
   const signatureColor = useUIStore((state) => state.signatureColor);
   const setSignatureColor = useUIStore((state) => state.setSignatureColor);
   const [localSignatureColor, setLocalSignatureColor] = useState(signatureColor);

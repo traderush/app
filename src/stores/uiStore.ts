@@ -47,6 +47,15 @@ export interface UISettings {
   developerMode: boolean;
 }
 
+export interface PnLCustomization {
+  backgroundImage: string;
+  backgroundOpacity: number;
+  backgroundBlur: number;
+  generalTextColor: string;
+  balanceTextColor: string;
+  pnlTextColor: string;
+}
+
 interface UIState {
   // Modal Management
   modals: Record<string, ModalState>;
@@ -61,6 +70,9 @@ interface UIState {
   
   // Signature Color (user's custom color)
   signatureColor: string;
+
+  // PnL customization
+  pnLCustomization: PnLCustomization;
   
   // Asset Preferences
   favoriteAssets: Set<'BTC' | 'ETH' | 'SOL' | 'DEMO'>;
@@ -95,6 +107,8 @@ interface UIState {
   // Actions - Signature Color
   setSignatureColor: (color: string) => void;
   resetSignatureColor: () => void;
+  updatePnLCustomization: (updates: Partial<PnLCustomization>) => void;
+  resetPnLCustomization: () => void;
   
   // Actions - Asset Preferences
   toggleFavoriteAsset: (asset: 'BTC' | 'ETH' | 'SOL' | 'DEMO') => void;
@@ -119,6 +133,15 @@ interface UIState {
   getUnreadNotifications: () => ToastNotification[];
   getNotificationCount: () => number;
 }
+
+const defaultPnLCustomization: PnLCustomization = {
+  backgroundImage: 'https://www.carscoops.com/wp-content/uploads/2023/05/McLaren-750S-main.gif',
+  backgroundOpacity: 100,
+  backgroundBlur: 0,
+  generalTextColor: '#ffffff',
+  balanceTextColor: '#ec397a',
+  pnlTextColor: '#2fe3ac',
+};
 
 const initialTheme: UITheme = {
   primaryColor: '#3b82f6',
@@ -149,8 +172,17 @@ const initialSettings: UISettings = {
   developerMode: false,
 };
 
+type PersistedUIState = {
+  theme: UITheme;
+  layout: UILayout;
+  settings: UISettings;
+  signatureColor: string;
+  favoriteAssets: ('BTC' | 'ETH' | 'SOL' | 'DEMO')[];
+  pnLCustomization: PnLCustomization;
+};
+
 export const useUIStore = create<UIState>()(
-  persist(
+  persist<UIState, [], [], PersistedUIState>(
     (set, get) => ({
       // Initial State
       modals: {},
@@ -159,6 +191,7 @@ export const useUIStore = create<UIState>()(
       layout: initialLayout,
       settings: initialSettings,
       signatureColor: '#FA5616', // Default signature color (orange)
+      pnLCustomization: defaultPnLCustomization,
       favoriteAssets: new Set(['BTC']), // BTC is favorited by default
       isAssetDropdownOpen: false,
       isLoading: false,
@@ -264,6 +297,14 @@ export const useUIStore = create<UIState>()(
 
       resetSignatureColor: () =>
         set({ signatureColor: '#FA5616' }),
+
+      updatePnLCustomization: (updates) =>
+        set((state) => ({
+          pnLCustomization: { ...state.pnLCustomization, ...updates },
+        })),
+
+      resetPnLCustomization: () =>
+        set({ pnLCustomization: defaultPnLCustomization }),
       
       // Asset Preferences Actions
       toggleFavoriteAsset: (asset) =>
@@ -326,6 +367,7 @@ export const useUIStore = create<UIState>()(
           theme: initialTheme,
           layout: initialLayout,
           settings: initialSettings,
+          pnLCustomization: defaultPnLCustomization,
           isLoading: false,
           loadingMessage: '',
           isConnected: true,
@@ -350,14 +392,31 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'ui-store',
-      storage: createPersistentStorage('ui') as any,
-      partialize: (state) => ({
+      storage: createPersistentStorage<PersistedUIState>('ui'),
+      partialize: (state): PersistedUIState => ({
         theme: state.theme,
         layout: state.layout,
         settings: state.settings,
         signatureColor: state.signatureColor,
-        favoriteAssets: Array.from(state.favoriteAssets), // Convert Set to Array for JSON serialization
-      }) as any,
+        pnLCustomization: state.pnLCustomization,
+        favoriteAssets: Array.from(state.favoriteAssets),
+      }),
+      merge: (persistedState, currentState) => {
+        if (!persistedState) return currentState;
+
+        const persisted = persistedState as PersistedUIState;
+        return {
+          ...currentState,
+          ...persisted,
+          favoriteAssets: new Set(
+            persisted.favoriteAssets?.length
+              ? persisted.favoriteAssets
+              : Array.from(currentState.favoriteAssets)
+          ),
+          pnLCustomization:
+            persisted.pnLCustomization ?? currentState.pnLCustomization,
+        };
+      },
     }
   )
 );

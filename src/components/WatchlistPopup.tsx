@@ -1,16 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { X, Search, Trash2 } from 'lucide-react';
-
-interface WatchedPlayer {
-  id: string;
-  name: string;
-  address: string;
-  avatar: string;
-  game: string;
-  isOnline: boolean;
-}
+import { DEMO_PLAYERS, RANDOM_NAMES } from '@/components/constants/watchlist';
+import type { WatchedPlayer } from '@/stores';
 
 interface WatchlistPopupProps {
   isOpen: boolean;
@@ -26,16 +20,7 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
   setWatchedPlayers
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAnimating, setIsAnimating] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-    } else {
-      setIsAnimating(false);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -66,82 +51,34 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
     }
   }, [isOpen, onClose]);
   
-  // Demo players for suggestions
-  const allDemoPlayers = [
-    {
-      id: 'demo1',
-      name: 'CryptoTrader',
-      address: '0x1234...5678',
-      avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg',
-      game: 'Box Hit',
-      isOnline: true
-    },
-    {
-      id: 'demo2',
-      name: 'DeFiMaster',
-      address: '0x2345...6789',
-      avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png',
-      game: 'Box Hit',
-      isOnline: false
-    },
-    {
-      id: 'demo3',
-      name: 'BlockchainPro',
-      address: '0x3456...7890',
-      avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg',
-      game: 'Box Hit',
-      isOnline: true
-    },
-    {
-      id: 'demo4',
-      name: 'TradingGuru',
-      address: '0x4567...8901',
-      avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg',
-      game: 'Box Hit',
-      isOnline: false
+  const suggestions = useMemo(() => {
+    const addedNames = new Set(watchedPlayers.map((player) => player.name));
+    const availableDemo = DEMO_PLAYERS.filter((player) => !addedNames.has(player.name));
+
+    if (availableDemo.length >= 4) {
+      return availableDemo.slice(0, 4);
     }
-  ];
 
-  // Random player names for suggestions
-  const randomNames = [
-    'BitcoinBull', 'EthereumEagle', 'SolanaShark', 'CardanoKing', 'PolygonPro',
-    'AvalancheAce', 'ChainlinkChamp', 'UniswapUnicorn', 'PancakeSwapPro', 'SushiSwapStar',
-    'CompoundCrypto', 'AaveAce', 'YearnYield', 'CurveCrusher', 'BalancerBoss',
-    'MakerMaster', 'SynthetixStar', 'RenRenegade', 'KyberKnight', 'BancorBaron'
-  ];
+    const generated: WatchedPlayer[] = [];
+    const usedNames = new Set([...addedNames, ...availableDemo.map((player) => player.name)]);
 
-  // Generate random suggestions (exclude already added players)
-  const getRandomSuggestions = () => {
-    const addedNames = watchedPlayers.map(p => p.name);
-    const availablePlayers = allDemoPlayers.filter(p => !addedNames.includes(p.name));
-    
-    // If we have fewer than 4 available demo players, generate random ones
-    if (availablePlayers.length < 4) {
-      const randomPlayers = [];
-      const usedNames = new Set([...addedNames, ...availablePlayers.map(p => p.name)]);
-      
-      while (randomPlayers.length < 4 && randomPlayers.length < randomNames.length) {
-        const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
-        if (!usedNames.has(randomName)) {
-          usedNames.add(randomName);
-          randomPlayers.push({
-            id: `random_${Date.now()}_${Math.random().toString(16).substr(2, 4)}`,
-            name: randomName,
-            address: '0x' + Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4),
-            avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
-            game: 'Box Hit',
-            isOnline: Math.random() > 0.5
-          });
-        }
-      }
-      
-      return [...availablePlayers, ...randomPlayers].slice(0, 4);
+    for (const randomName of RANDOM_NAMES) {
+      if (generated.length >= 4 - availableDemo.length) break;
+      if (usedNames.has(randomName)) continue;
+
+      usedNames.add(randomName);
+      generated.push({
+        id: `random_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+        name: randomName,
+        address: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
+        avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
+        game: 'Box Hit',
+        isOnline: Math.random() > 0.5,
+      });
     }
-    
-    return availablePlayers.slice(0, 4);
-  };
 
-  const demoPlayers = getRandomSuggestions();
+    return [...availableDemo, ...generated].slice(0, 4);
+  }, [watchedPlayers]);
 
   const handleRemovePlayer = (playerId: string) => {
     setWatchedPlayers(prev => prev.filter(player => player.id !== playerId));
@@ -259,13 +196,15 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
                   {/* Player Info */}
                   <div className="col-span-4 flex items-center gap-2">
                     <div className="relative">
-                      <img
+                      <Image
                         src={player.avatar}
                         alt={player.name}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded object-cover"
                         style={{ borderRadius: '4px' }}
+                        loading="lazy"
                       />
-                      {/* Online indicator */}
                       <div
                         className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-[#0E0E0E] ${
                           player.isOnline ? 'bg-green-500' : 'bg-zinc-500'
@@ -327,13 +266,16 @@ const WatchlistPopup: React.FC<WatchlistPopupProps> = ({
           <div className="p-3 border-t border-zinc-800/70">
             <h3 className="text-white text-xs font-medium mb-2">Suggested Players</h3>
             <div className="grid grid-cols-2 gap-1.5">
-              {demoPlayers.map((player) => (
+              {suggestions.map((player) => (
                 <div key={player.id} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 rounded hover:bg-zinc-900/50 transition-colors">
-                  <img
+                  <Image
                     src={player.avatar}
                     alt={player.name}
+                    width={20}
+                    height={20}
                     className="w-5 h-5 rounded object-cover"
                     style={{ borderRadius: '4px' }}
+                    loading="lazy"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="text-white text-xs font-medium truncate">{player.name}</div>

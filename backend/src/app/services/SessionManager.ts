@@ -15,10 +15,7 @@ import {
 import { TimeFrame } from '../../clearingHouse/types';
 import { createLogger } from '../utils/logger';
 import { clearingHouseAPI } from '../../clearingHouse';
-import { 
-  AlreadyInSessionError, 
-  NoActiveSessionError 
-} from '../utils/errors';
+import { AlreadyInSessionError } from '../utils/errors';
 import { MarketType } from '../../clearingHouse';
 
 const logger = createLogger('SessionManager');
@@ -104,7 +101,7 @@ export class SessionManager {
     try {
       const sessionIds = this.userSessions.get(userId);
       if (!sessionIds || sessionIds.size === 0) {
-        return err(new NoActiveSessionError());
+        return ok(undefined);
       }
 
       // Leave all user sessions (should be just one)
@@ -116,7 +113,7 @@ export class SessionManager {
 
           // Remove session
           this.sessions.delete(sessionId);
-          
+
           logger.info('Session ended', {
             sessionId,
             userId,
@@ -310,8 +307,6 @@ export class SessionManager {
     switch (gameMode) {
       case GameMode.BOX_HIT:
         return 'iron_condor';
-      case GameMode.TOWERS:
-        return 'spread';
       default:
         throw new Error(`Unknown game mode: ${gameMode}`);
     }

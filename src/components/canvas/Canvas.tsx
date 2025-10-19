@@ -10,6 +10,51 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useUIStore } from '@/stores/uiStore';
 import { useUserStore } from '@/stores/userStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useTradeNotifications } from './hooks/useTradeNotifications';
+import { useOtherPlayerOverlay } from './hooks/useOtherPlayerOverlay';
+import { BoxHitContract, BoxHitPosition, BoxHitPositionMap, TradeResultPayload } from '@/types/boxHit';
+
+const getTimeFrameFromMs = (ms?: number): TimeFrame => {
+  switch (ms) {
+    case 500:
+      return TimeFrame.HALF_SECOND;
+    case 1000:
+      return TimeFrame.SECOND;
+    case 2000:
+      return TimeFrame.TWO_SECONDS;
+    case 4000:
+      return TimeFrame.FOUR_SECONDS;
+    case 10000:
+      return TimeFrame.TEN_SECONDS;
+    default:
+      return TimeFrame.TWO_SECONDS;
+  }
+};
+
+const PIXELS_PER_POINT = 5;
+const MS_PER_DATA_POINT = 100;
+
+interface CanvasMultiplier {
+  value: number;
+  x: number;
+  y: number;
+  worldX: number;
+  worldY: number;
+  width: number;
+  height: number;
+  totalBets: number;
+  userBet: number;
+  timestampRange: {
+    start: number;
+    end: number;
+  };
+  priceRange: {
+    min: number;
+    max: number;
+  };
+  status?: 'hit' | 'missed';
+  isClickable: boolean;
+}
 
 /**
  * Props for the Canvas component (Mock Backend Trading View)
@@ -31,7 +76,12 @@ interface CanvasProps {
   externalIsStarted?: boolean;
   onExternalStartChange?: (isStarted: boolean) => void;
   externalTimeframe?: number;
-  onPositionsChange?: (positions: Map<string, any>, contracts: any[], hitBoxes: string[], missedBoxes: string[]) => void;
+  onPositionsChange?: (
+    positions: BoxHitPositionMap,
+    contracts: BoxHitContract[],
+    hitBoxes: string[],
+    missedBoxes: string[],
+  ) => void;
   betAmount?: number;
   onPriceUpdate?: (price: number) => void;
   onSelectionChange?: (count: number, best: number, multipliers: number[], averagePrice?: number | null) => void;
@@ -41,18 +91,6 @@ interface CanvasProps {
 }
 
 function Canvas({ externalControl = false, externalIsStarted = false, onExternalStartChange, externalTimeframe, onPositionsChange, betAmount = 100, onPriceUpdate, onSelectionChange, showProbabilities = false, showOtherPlayers = false, minMultiplier = 1.0 }: CanvasProps = {}) {
-  // Convert external timeframe (ms) to TimeFrame enum
-  const getTimeFrameFromMs = (ms?: number): TimeFrame => {
-    switch (ms) {
-      case 500: return TimeFrame.HALF_SECOND;
-      case 1000: return TimeFrame.SECOND;
-      case 2000: return TimeFrame.TWO_SECONDS;
-      case 4000: return TimeFrame.FOUR_SECONDS;
-      case 10000: return TimeFrame.TEN_SECONDS;
-      default: return TimeFrame.TWO_SECONDS;
-    }
-  };
-  
   const [configLoaded, setConfigLoaded] = useState(false);
   const [numYsquares, setNumYsquares] = useState(20);
   const [numXsquares, setNumXsquares] = useState(25);
@@ -72,24 +110,34 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     basePrice + priceStep * numYsquares * 0.5
   );
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [notifications, setNotifications] = useState<
-    Array<{ id: string; message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>
-  >([]);
   const [isFollowingPrice, setIsFollowingPrice] = useState(true);
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GridGame | null>(null);
-  const priceUpdateIntervalRef = useRef<number | null>(null);
   const handleTradePlaceRef = useRef<typeof handleTradePlace | null>(null);
   const isJoinedRef = useRef(false);
-  const contractsRef = useRef<any[]>([]);
+  const contractsRef = useRef<BoxHitContract[]>([]);
+  const { notifications, pushNotification, dismissNotification } = useTradeNotifications();
+  const { randomPlayerCounts, trackedPlayerSelections, loadedImages } = useOtherPlayerOverlay(
+    showOtherPlayers,
+    gameRef,
+  );
+  const betAmountRef = useRef(betAmount);
+  const onSelectionChangeRef = useRef(onSelectionChange);
+
+  useEffect(() => {
+    betAmountRef.current = betAmount;
+  }, [betAmount]);
+
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange;
+  }, [onSelectionChange]);
   
   // Get signature color from UI store
   const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Get balance update function from user store
   const updateBalance = useUserStore((state) => state.updateBalance);
-  const addTrade = useUserStore((state) => state.addTrade);
   
   // Get backend connection setter from store
   const setBackendConnected = useConnectionStore((state) => state.setBackendConnected);
@@ -107,19 +155,12 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       enabled: isConnected,
     });
 
-  // Debug WebSocket connection status and update backend connection status
+  const contractCount = contracts.length;
+
+  // Update backend connection status when connectivity changes
   useEffect(() => {
-    console.log('🔍 Canvas WebSocket status:', {
-      isConnected,
-      isJoined,
-      positionsSize: positions?.size || 0,
-      contractsLength: contracts?.length || 0,
-      positions: positions ? Array.from(positions.entries()) : []
-    });
-    
-    // Update backend connection status in the global store
     setBackendConnected(isConnected);
-  }, [isConnected, isJoined, positions, contracts, setBackendConnected]);
+  }, [isConnected, setBackendConnected]);
 
   // Sync userBalance from game session to Zustand store
   useEffect(() => {
@@ -136,55 +177,9 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     if (onPositionsChange && positions && gameRef.current) {
       const hitBoxes = gameRef.current.getHitBoxes();
       const missedBoxes = gameRef.current.getMissedBoxes();
-      const selectedSquares = gameRef.current.getSelectedSquares();
-      
-      console.log('🔍 Canvas: Hit/Miss status:', {
-        hitBoxes: hitBoxes,
-        missedBoxes: missedBoxes,
-        selectedSquares: selectedSquares,
-        positionsSize: positions.size,
-        contractsLength: contracts.length,
-        hitMissedUpdateTrigger
-      });
-      
-      // Pass ALL positions (including resolved ones) to parent for proper history tracking
-      console.log('🔄 Syncing to parent - all positions:', { 
-        totalPositions: positions.size,
-        selectedSquares: selectedSquares.length,
-        hitBoxes: hitBoxes.length, 
-        missedBoxes: missedBoxes.length,
-        positionsDetail: Array.from(positions.entries()).map(([id, p]) => ({ 
-          id, 
-          contractId: p.contractId, 
-          amount: p.amount,
-          isHit: hitBoxes.includes(p.contractId),
-          isMissed: missedBoxes.includes(p.contractId)
-        }))
-      });
-      
-      console.log('🔄 Calling onPositionsChange with:', {
-        positionsSize: positions.size,
-        contractsLength: contracts.length,
-        hitBoxesLength: hitBoxes.length,
-        missedBoxesLength: missedBoxes.length,
-        hasCallback: !!onPositionsChange
-      });
-      
-      if (onPositionsChange) {
-        onPositionsChange(positions, contracts, hitBoxes, missedBoxes);
-      } else {
-        console.log('❌ onPositionsChange callback not provided');
-      }
+      onPositionsChange(positions, contracts, hitBoxes, missedBoxes);
     }
   }, [positions, contracts, onPositionsChange, hitMissedUpdateTrigger]);
-
-  // Debug contracts
-  useEffect(() => {
-    if (contracts.length > 0) {
-      const now = Date.now();
-      const futureContracts = contracts.filter((c) => c.startTime > now);
-    }
-  }, [contracts, isJoined]);
 
   // Keep refs updated
   useEffect(() => {
@@ -197,74 +192,42 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   useEffect(() => {
     if (!isConnected) return;
 
-    const handleContractResolved = (msg: any) => {
-      console.log('🔔 Contract resolved event:', msg);
-      if (msg.payload && gameRef.current) {
-        const { contractId, outcome } = msg.payload;
-        console.log('📋 Contract ID:', contractId, 'Outcome:', outcome);
+    type ContractResolvedPayload = {
+      contractId: string;
+      outcome: 'hit' | 'miss' | string;
+    };
 
-        if (outcome === 'hit') {
-          console.log('➡️ Calling markContractAsHit');
-          gameRef.current.markContractAsHit(contractId);
-          setHitMissedUpdateTrigger(prev => prev + 1); // Trigger position sync
-        } else if (outcome === 'miss') {
-          console.log('➡️ Calling markContractAsMissed');
-          gameRef.current.markContractAsMissed(contractId);
-          setHitMissedUpdateTrigger(prev => prev + 1); // Trigger position sync
-        } else {
-          console.log('⚠️ Unknown outcome:', outcome);
-        }
-      } else {
-        console.log('⚠️ Missing payload or gameRef:', { hasPayload: !!msg.payload, hasGameRef: !!gameRef.current });
+    const handleContractResolved = (message: unknown) => {
+      const payload = (message as { payload?: ContractResolvedPayload })?.payload;
+      if (!payload || !gameRef.current) {
+        return;
+      }
+
+      const { contractId, outcome } = payload;
+
+      if (outcome === 'hit') {
+        gameRef.current.markContractAsHit(contractId);
+        setHitMissedUpdateTrigger((prev) => prev + 1);
+      } else if (outcome === 'miss') {
+        gameRef.current.markContractAsMissed(contractId);
+        setHitMissedUpdateTrigger((prev) => prev + 1);
       }
     };
 
-    const handleTradeResult = (msg: any) => {
-      if (msg.payload) {
-        const { contractId, won, payout, profit, balance } = msg.payload;
+    const handleTradeResult = (message: unknown) => {
+      const data = (message as { payload?: TradeResultPayload })?.payload ?? (message as TradeResultPayload);
+      if (data) {
+        const { won, profit, balance } = data;
         const message = won
           ? `Trade Won  +$${Math.abs(profit).toFixed(2)}`
           : `Trade Lost -$${Math.abs(profit).toFixed(2)}`;
 
-        // Add notification
-        const notification = {
-          id: `${contractId}_${Date.now()}`,
-          message,
-          type: won ? 'success' : ('error' as 'success' | 'error'),
-          isVisible: true,
-        };
-
-        setNotifications((prev) => {
-          const updated = [...prev, notification];
-          // Keep only the latest 5 notifications
-          return updated.length > 5 ? updated.slice(-5) : updated;
-        });
-
-        // Start fade out after 2.5 seconds
-        setTimeout(() => {
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === notification.id ? { ...n, isVisible: false } : n))
-          );
-        }, 2500);
-
-        // Remove notification after fade out completes
-        setTimeout(() => {
-          setNotifications((prev) =>
-            prev.filter((n) => n.id !== notification.id)
-          );
-        }, 3000);
+        pushNotification(message, won ? 'success' : 'error');
 
         // Update balance in Zustand store for global sync
         if (balance !== undefined && balance !== null) {
           updateBalance(balance);
         }
-        
-        console.log('Trade result:', {
-          contractId,
-          won,
-          profit,
-          newBalance: balance,
-        });
       }
     };
 
@@ -275,7 +238,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       off('contract_resolved', handleContractResolved);
       off('trade_result', handleTradeResult);
     };
-  }, [isConnected, on, off]);
+  }, [isConnected, on, off, pushNotification, updateBalance]);
 
   // Update time every second
   useEffect(() => {
@@ -294,9 +257,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         },
       });
 
-      const handleGameConfig = (msg: any) => {
-        if (msg.type === 'game_config' && msg.payload) {
-          const { config } = msg.payload;
+      const handleGameConfig = (message: unknown) => {
+        const data = message as { type?: string; payload?: { config: { priceStep: number; timeStep: number; basePrice: number } } };
+        if (data.type === 'game_config' && data.payload) {
+          const { config } = data.payload;
           setPriceStep(config.priceStep);
           setTimeStep(config.timeStep);
           setBasePrice(config.basePrice);
@@ -323,9 +287,10 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
   // Handle price updates
   useEffect(() => {
     if (isConnected) {
-      const handlePriceUpdate = (msg: any) => {
-        if (msg.payload && typeof msg.payload.price === 'number') {
-          const newPrice = msg.payload.price;
+      const handlePriceUpdate = (message: unknown) => {
+        const payload = (message as { payload?: { price?: number } })?.payload;
+        if (payload && typeof payload.price === 'number') {
+          const newPrice = payload.price;
           setCurrentPrice(newPrice);
           
           // Notify parent of price update (for header display)
@@ -351,54 +316,29 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         off('price_update', handlePriceUpdate);
       };
     }
-  }, [isConnected, on, off]);
+  }, [isConnected, on, off, onPriceUpdate]);
 
   // Track data point count for accurate world coordinate calculation
   const [dataPointCount, setDataPointCount] = useState(0);
-
-  // Track initial world X position when grid is first created (stays fixed)
-  const initialWorldXRef = useRef<number | null>(null);
-
-  // Other players functionality - FLUID SYSTEM (from normal box-hit canvas)
-  const [randomPlayerCounts, setRandomPlayerCounts] = useState<{[key: string]: number}>({});
-  const [trackedPlayerSelections, setTrackedPlayerSelections] = useState<{[key: string]: Array<{id: string, name: string, avatar: string, type: string}>}>({});
-  const [loadedImages, setLoadedImages] = useState<{[key: string]: HTMLImageElement}>({});
-  const lastGenerationTimeRef = useRef<number>(0);
-  
-  // Fixed pool of other player selections that get recycled
-  const [availablePlayerCounts, setAvailablePlayerCounts] = useState<number[]>([]);
-  const [availableTrackedSelections, setAvailableTrackedSelections] = useState<Array<{id: string, name: string, avatar: string, type: string}>[]>([]);
+  const positionsByContractId = useMemo(() => {
+    const map = new Map<string, BoxHitPosition>();
+    positions.forEach((position) => {
+      map.set(position.contractId, position);
+    });
+    return map;
+  }, [positions]);
 
   // Convert contracts to canvas format with accurate coordinate mapping
-  // Throttle debug logging to avoid console spam (max once per 2 seconds)
-  const lastCanvasDebugLog = useRef(0);
-  
   const canvasMultipliers = useMemo(() => {
-    const multipliers: Record<string, any> = {};
+    const multipliers: Record<string, CanvasMultiplier> = {};
 
     // If no contracts, DON'T generate empty boxes - let GridGame handle it
     // This prevents dual grid collision (Canvas static grid vs GridGame world-space grid)
     if (!contracts.length) {
-      const now = Date.now();
-      if (now - lastCanvasDebugLog.current > 2000) {
-        console.log('🔍 Canvas: No contracts received from backend');
-        lastCanvasDebugLog.current = now;
-      }
       return multipliers; // Return empty - GridGame will generate empty boxes to fill viewport
     }
 
     const currentTimeMs = Date.now();
-    const pixelsPerPoint = 5; // From GridGame default config
-    const msPerDataPoint = 100; // Each data point represents 100ms
-
-    if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
-      console.log('🔍 Canvas: Processing contracts', {
-        totalContracts: contracts.length,
-        currentTime: currentTimeMs,
-        dataPointCount: dataPointCount,
-      });
-      lastCanvasDebugLog.current = currentTimeMs;
-    }
 
     // Include all contracts (active and recently expired) for visualization
     const visibleContracts = contracts.filter((contract) => {
@@ -421,18 +361,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       return false;
     });
 
-    if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
-      console.log('🔍 Canvas: Filtered visible contracts', {
-        visibleCount: visibleContracts.length,
-        futureContracts: visibleContracts.filter(c => c.startTime > currentTimeMs).length,
-        pastContracts: visibleContracts.filter(c => c.endTime <= currentTimeMs).length,
-      });
-    }
-
-    let skippedOld = 0;
-    let skippedFuture = 0;
-    let processedCount = 0;
-
     visibleContracts.forEach((contract) => {
       // Calculate grid position based on time
       const timeUntilStart = contract.startTime - currentTimeMs;
@@ -444,17 +372,13 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       // Skip very old contracts (beyond columnsBehind config)
       const tfConfig = getTimeframeConfig(selectedTimeframe);
       if (timeSinceEnd > timeStep * tfConfig.ironCondor.columnsBehind) {
-        skippedOld++;
         return;
       }
 
       // Also skip contracts that are too far in the future (more than numXsquares columns)
       if (col >= numXsquares) {
-        skippedFuture++;
         return;
       }
-
-      processedCount++;
 
       // Calculate row based on price
       const priceCenter = (contract.lowerStrike + contract.upperStrike) / 2;
@@ -468,22 +392,24 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
       // Calculate how many data points from start this contract begins
       // Each data point represents 100ms
-      const dataPointsUntilStart = Math.floor(timeUntilStart / msPerDataPoint);
+      const dataPointsUntilStart = Math.floor(timeUntilStart / MS_PER_DATA_POINT);
 
       // World X should be: current position + offset into future
       // dataPointCount represents GridGame's totalDataPoints
-      const currentWorldX = Math.max(0, dataPointCount - 1) * pixelsPerPoint;
-      const worldX = currentWorldX + dataPointsUntilStart * pixelsPerPoint;
+      const currentWorldX = Math.max(0, dataPointCount - 1) * PIXELS_PER_POINT;
+      const worldX = currentWorldX + dataPointsUntilStart * PIXELS_PER_POINT;
 
       // World Y is the actual price value (lower strike is the bottom of the box)
       const worldY = contract.lowerStrike;
 
       // Width is time step converted to world units
-      const dataPointsPerTimeStep = Math.floor(timeStep / msPerDataPoint);
-      const width = dataPointsPerTimeStep * pixelsPerPoint;
+      const dataPointsPerTimeStep = Math.floor(timeStep / MS_PER_DATA_POINT);
+      const width = dataPointsPerTimeStep * PIXELS_PER_POINT;
 
       // Height is the price range
       const height = contract.upperStrike - contract.lowerStrike;
+
+      const userPosition = positionsByContractId.get(contract.contractId);
 
       multipliers[contract.contractId] = {
         value: contract.returnMultiplier,
@@ -494,9 +420,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         width: width,
         height: height,
         totalBets: contract.totalVolume,
-        userBet: positions.has(contract.contractId)
-          ? positions.get(contract.contractId).amount
-          : 0,
+        userBet: userPosition?.amount ?? 0,
         timestampRange: {
           start: contract.startTime,
           end: contract.endTime,
@@ -505,37 +429,21 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
           min: contract.lowerStrike,
           max: contract.upperStrike,
         },
-        status:
-          contract.endTime < currentTimeMs
-            ? 'passed'
-            : !contract.isActive
-              ? 'expired'
-              : undefined,
         isClickable: contract.isActive && contract.startTime > currentTimeMs, // Only future active contracts are clickable
       };
     });
 
-    if (currentTimeMs - lastCanvasDebugLog.current > 2000) {
-      console.log('🔍 Canvas: Final multipliers result', {
-        processed: processedCount,
-        skippedOld: skippedOld,
-        skippedFuture: skippedFuture,
-        totalMultipliers: Object.keys(multipliers).length,
-        futureMultipliers: Object.values(multipliers).filter((m: any) => m.isClickable).length,
-        pastMultipliers: Object.values(multipliers).filter((m: any) => m.status === 'passed').length,
-      });
-    }
-
     return multipliers;
   }, [
     contracts,
-    positions,
+    positionsByContractId,
     numXsquares,
     numYsquares,
     basePrice,
     priceStep,
     timeStep,
     dataPointCount,
+    selectedTimeframe,
   ]);
 
   // Update canvas game with new multipliers
@@ -561,210 +469,17 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     }
   }, [showProbabilities, minMultiplier]);
 
-  // Other players generation logic (from normal box-hit canvas)
-  useEffect(() => {
-    if (!showOtherPlayers) return;
-
-    const initializePlayerPool = () => {
-      // Initialize available player counts pool - reduced for less aggressive generation
-      const playerCounts = [1, 2, 3, 4, 5];
-      setAvailablePlayerCounts(playerCounts);
-
-      // Initialize available tracked selections pool - each selection contains 1-3 players like normal canvas
-      const allPlayers = [
-        { id: 'leaderboard1', name: 'CryptoWhale', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'leaderboard' },
-        { id: 'leaderboard2', name: 'TradingPro', avatar: 'https://pbs.twimg.com/profile_images/1848910264051052546/Mu18BSYv_400x400.jpg', type: 'leaderboard' },
-        { id: 'leaderboard3', name: 'DeFiMaster', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'leaderboard' },
-        { id: 'watchlist1', name: 'MoonTrader', avatar: 'https://pbs.twimg.com/profile_images/1944058901713805312/Hl1bsg0D_400x400.jpg', type: 'watchlist' },
-        { id: 'watchlist2', name: 'DiamondHands', avatar: 'https://pbs.twimg.com/profile_images/1785913384590061568/OcNP_wnv_400x400.png', type: 'watchlist' },
-        { id: 'watchlist3', name: 'BullRun', avatar: 'https://pbs.twimg.com/profile_images/1760274165070798848/f5V5qbs9_400x400.jpg', type: 'watchlist' },
-        { id: 'watchlist4', name: 'HODLer', avatar: 'https://pbs.twimg.com/profile_images/1935120379137134592/Khgw5Kfn_400x400.jpg', type: 'watchlist' },
-        { id: 'watchlist5', name: 'CryptoKing', avatar: 'https://i.ibb.co/cXskDgbs/gasg.png', type: 'watchlist' }
-      ];
-
-      // Create pool of selections with 1-3 players each (matching normal canvas logic)
-      const poolSize = 5;
-      const trackedSelections: Array<{id: string, name: string, avatar: string, type: string}>[] = [];
-      
-      for (let i = 0; i < poolSize; i++) {
-        const numPlayers = Math.floor(Math.random() * 3) + 1; // 1-3 players
-        const leaderboardPlayers = allPlayers.filter(p => p.type === 'leaderboard');
-        const watchlistPlayers = allPlayers.filter(p => p.type === 'watchlist');
-        
-        const selectedPlayers: Array<{id: string, name: string, avatar: string, type: string}> = [];
-        for (let j = 0; j < numPlayers; j++) {
-          const useWatchlist = Math.random() < 0.6;
-          const playerPool = useWatchlist ? watchlistPlayers : leaderboardPlayers;
-          
-          if (playerPool.length > 0) {
-            const randomPlayer = playerPool[Math.floor(Math.random() * playerPool.length)];
-            if (!selectedPlayers.some(p => p.id === randomPlayer.id)) {
-              selectedPlayers.push(randomPlayer);
-            }
-          }
-        }
-        
-        if (selectedPlayers.length > 0) {
-          trackedSelections.push(selectedPlayers);
-        }
-      }
-      setAvailableTrackedSelections(trackedSelections);
-
-      // Preload images for all players
-      allPlayers.forEach(player => {
-        if (!loadedImages[player.id]) {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            setLoadedImages(prev => ({ ...prev, [player.id]: img }));
-          };
-          img.src = player.avatar;
-        }
-      });
-    };
-
-    initializePlayerPool();
-  }, [showOtherPlayers, loadedImages]);
-
-  // Fluid other player assignment - matches normal box-hit canvas behavior
-  useEffect(() => {
-    if (!showOtherPlayers || !gameRef.current) return;
-
-    const assignPlayerCountsFluidly = () => {
-      setRandomPlayerCounts(prev => {
-        const newCounts = { ...prev };
-        
-        // Get all multiplier boxes from the game
-        const allBoxes = gameRef.current?.getBackendMultipliers() || {};
-        const currentWorldX = gameRef.current?.getCurrentWorldX() || 0;
-        
-        // Remove counts from boxes that have passed the NOW line (cleanup)
-        Object.keys(newCounts).forEach(boxId => {
-          const box = allBoxes[boxId];
-          if (box) {
-            // Remove if box has passed NOW line (behind NOW line)
-            if (box.worldX + box.width < currentWorldX) {
-              const count = newCounts[boxId];
-              setAvailablePlayerCounts(prevPool => [...prevPool, count]);
-              delete newCounts[boxId];
-            }
-          } else {
-            // Box doesn't exist anymore, remove the count
-            const count = newCounts[boxId];
-            setAvailablePlayerCounts(prevPool => [...prevPool, count]);
-            delete newCounts[boxId];
-          }
-        });
-        
-        // Find boxes that are ahead of NOW line but don't have player counts yet
-        const boxesNearNowLine = Object.keys(allBoxes).filter(boxId => {
-          const box = allBoxes[boxId];
-          if (!box || newCounts[boxId]) return false; // Already has a count or box doesn't exist
-          
-          // Only consider boxes that are in front of NOW line and within reasonable distance
-          const distanceFromNow = box.worldX - currentWorldX;
-          return distanceFromNow > 0 && distanceFromNow < 400; // Reduced to 400 world units for less aggressive generation
-        });
-        
-        // Assign available counts to boxes near NOW line (3% chance per frame - reduced for less aggressive generation)
-        boxesNearNowLine.forEach(boxId => {
-          if (availablePlayerCounts.length > 0 && Math.random() < 0.03) {
-            const randomIndex = Math.floor(Math.random() * availablePlayerCounts.length);
-            const playerCount = availablePlayerCounts[randomIndex];
-            
-            newCounts[boxId] = playerCount;
-            
-            // Remove from available pool
-            setAvailablePlayerCounts(prevPool => prevPool.filter((_, index) => index !== randomIndex));
-          }
-        });
-        
-        return newCounts;
-      });
-    };
-
-    const assignTrackedPlayersFluidly = () => {
-      setTrackedPlayerSelections(prev => {
-        const newSelections = { ...prev };
-        
-        // Get all multiplier boxes from the game
-        const allBoxes = gameRef.current?.getBackendMultipliers() || {};
-        const currentWorldX = gameRef.current?.getCurrentWorldX() || 0;
-        
-        // Remove selections from boxes that have passed the NOW line (cleanup)
-        Object.keys(newSelections).forEach(boxId => {
-          const box = allBoxes[boxId];
-          if (box) {
-            // Remove if box has passed NOW line (behind NOW line)
-            if (box.worldX + box.width < currentWorldX) {
-              const selections = newSelections[boxId];
-              setAvailableTrackedSelections(prevPool => [...prevPool, selections]);
-              delete newSelections[boxId];
-            }
-          } else {
-            // Box doesn't exist anymore, remove the selections
-            const selections = newSelections[boxId];
-            setAvailableTrackedSelections(prevPool => [...prevPool, selections]);
-            delete newSelections[boxId];
-          }
-        });
-        
-        // Find boxes that have player counts but no tracked selections
-        Object.keys(randomPlayerCounts).forEach(boxId => {
-          if (!newSelections[boxId] && availableTrackedSelections.length > 0) {
-            const randomSelections = availableTrackedSelections[Math.floor(Math.random() * availableTrackedSelections.length)];
-            newSelections[boxId] = randomSelections.slice(0, Math.min(3, randomSelections.length));
-            
-            // Remove from available pool
-            setAvailableTrackedSelections(prevPool => prevPool.filter((_, index) => index !== 0));
-          }
-        });
-
-        // Also generate tracked players independently for boxes near NOW line (higher probability)
-        const boxesNearNowLine = Object.keys(allBoxes).filter(boxId => {
-          const box = allBoxes[boxId];
-          if (!box || newSelections[boxId]) return false; // Already has selections or box doesn't exist
-          
-          // Only consider boxes that are in front of NOW line and within reasonable distance
-          const distanceFromNow = box.worldX - currentWorldX;
-          return distanceFromNow > 0 && distanceFromNow < 400;
-        });
-        
-        // Assign tracked players to boxes near NOW line (8% chance per frame - higher than player counts)
-        boxesNearNowLine.forEach(boxId => {
-          if (availableTrackedSelections.length > 0 && Math.random() < 0.08) {
-            const randomSelections = availableTrackedSelections[Math.floor(Math.random() * availableTrackedSelections.length)];
-            newSelections[boxId] = randomSelections.slice(0, Math.min(3, randomSelections.length));
-            
-            // Remove from available pool
-            setAvailableTrackedSelections(prevPool => prevPool.filter((_, index) => index !== 0));
-          }
-        });
-        
-        return newSelections;
-      });
-    };
-
-    const interval = setInterval(() => {
-      assignPlayerCountsFluidly();
-      assignTrackedPlayersFluidly();
-    }, 200); // Update every 200ms for less aggressive generation
-
-    return () => clearInterval(interval);
-  }, [showOtherPlayers, availablePlayerCounts, availableTrackedSelections, randomPlayerCounts]);
-
   // Update GridGame config when showProbabilities, showOtherPlayers or minMultiplier change (live updates without restart)
   useEffect(() => {
-    if (gameRef.current && isStarted) {
-      console.log('🎮 Canvas: Updating GridGame config:', { showProbabilities, showOtherPlayers, minMultiplier });
-      gameRef.current.updateConfig({
-        showProbabilities,
-        showOtherPlayers,
-        minMultiplier
-      });
-    } else {
-      console.log('🎮 Canvas: Cannot update config - game not ready:', { hasGame: !!gameRef.current, isStarted });
+    if (!gameRef.current || !isStarted) {
+      return;
     }
+
+    gameRef.current.updateConfig({
+      showProbabilities,
+      showOtherPlayers,
+      minMultiplier,
+    });
   }, [showProbabilities, showOtherPlayers, minMultiplier, isStarted]);
 
   // Initialize canvas game
@@ -939,80 +654,20 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         const bestMult = multipliers.length > 0 ? Math.max(...multipliers) : 0;
         const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
         
-        console.log('📊 Canvas: Selection changed:', {
-          totalSelected: selectedSquares.length,
-          activeSelections: activeSelections.length,
-          hitBoxes: hitBoxes.length,
-          missedBoxes: missedBoxes.length,
-          bestMultiplier: bestMult,
-          multipliers,
-          averagePrice: avgPrice
-        });
-        
         // Emit to parent for immediate right panel update (only active selections)
-        if (onSelectionChange) {
-          onSelectionChange(activeSelections.length, bestMult, multipliers, avgPrice);
-        }
+        onSelectionChangeRef.current?.(activeSelections.length, bestMult, multipliers, avgPrice);
       };
 
       game.on('squareSelected', ({ squareId }: { squareId: string }) => {
-        console.log('Square selected (double-clicked):', squareId);
         updateSelectionStats();
-
-        // Find the contract details to understand column mapping
-        const contract = contractsRef.current.find(
-          (c) => c.contractId === squareId
-        );
-        if (contract) {
-          const currentTimeMs = Date.now();
-          const timeUntilStart = contract.startTime - currentTimeMs;
-          const col = Math.floor(timeUntilStart / timeStep);
-
-          console.log('Contract details on click:', {
-            contractId: squareId,
-            startTime: new Date(contract.startTime).toISOString(),
-            endTime: new Date(contract.endTime).toISOString(),
-            timeUntilStart: timeUntilStart,
-            timeUntilStartSeconds: (timeUntilStart / 1000).toFixed(2),
-            calculatedColumn: col,
-            columnExact: timeUntilStart / timeStep,
-            timeStep: timeStep,
-            lowerStrike: contract.lowerStrike,
-            upperStrike: contract.upperStrike,
-          });
-        } else {
-          console.log('Contract not found in contractsRef.current:', {
-            contractId: squareId,
-            contractsLength: contractsRef.current.length,
-          });
-        }
-
-        // Handle trade placement using refs to avoid stale closure
-        console.log('🔍 Trade placement check:', {
-          isJoined: isJoinedRef.current,
-          hasHandler: !!handleTradePlaceRef.current,
-          squareId,
-          betAmount,
-          isConnected,
-          positionsSize: positions?.size || 0
-        });
         
         if (isJoinedRef.current && handleTradePlaceRef.current) {
-          console.log('✅ Placing trade for contract:', squareId, 'amount:', betAmount);
-          handleTradePlaceRef.current(squareId, betAmount);
-        } else {
-          console.log('❌ Cannot place trade - not joined or handler not ready:', {
-            isJoined: isJoinedRef.current,
-            hasHandler: !!handleTradePlaceRef.current,
-            isConnected,
-            positionsSize: positions?.size || 0
-          });
+          handleTradePlaceRef.current(squareId, betAmountRef.current);
         }
       });
 
       // Handle selection changes when boxes are hit or missed
       game.on('selectionChanged', () => {
-        console.log('📊 Canvas: Selection changed (hit/miss)');
         // Small delay to ensure selectedSquareIds is updated
         setTimeout(() => {
           updateSelectionStats();
@@ -1025,18 +680,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       // Reset data point count
       setDataPointCount(0);
 
-      // Initialize with base price from config to match the test UI
-      const initialPrice = currentPrice || basePrice;
-
-      console.log(
-        'Initializing game with basePrice:',
-        basePrice,
-        'currentPrice:',
-        currentPrice,
-        'priceStep:',
-        priceStep
-      );
-
       // Don't add initial data points - let the price updates handle it
       // This ensures dataPointCount stays in sync with GridGame's totalDataPoints
       setDataPointCount(1); // Start with 1 to match GridGame's initial state
@@ -1045,7 +688,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
       setIsFollowingPrice(true);
 
       // If we already have contracts, update the game with them
-      if (contracts.length > 0) {
+      if (contractCount > 0) {
         // Force recalculation by setting a dummy state
         setDataPointCount((prev) => prev + 1);
       }
@@ -1055,7 +698,15 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     return () => {
       // Don't destroy on every re-render, only on unmount
     };
-  }, [isStarted, configLoaded, showProbabilities, minMultiplier]); // Only re-create when starting/stopping or config changes
+  }, [
+    isStarted,
+    configLoaded,
+    showProbabilities,
+    minMultiplier,
+    signatureColor,
+    showOtherPlayers,
+    contractCount,
+  ]);
 
   // Separate cleanup effect for unmount
   useEffect(() => {
@@ -1064,10 +715,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         gameRef.current.destroy();
         gameRef.current = null;
       }
-      if (priceUpdateIntervalRef.current) {
-        clearInterval(priceUpdateIntervalRef.current);
-        priceUpdateIntervalRef.current = null;
-      }
     };
   }, []);
 
@@ -1075,7 +722,6 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
     try {
       // Generate a username for the connection
       const username = `player_${Math.random().toString(36).substring(2, 11)}`;
-      console.log('🔗 Canvas: Attempting to connect with username:', username);
       
       // Add a small delay to ensure backend is ready
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -1344,7 +990,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
                     areas
                   </p>
                   <p>
-                    • Camera follows price by default, use "Follow Price" to
+                    • Camera follows price by default, use &quot;Follow Price&quot; to
                     reset
                   </p>
                   <p>• Double-click boxes to place trades</p>
@@ -1397,16 +1043,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
 
             {/* Close Button */}
             <button
-              onClick={() => {
-                // Start fade out animation
-                setNotifications((prev) =>
-                  prev.map((n) => (n.id === notification.id ? { ...n, isVisible: false } : n))
-                );
-                // Remove after animation completes
-                setTimeout(() => {
-                  setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-                }, 300);
-              }}
+              onClick={() => dismissNotification(notification.id)}
               className="ml-2 text-zinc-400 hover:text-zinc-300 transition-colors flex-shrink-0"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -11,11 +11,6 @@ export interface BoxHitContract extends GameContract {
   upperStrike: number;
 }
 
-// Towers specific types
-export interface TowersContract extends GameContract {
-  strikePrice: number;
-  type: 'call' | 'put';
-}
 
 // Game state for visualization
 export interface GameVisualizationState {
@@ -51,26 +46,6 @@ export interface BoxHitBox {
   totalVolume: number;
 }
 
-// Towers game state
-export interface TowersGameState {
-  gameMode: GameMode.TOWERS;
-  timeframe: TimeFrame;
-  contracts: TowersContract[];
-  currentPrice: number;
-}
-
-// Individual tower state
-export interface Tower {
-  contractId: string;
-  direction: 'UP' | 'DOWN';
-  currentHeight: number;
-  maxHeight: number;
-  isBuilding: boolean;
-  lastBuildTime?: number;
-  playerBets: Map<string, number>;
-  totalVolume: number;
-}
-
 // Game engine interface
 export interface IGameEngine {
   gameMode: GameMode;
@@ -85,7 +60,7 @@ export interface IGameEngine {
   // Game operations
   placeBet(userId: string, contractId: string, amount: number): Promise<boolean>;
   getActiveContracts(): GameContract[];
-  getGameState(): BoxHitGameState | TowersGameState;
+  getGameState(): BoxHitGameState ;
   
   // Event handlers
   onPriceUpdate(price: number, timestamp: number): void;
@@ -107,12 +82,6 @@ export enum GameEventType {
   BOX_MISS = 'box_miss',
   BOX_EXPIRED = 'box_expired',
   
-  // Towers events
-  TOWER_CREATED = 'tower_created',
-  TOWER_BUILD = 'tower_build',
-  TOWER_COMPLETE = 'tower_complete',
-  TOWER_COLLAPSE = 'tower_collapse',
-  
   // Common events
   BET_PLACED = 'bet_placed',
   CONTRACT_SETTLED = 'contract_settled',
@@ -126,13 +95,6 @@ export interface AnimationState {
     startTime: number;
     duration: number;
     intensity: number;
-  };
-  towerBuild?: {
-    contractId: string;
-    startTime: number;
-    fromHeight: number;
-    toHeight: number;
-    duration: number;
   };
   priceMovement?: {
     fromPrice: number;

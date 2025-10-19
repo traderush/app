@@ -13,13 +13,11 @@ import {
   GameMode,
   IGameEngine,
   Result,
-  TowersGameState,
   err,
   ok,
 } from '../types';
 import { createLogger } from '../utils/logger';
 import { BoxHitEngine } from './boxhit/BoxHitEngine';
-import { TowersEngine } from './towers/TowersEngine';
 
 const logger = createLogger('GameEngineManager');
 
@@ -64,15 +62,25 @@ export class GameEngineManager extends EventEmitter {
       case GameMode.BOX_HIT:
         engine = new BoxHitEngine(timeframe);
         break;
-      case GameMode.TOWERS:
-        engine = new TowersEngine(timeframe);
-        break;
       default:
         throw new Error(`Unknown game mode: ${gameMode}`);
     }
 
     await engine.initialize();
     engine.start();
+
+    if (gameMode === GameMode.BOX_HIT) {
+      const contracts = clearingHouseAPI.getActiveIronCondorContracts(timeframe);
+      if (typeof (engine as any).onNewContracts === 'function') {
+        (engine as any).onNewContracts(contracts);
+      }
+      this.emit('contracts_updated', {
+        gameMode,
+        timeframe,
+        newContracts: contracts,
+        isInitial: true,
+      });
+    }
 
     logger.info('Game engine created and started', { gameMode, timeframe });
     return engine;
@@ -135,7 +143,7 @@ export class GameEngineManager extends EventEmitter {
   async getGameState(
     gameMode: GameMode,
     timeframe: TimeFrame
-  ): Promise<BoxHitGameState | TowersGameState | null> {
+  ): Promise<BoxHitGameState | null> {
     try {
       const engine = await this.getEngine(gameMode, timeframe);
       return engine.getGameState();
@@ -182,55 +190,26 @@ export class GameEngineManager extends EventEmitter {
             settlement.contractId,
             winners
           );
-        } else if (
-          settlement.type === 'spread' &&
-          engine.gameMode === GameMode.TOWERS
-        ) {
-          engine.onContractSettlement(
-            settlement.contractId,
-            winners
-          );
         }
       }
     });
-
-    // Listen for new Iron Condor contracts
-    clearingHouseAPI.clearingHouse.on(
-      'iron_condor_contracts_generated',
-      (data: any) => {
-        const timeframe = data.timeframe;
-        const engine = this.engines.get(`${GameMode.BOX_HIT}:${timeframe}`);
-        if (engine) {
+    // Listen for contract snapshots
+    clearingHouseAPI.on('iron_condor_contracts_updated', (data: any) => {
+      const timeframe = data.timeframe as TimeFrame;
+      const engine = this.engines.get(`${GameMode.BOX_HIT}:${timeframe}`);
+      if (engine) {
+        if (typeof (engine as any).onNewContracts === 'function') {
           (engine as any).onNewContracts(data.contracts);
-          // Trigger contract update broadcast with new contracts only
-          this.emit('contracts_updated', {
-            gameMode: GameMode.BOX_HIT,
-            timeframe,
-            newContracts: data.contracts,
-            isInitial: data.contracts.length > 100, // Initial load has many contracts
-          });
         }
+        this.emit('contracts_updated', {
+          gameMode: GameMode.BOX_HIT,
+          timeframe,
+          newContracts: data.contracts,
+          isInitial: data.reason === 'initial',
+        });
       }
-    );
+    });
 
-    // Listen for new Spread contracts
-    clearingHouseAPI.clearingHouse.on(
-      'spread_contracts_generated',
-      (data: any) => {
-        const timeframe = data.timeframe;
-        const engine = this.engines.get(`${GameMode.TOWERS}:${timeframe}`);
-        if (engine) {
-          (engine as any).onNewContracts(data.contracts);
-          // Trigger contract update broadcast with new contracts only
-          this.emit('contracts_updated', {
-            gameMode: GameMode.TOWERS,
-            timeframe,
-            newContracts: data.contracts,
-            isInitial: data.contracts.length > 100, // Initial load has many contracts
-          });
-        }
-      }
-    );
 
     logger.info('Clearing house listeners setup');
   }

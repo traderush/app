@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ClearingHouse Orderbook Visualizer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b1118;
+      color: #e5ecf4;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      letter-spacing: 0.04em;
+    }
+
+    #status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+    }
+
+    #status span.badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.7rem;
+      background: #1d2a3a;
+      color: #78dceb;
+    }
+
+    #status span.badge[data-state="connected"] {
+      background: rgba(74, 222, 128, 0.16);
+      color: #4ade80;
+    }
+
+    #status span.badge[data-state="disconnected"] {
+      background: rgba(248, 113, 113, 0.16);
+      color: #f87171;
+    }
+
+    #status span.badge[data-state="connecting"] {
+      background: rgba(96, 165, 250, 0.18);
+      color: #93c5fd;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .orderbook {
+      border: 1px solid rgba(120, 172, 255, 0.16);
+      border-radius: 16px;
+      padding: 20px;
+      background: rgba(13, 25, 38, 0.88);
+      box-shadow: 0 0 24px rgba(8, 17, 28, 0.5);
+    }
+
+    .orderbook header {
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .orderbook header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    .meta {
+      display: flex;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: #9ab1c7;
+    }
+
+    table.orderbook-grid {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    table.orderbook-grid thead th {
+      background: rgba(20, 32, 48, 0.85);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    table.orderbook-grid th,
+    table.orderbook-grid td {
+      border: 1px solid rgba(120, 172, 255, 0.1);
+      padding: 8px 10px;
+      text-align: center;
+      font-size: 0.8rem;
+    }
+
+    table.orderbook-grid tbody th {
+      background: rgba(15, 25, 37, 0.85);
+      text-align: right;
+      font-weight: 500;
+    }
+
+    td.empty {
+      background: rgba(10, 18, 28, 0.6);
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    td.has-order {
+      background: rgba(23, 44, 66, 0.85);
+    }
+
+    td.has-order .order-id {
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      font-size: 0.75rem;
+      color: #7dd3fc;
+    }
+
+    td.has-order .order-size {
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    td.has-order .order-maker {
+      margin-top: 6px;
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+
+    td.has-order .order-multiplier {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fbbf24;
+      letter-spacing: 0.04em;
+    }
+
+    td.has-order .order-window {
+      margin-top: 6px;
+      font-size: 0.65rem;
+      color: #64748b;
+    }
+
+    td.has-order .pending {
+      margin-top: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(125, 211, 252, 0.12);
+      color: #bae6fd;
+    }
+
+    section#event-log {
+      border: 1px solid rgba(120, 172, 255, 0.12);
+      border-radius: 16px;
+      padding: 16px;
+      background: rgba(8, 13, 20, 0.85);
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    section#event-log h3 {
+      margin: 0 0 12px 0;
+      font-size: 1rem;
+      color: #94a3b8;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .event-entry {
+      font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.7rem;
+      line-height: 1.6;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(12, 21, 32, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.08);
+      margin-bottom: 6px;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .event-entry:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ClearingHouse Orderbook Visualizer</h1>
+    <div id="status">
+      <span id="connection" class="badge" data-state="disconnected">Disconnected</span>
+      <span id="last-update">Last update N/A</span>
+    </div>
+  </header>
+
+  <main id="orderbooks">
+    <p>Waiting for snapshots…</p>
+  </main>
+
+  <section id="event-log">
+    <h3>Event Stream</h3>
+    <div id="events"></div>
+  </section>
+
+  <script type="module">
+    const orderbooksContainer = document.getElementById("orderbooks");
+    const connectionBadge = document.getElementById("connection");
+    const lastUpdate = document.getElementById("last-update");
+    const eventsContainer = document.getElementById("events");
+
+    const MAX_EVENTS = 200;
+    let eventSource = null;
+    let reconnectTimer = null;
+    let lastUpdateTs = null;
+
+    function formatTime(ts) {
+      const date = new Date(ts);
+      return date.toLocaleTimeString([], { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 3 });
+    }
+
+    function formatDuration(start, end) {
+      const span = (end - start) / 1000;
+      return `${span.toFixed(3)}s`;
+    }
+
+    function formatAgo(ts) {
+      if (!Number.isFinite(ts)) return "N/A";
+      const delta = Date.now() - ts;
+      if (!Number.isFinite(delta) || delta < 0) return "N/A";
+      if (delta < 1_000) return "<1s ago";
+      if (delta < 60_000) return `${(delta / 1_000).toFixed(1)}s ago`;
+      if (delta < 3_600_000) return `${(delta / 60_000).toFixed(1)}m ago`;
+      return `${(delta / 3_600_000).toFixed(1)}h ago`;
+    }
+
+    function truncateId(id) {
+      if (!id) return "—";
+      return id.length > 8 ? `${id.slice(0, 4)}…${id.slice(-4)}` : id;
+    }
+
+    function setConnectionState(state) {
+      connectionBadge.dataset.state = state;
+      if (state === "connected") {
+        connectionBadge.textContent = "Connected";
+      } else if (state === "connecting") {
+        connectionBadge.textContent = "Connecting…";
+      } else {
+        connectionBadge.textContent = "Disconnected";
+      }
+    }
+
+    function updateLastSeen(ts) {
+      lastUpdateTs = ts;
+      lastUpdate.dataset.ts = String(ts);
+      lastUpdate.textContent = `Last update ${formatTime(ts)} (${formatAgo(ts)})`;
+    }
+
+    function renderOrderbook(orderbook) {
+      const prices = new Set();
+      const columns = [...orderbook.columns].sort((a, b) => a.windowStart - b.windowStart);
+      const priceLabel = orderbook.currentPrice != null ? orderbook.currentPrice.toFixed(2) : "—";
+      const priceUpdatedSpan = orderbook.priceUpdatedAt != null
+        ? `<span data-format="ago" data-label="Updated" data-ts="${orderbook.priceUpdatedAt}">Updated ${formatAgo(orderbook.priceUpdatedAt)}</span>`
+        : `<span>Updated N/A</span>`;
+      const metaParts = [
+        `Timeframe ${orderbook.timeframe} ms`,
+        `Price step ${orderbook.priceStep}`,
+        `${columns.length} windows`,
+        `Price ${priceLabel}`,
+      ];
+      const metaHtml = `${metaParts.map((part) => `<span>${part}</span>`).join("")}${priceUpdatedSpan}`;
+
+      for (const column of columns) {
+        for (const bucket of column.buckets) {
+          prices.add(bucket.price);
+        }
+      }
+
+      const sortedPrices = [...prices].sort((a, b) => b - a);
+
+      if (sortedPrices.length === 0 || columns.length === 0) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "orderbook";
+        wrapper.innerHTML = `
+          <header>
+            <h2>${orderbook.symbol} · ${orderbook.orderbookId}</h2>
+            <div class="meta">
+              ${metaHtml}
+            </div>
+          </header>
+          <p>No live orders in this book.</p>
+        `;
+        return wrapper;
+      }
+
+      const table = document.createElement("table");
+      table.className = "orderbook-grid";
+
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      const corner = document.createElement("th");
+      corner.textContent = "Price / Time";
+      headRow.appendChild(corner);
+
+      for (const column of columns) {
+        const th = document.createElement("th");
+        th.innerHTML = `${formatTime(column.windowStart)}<br><span class="sub">→ ${formatTime(column.windowEnd)}</span>`;
+        headRow.appendChild(th);
+      }
+
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+
+      for (const price of sortedPrices) {
+        const row = document.createElement("tr");
+        const headerCell = document.createElement("th");
+        headerCell.textContent = price.toFixed(2);
+        row.appendChild(headerCell);
+
+        for (const column of columns) {
+          const cell = document.createElement("td");
+          const bucket = column.buckets.find((b) => b.price === price);
+          if (!bucket) {
+            cell.className = "empty";
+            cell.textContent = "—";
+          } else {
+            cell.className = "has-order";
+            const remaining = bucket.sizeRemaining.toFixed(3);
+            const total = bucket.sizeTotal.toFixed(3);
+            const pendingTag = bucket.pendingPositions > 0 ? `<div class="pending">Pending ×${bucket.pendingPositions}</div>` : "";
+            const multiplierTag = typeof bucket.multiplier === "number"
+              ? `<div class="order-multiplier">×${bucket.multiplier.toFixed(2)}</div>`
+              : "";
+            cell.innerHTML = `
+              <div class="order-id">${truncateId(bucket.orderId)}</div>
+              <div class="order-size">${remaining} / ${total}</div>
+              <div class="order-maker">Maker ${truncateId(bucket.makerId)}</div>
+              ${multiplierTag}
+              <div class="order-window">${formatTime(bucket.triggerStart)} → ${formatTime(bucket.triggerEnd)} (${formatDuration(bucket.triggerStart, bucket.triggerEnd)})</div>
+              ${pendingTag}
+            `;
+          }
+          row.appendChild(cell);
+        }
+
+        tbody.appendChild(row);
+      }
+
+      table.appendChild(tbody);
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "orderbook";
+      wrapper.appendChild((() => {
+        const head = document.createElement("header");
+        const title = document.createElement("h2");
+        title.textContent = `${orderbook.symbol} · ${orderbook.orderbookId}`;
+        head.appendChild(title);
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.innerHTML = metaHtml;
+        head.appendChild(meta);
+        return head;
+      })());
+      wrapper.appendChild(table);
+      return wrapper;
+    }
+
+    function renderOrderbooks(snapshot) {
+      orderbooksContainer.innerHTML = "";
+      if (!snapshot || snapshot.length === 0) {
+        orderbooksContainer.innerHTML = "<p>No orderbooks active.</p>";
+        return;
+      }
+
+      for (const orderbook of snapshot) {
+        orderbooksContainer.appendChild(renderOrderbook(orderbook));
+      }
+
+      refreshRelativeTimes();
+    }
+
+    function logEvent(event) {
+      const entry = document.createElement("div");
+      entry.className = "event-entry";
+      const ts = event.ts ?? Date.now();
+      entry.textContent = `${formatTime(ts)} | ${event.name} | ${JSON.stringify(event.payload, null, 2)}`;
+      eventsContainer.prepend(entry);
+      while (eventsContainer.children.length > MAX_EVENTS) {
+        eventsContainer.removeChild(eventsContainer.lastChild);
+      }
+    }
+
+    function refreshRelativeTimes() {
+      if (lastUpdateTs != null) {
+        lastUpdate.textContent = `Last update ${formatTime(lastUpdateTs)} (${formatAgo(lastUpdateTs)})`;
+      }
+      document.querySelectorAll('[data-format="ago"]').forEach((element) => {
+        const ts = Number(element.dataset.ts);
+        const label = element.dataset.label ?? "Updated";
+        if (!Number.isFinite(ts)) {
+          element.textContent = `${label} N/A`;
+          return;
+        }
+        element.textContent = `${label} ${formatAgo(ts)}`;
+      });
+    }
+
+    async function bootstrap() {
+      try {
+        const response = await fetch("/snapshot");
+        if (!response.ok) {
+          throw new Error(`Snapshot request failed with ${response.status}`);
+        }
+        const payload = await response.json();
+        if (payload.snapshots) {
+          renderOrderbooks(payload.snapshots);
+          updateLastSeen(payload.ts);
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial snapshot", error);
+      }
+    }
+
+    function connect() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+
+      setConnectionState("connecting");
+      const source = new EventSource("/events");
+      eventSource = source;
+
+      source.onopen = () => {
+        setConnectionState("connected");
+      };
+
+      source.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          setConnectionState("connected");
+          if (payload.snapshots) {
+            renderOrderbooks(payload.snapshots);
+          }
+          if (payload.kind === "event" && payload.event) {
+            logEvent(payload.event);
+          }
+          if (payload.ts) {
+            updateLastSeen(payload.ts);
+          }
+        } catch (error) {
+          console.error("Failed to parse SSE payload", error, event.data);
+        }
+      };
+
+      source.onerror = () => {
+        if (source.readyState === EventSource.CLOSED) {
+          setConnectionState("disconnected");
+          reconnectTimer = setTimeout(connect, 1500);
+        } else {
+          setConnectionState("connecting");
+        }
+      };
+    }
+
+    setInterval(refreshRelativeTimes, 1000);
+
+    await bootstrap();
+    connect();
+  </script>
+</body>
+</html>

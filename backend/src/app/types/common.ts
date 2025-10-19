@@ -6,8 +6,7 @@
 
 // Game modes available in the app
 export enum GameMode {
-  BOX_HIT = 'box_hit',
-  TOWERS = 'towers'
+  BOX_HIT = 'box_hit'
 }
 
 // Base message structure for all WebSocket communication

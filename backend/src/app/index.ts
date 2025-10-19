@@ -12,6 +12,7 @@ import { StreamingService } from './services/StreamingService';
 import { UserService } from './services/UserService';
 import { ClientMessageType } from './types';
 import { createLogger } from './utils/logger';
+import { launchClearingHouse, shutdownClearingHouse } from '../clearingHouse';
 
 // Import handlers
 import { handleAuth } from './handlers/AuthHandler';
@@ -42,6 +43,8 @@ export class TradeRushApp {
       host?: string;
     }
   ) {
+    launchClearingHouse();
+
     // Initialize services
     this.connectionManager = new ConnectionManager();
 
@@ -170,6 +173,8 @@ export class TradeRushApp {
 
       // Stop WebSocket server
       await this.wsServer.stop();
+
+      shutdownClearingHouse();
 
       logger.info('TradeRush app stopped');
     } catch (error) {

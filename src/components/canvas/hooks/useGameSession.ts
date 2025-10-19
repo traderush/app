@@ -1,23 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUserStore } from '@/stores/userStore';
 import { playHitSound } from '@/lib/sound/SoundManager';
+import {
+  BoxHitContract,
+  BoxHitPosition,
+  BoxHitPositionMap,
+  TradeResultPayload,
+} from '@/types/boxHit';
+
+const debug = (...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.debug(...args);
+  }
+};
+
+type OutgoingMessage = {
+  type: string;
+  payload?: unknown;
+};
+
+type WebSocketBridge = {
+  send: (message: OutgoingMessage) => void;
+  on: (event: string, handler: (data: unknown) => void) => void;
+  off: (event: string, handler: (data: unknown) => void) => void;
+};
 
 interface UseGameSessionProps {
   gameMode: 'box_hit' | 'towers';
   timeframe: number;
-  ws: {
-    send: (message: any) => void;
-    on: (event: string, handler: (data: any) => void) => void;
-    off: (event: string, handler: (data: any) => void) => void;
-  } | null;
+  ws: WebSocketBridge | null;
   enabled: boolean;
 }
 
 interface UseGameSessionReturn {
   isJoined: boolean;
-  contracts: any[];
+  contracts: BoxHitContract[];
   userBalance: number;
-  positions: Map<string, any>;
+  positions: BoxHitPositionMap;
   handleTradePlace: (contractId: string, amount: number) => void;
 }
 
@@ -28,9 +47,10 @@ export function useGameSession({
   enabled,
 }: UseGameSessionProps): UseGameSessionReturn {
   const [isJoined, setIsJoined] = useState(false);
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<BoxHitContract[]>([]);
   const [userBalance, setUserBalance] = useState(0);
-  const [positions, setPositions] = useState<Map<string, any>>(new Map());
+  const [positions, setPositions] = useState<BoxHitPositionMap>(new Map());
+  const positionsRef = useRef<BoxHitPositionMap>(new Map());
 
   // Get userStore functions
   const settleTrade = useUserStore((state) => state.settleTrade);
@@ -51,7 +71,7 @@ export function useGameSession({
   // Handle trade placement
   const handleTradePlace = useCallback(
     (contractId: string, amount: number) => {
-      console.log('🔍 handleTradePlace called:', {
+      debug('🔍 handleTradePlace called:', {
         contractId,
         amount,
         hasWs: !!wsRef.current,
@@ -60,7 +80,7 @@ export function useGameSession({
       });
       
       if (wsRef.current && isJoined) {
-        console.log('✅ Sending place_trade message:', { contractId, amount });
+        debug('✅ Sending place_trade message:', { contractId, amount });
         
         // Add trade to userStore immediately when placed
         addTrade({
@@ -69,21 +89,21 @@ export function useGameSession({
           placedAt: new Date(),
         });
         
-        console.log('➕ Trade added to userStore:', { contractId, amount });
+        debug('➕ Trade added to userStore:', { contractId, amount });
         
         wsRef.current.send({
           type: 'place_trade',
           payload: { contractId, amount },
         });
       } else {
-        console.log('❌ Cannot place trade:', {
+        debug('❌ Cannot place trade:', {
           hasWs: !!wsRef.current,
           isJoined,
           enabled
         });
       }
     },
-    [isJoined]
+    [isJoined, addTrade, enabled]
   );
 
   useEffect(() => {
@@ -104,42 +124,48 @@ export function useGameSession({
     let mounted = true;
 
     // Event handlers
-    const handleGameJoined = (msg: any) => {
+    const handleGameJoined = (message: unknown) => {
       if (!mounted) return;
-      console.log('[useGameSession] Game joined:', {
+      const data = message as {
+        payload?: { contracts?: BoxHitContract[]; balance?: number };
+        contracts?: BoxHitContract[];
+        balance?: number;
+      };
+
+      const incomingContracts = data.payload?.contracts ?? data.contracts ?? [];
+      const initialBalance = data.payload?.balance ?? data.balance;
+
+      debug('[useGameSession] Game joined:', {
         timeframe,
-        hasContracts: !!(msg.payload?.contracts || msg.contracts),
-        contractCount: (msg.payload?.contracts || msg.contracts || []).length,
+        hasContracts: incomingContracts.length > 0,
+        contractCount: incomingContracts.length,
       });
+
       setIsJoined(true);
       isJoinedRef.current = true;
-      if (msg.payload && msg.payload.contracts) {
-        setContracts(msg.payload.contracts);
-      } else if (msg.contracts) {
-        setContracts(msg.contracts);
-      }
-      // Set initial balance from game_joined message
-      if (msg.payload && typeof msg.payload.balance === 'number') {
-        setUserBalance(msg.payload.balance);
-      } else if (typeof msg.balance === 'number') {
-        setUserBalance(msg.balance);
+      setContracts(incomingContracts);
+
+      if (typeof initialBalance === 'number') {
+        setUserBalance(initialBalance);
       }
     };
 
-    const handleContractUpdate = (msg: any) => {
+    const handleContractUpdate = (message: unknown) => {
       if (!mounted) return;
-      const now = Date.now();
-      const timestamp = new Date().toISOString();
 
-      // Only log first update
+      const data = message as {
+        payload?: { contracts?: BoxHitContract[]; updateType?: string };
+        contracts?: BoxHitContract[];
+      };
+
+      const payloadContracts = data.payload?.contracts ?? data.contracts ?? [];
+
       if (!contractsReceived.current) {
         contractsReceived.current = true;
-        const firstContract = (msg.payload?.contracts ||
-          msg.contracts ||
-          [])[0];
-        console.log('[useGameSession] First contract update:', {
-          updateType: msg.payload?.updateType,
-          contractCount: (msg.payload?.contracts || msg.contracts || []).length,
+        const firstContract = payloadContracts[0];
+        debug('[useGameSession] First contract update:', {
+          updateType: data.payload?.updateType,
+          contractCount: payloadContracts.length,
           firstContract: firstContract
             ? {
                 ...firstContract,
@@ -157,144 +183,155 @@ export function useGameSession({
         });
       }
 
-      if (msg.payload && msg.payload.contracts) {
-        const contracts = msg.payload.contracts;
-        const updateType = msg.payload.updateType;
-
-        if (updateType === 'new') {
-          // Append new contracts to existing ones
-          setContracts((prev) => [...prev, ...contracts]);
-        } else {
-          // Replace all contracts (initial load or full update)
-          setContracts(contracts);
-        }
-      } else if (msg.contracts) {
-        setContracts(msg.contracts);
+      if (data.payload?.updateType === 'new') {
+        setContracts((prev) => [...prev, ...payloadContracts]);
+      } else {
+        setContracts(payloadContracts);
       }
     };
 
-    const handleTradeConfirmed = (msg: any) => {
+    const handleTradeConfirmed = (message: unknown) => {
       if (!mounted) return;
-      console.log('✅ Trade confirmed event:', msg);
-      if (msg.payload && typeof msg.payload.balance === 'number') {
-        setUserBalance(msg.payload.balance);
-      } else if (typeof msg.balance === 'number') {
-        setUserBalance(msg.balance);
-      }
-      
-      // Extract contractId from payload or root level
-      const contractId = msg.payload?.contractId || msg.contractId;
-      const amount = msg.payload?.amount || msg.amount;
-      const tradeId = msg.payload?.tradeId || msg.tradeId;
-      
-      const position = {
-        contractId: contractId,
-        amount: amount,
-        timestamp: msg.timestamp || Date.now(),
-        tradeId: tradeId,
+      debug('✅ Trade confirmed event:', message);
+
+      const data = message as {
+        payload?: {
+          balance?: number;
+          contractId?: string;
+          amount?: number;
+          tradeId?: string;
+          timestamp?: number;
+        };
+        balance?: number;
+        contractId?: string;
+        amount?: number;
+        tradeId?: string;
+        timestamp?: number;
       };
-      
-      console.log('📋 Adding position to map:', { tradeId, position });
+
+      const payload = data.payload ?? data;
+
+      if (typeof payload.balance === 'number') {
+        setUserBalance(payload.balance);
+      }
+
+      const contractId = payload.contractId ?? 'unknown';
+      const amount = payload.amount ?? 0;
+      const positionId = payload.tradeId ?? contractId ?? `trade_${Date.now()}`;
+
+      const position: BoxHitPosition = {
+        contractId,
+        amount,
+        timestamp: payload.timestamp || Date.now(),
+        tradeId: positionId,
+      };
+
+      debug('📋 Adding position to map:', { tradeId: positionId, position });
       setPositions((prev) => {
         const newPositions = new Map(prev);
-        newPositions.set(tradeId, position);
-        console.log('📋 Updated positions map:', { 
-          size: newPositions.size, 
+        newPositions.set(positionId, position);
+        positionsRef.current = newPositions;
+        debug('📋 Updated positions map:', {
+          size: newPositions.size,
           positions: Array.from(newPositions.entries()),
-          newPosition: { tradeId, contractId, amount }
+          newPosition: { tradeId: positionId, contractId, amount },
         });
         return newPositions;
       });
     };
 
-    const handleTradeResult = (msg: any) => {
+    const handleTradeResult = (message: unknown) => {
       if (!mounted) return;
-      console.log('🎯 Trade result received:', msg);
-      
-      // Extract data from message
-      const payload = msg.payload || msg;
-      const tradeId = payload.tradeId;
-      const contractId = payload.contractId;
-      const won = payload.won;
-      const payout = payload.payout || 0;
-      const profit = payload.profit || 0;
-      const balance = payload.balance;
-      
-      console.log('🎯 Processing trade result:', {
+      debug('🎯 Trade result received:', message);
+
+      const payload = (message as { payload?: TradeResultPayload })?.payload ?? (message as TradeResultPayload | undefined);
+      if (!payload) return;
+
+      const {
+        contractId,
+        won,
+        payout = 0,
+        profit = 0,
+        balance,
+        tradeId,
+      } = payload;
+
+      debug('🎯 Processing trade result:', {
         tradeId,
         contractId,
         won,
         payout,
         profit,
-        balance
+        balance,
       });
-      
-      // Find the position by contractId since tradeId might not match
-      let position = positions.get(tradeId);
-      if (!position) {
-        // Try to find by contractId if tradeId doesn't match
-        console.log('🔍 TradeId not found, searching by contractId:', contractId);
-        for (const [posTradeId, pos] of positions.entries()) {
-          if (pos.contractId === contractId) {
-            position = pos;
-            console.log('✅ Found position by contractId:', { posTradeId, contractId });
+
+      let positionEntry: [string, BoxHitPosition] | undefined;
+
+      if (tradeId) {
+        const directMatch = positionsRef.current.get(tradeId);
+        if (directMatch) {
+          positionEntry = [tradeId, directMatch];
+        }
+      }
+
+      if (!positionEntry) {
+        for (const entry of positionsRef.current.entries()) {
+          if (entry[1].contractId === contractId) {
+            positionEntry = entry;
+            debug('✅ Found position by contractId:', { positionKey: entry[0], contractId });
             break;
           }
         }
       }
-      
-      if (position) {
-        const amount = position.amount;
-        
-        // Use the original tradeId from the position, not the settlement tradeId
-        const originalTradeId = position.tradeId || tradeId;
-        
-        // Settle the trade in userStore (this will update stats and PnL)
+
+      if (positionEntry) {
+        const [positionKey, position] = positionEntry;
+        const originalTradeId = position.tradeId || positionKey;
+
         settleTrade(originalTradeId, won ? 'win' : 'loss', payout);
-        
-        // Play hit sound for trade result
-        console.log('🔊 About to play hit sound for trade result:', { won, payout });
+        debug('🔊 About to play hit sound for trade result:', { won, payout });
         playHitSound();
-        
-        console.log('✅ Trade settled in userStore:', {
+
+        setPositions((prev) => {
+          const newPositions = new Map(prev);
+          const target = newPositions.get(positionKey);
+          if (target) {
+            target.result = won ? 'win' : 'loss';
+            target.payout = payout;
+            target.settledAt = new Date();
+          }
+          positionsRef.current = newPositions;
+          return newPositions;
+        });
+
+        debug('✅ Trade settled in userStore:', {
           originalTradeId,
           settlementTradeId: tradeId,
           contractId,
-          amount,
+          amount: position.amount,
           result: won ? 'win' : 'loss',
           payout,
-          profit
+          profit,
         });
       } else {
         console.warn('⚠️ Position not found for tradeId or contractId:', { tradeId, contractId });
-        console.log('📋 Available positions:', Array.from(positions.entries()));
+        debug('📋 Available positions:', Array.from(positionsRef.current.entries()));
       }
-      
-      // Update positions state
-      setPositions((prev) => {
-        const newPositions = new Map(prev);
-        const position = newPositions.get(tradeId);
-        if (position) {
-          position.result = won ? 'win' : 'loss';
-          position.payout = payout;
-          position.settledAt = new Date();
-        }
-        return newPositions;
-      });
-      
-      // Update balance
+
       if (typeof balance === 'number') {
         setUserBalance(balance);
         updateBalance(balance);
       }
     };
 
-    const handleBalanceUpdate = (msg: any) => {
+    const handleBalanceUpdate = (message: unknown) => {
       if (!mounted) return;
-      console.log('Balance update:', msg);
-      if (msg.payload && typeof msg.payload.balance === 'number') {
-        console.log('Setting balance to:', msg.payload.balance);
-        setUserBalance(msg.payload.balance);
+      debug('Balance update:', message);
+      const data = message as { payload?: { balance?: number } };
+      const balance = data.payload?.balance;
+      if (typeof balance === 'number') {
+        debug('Setting balance to:', balance);
+        setUserBalance(balance);
       }
     };
 
@@ -308,7 +345,7 @@ export function useGameSession({
     // Join game after a small delay
     const joinTimeout = setTimeout(() => {
       if (mounted && wsRef.current) {
-        console.log('[useGameSession] Sending join_game:', {
+        debug('[useGameSession] Sending join_game:', {
           mode: gameMode,
           timeframe,
         });
@@ -346,7 +383,7 @@ export function useGameSession({
       // Reset init ref on cleanup
       initRef.current = false;
     };
-  }, [enabled, gameMode, timeframe]); // Remove ws from dependencies
+  }, [enabled, gameMode, timeframe, settleTrade, updateBalance]);
 
   return {
     isJoined,

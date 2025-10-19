@@ -142,9 +142,11 @@ const initialGameStats: GameStats = {
   bestMultiplier: 0,
 };
 
+type PersistedGameState = Pick<GameState, 'gameSettings' | 'gameStats' | 'showGrid' | 'showStats'>;
+
 export const useGameStore = create<GameState>()(
-  persist(
-    subscribeWithSelector((set, get) => ({
+  subscribeWithSelector(
+    persist<GameState, [], [], PersistedGameState>((set, get) => ({
     // Initial State
     gridCells: [],
     activePositions: [],
@@ -460,16 +462,17 @@ export const useGameStore = create<GameState>()(
       ).length;
       return (completedPositions / state.activePositions.length) * 100;
     },
-  })),
+    }),
     {
       name: 'game-store',
-      storage: createPersistentStorage('game') as any,
+      storage: createPersistentStorage<PersistedGameState>('game'),
       partialize: (state) => ({
         gameSettings: state.gameSettings,
         gameStats: state.gameStats,
         showGrid: state.showGrid,
         showStats: state.showStats,
-      }) as any,
+      }),
     }
+  )
   )
 );

@@ -1,7 +1,7 @@
 // Contract Types matching the new backend architecture
 // These types are shared between frontend and backend
 
-import { TimeFrame, IronCondorTimeframes, SpreadTimeframes } from './timeframe';
+import { IronCondorTimeframes, SpreadTimeframes } from './timeframe';
 
 // Type aliases for backward compatibility
 type IronCondorTimeframe = typeof IronCondorTimeframes[number];

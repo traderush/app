@@ -26,16 +26,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
   const [selectedTimeframe, setSelectedTimeframe] = useState('Max');
   const [activeTab, setActiveTab] = useState('Activity');
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; pnl: string; date: string } | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-    } else {
-      setIsAnimating(false);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

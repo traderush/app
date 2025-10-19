@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { X, Gift, Trophy, Star, TrendingUp, Users, Target, Zap, Coins } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useUIStore } from '@/stores';
 
 interface RewardsPopupProps {
@@ -10,8 +10,6 @@ interface RewardsPopupProps {
 }
 
 export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPopupProps) {
-  console.log('RewardsPopup render - isOpen:', isOpen);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState(2); // Default to middle point
   const [copied, setCopied] = useState(false);
   const [referralCode] = useState(() => {
@@ -37,14 +35,6 @@ export default function RewardsPopup({ isOpen, onClose, triggerRef }: RewardsPop
       console.error('Failed to copy: ', err);
     }
   };
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-    } else {
-      setIsAnimating(false);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

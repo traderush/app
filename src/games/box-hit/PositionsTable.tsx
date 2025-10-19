@@ -9,54 +9,41 @@ const TRADING_COLORS = {
 } as const;
 
 interface PositionsTableProps {
-  selectedCount: number;
-  selectedMultipliers: number[];
-  betAmount: number;
   currentBTCPrice: number;
-  onPositionHit?: (positionId: string) => void;
-  onPositionMiss?: (positionId: string) => void;
-  hitBoxes?: string[]; // Array of contract IDs that were successfully hit
-  missedBoxes?: string[]; // Array of contract IDs that were missed
-  realPositions?: Map<string, any>; // Real backend positions (for mock backend mode)
-  contracts?: any[]; // Backend contracts (for mock backend mode)
 }
 
-// Stable empty array to prevent infinite loops
-const EMPTY_ARRAY: number[] = [];
-const EMPTY_STRING_ARRAY: string[] = [];
+const formatTime = (value: Date | string | number | null | undefined) => {
+  if (!value) return '—';
+  const date =
+    value instanceof Date
+      ? value
+      : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  return date.toLocaleTimeString();
+};
 
-const PositionsTable = React.memo(function PositionsTable({ 
-  selectedCount, 
-  selectedMultipliers, 
-  betAmount, 
-  currentBTCPrice, 
-  onPositionHit, 
-  onPositionMiss, 
-  hitBoxes = EMPTY_STRING_ARRAY, 
-  missedBoxes = EMPTY_STRING_ARRAY, 
-  realPositions, 
-  contracts = EMPTY_ARRAY as any[] 
-}: PositionsTableProps) {
+const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice }: PositionsTableProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
   const signatureColor = useUIStore((state) => state.signatureColor);
   
   // Get userStore data for accurate positions tracking
   const activeTrades = useUserStore((state) => state.activeTrades);
   const tradeHistory = useUserStore((state) => state.tradeHistory);
-  const balance = useUserStore((state) => state.balance);
   
   // Convert userStore data to positions format for display
   const activePositions = useMemo(() => {
     return activeTrades.map(trade => ({
       id: trade.id,
-      time: trade.placedAt.toLocaleTimeString(),
+      time: formatTime(trade.placedAt),
       size: trade.amount,
       equity: `$${trade.amount.toFixed(2)}`, // Will be updated when settled
       hit: 'Pending',
       prog: '0%',
       entry: currentBTCPrice.toFixed(2),
       betAmount: trade.amount,
-      selectedMultipliers: [1.0], // Default multiplier
+      selectedMultipliers: [1.0],
       multiplier: 1.0,
       contractId: trade.contractId
     }));
@@ -69,7 +56,7 @@ const PositionsTable = React.memo(function PositionsTable({
       .slice(-10) // Last 10 trades
       .map(trade => ({
         id: trade.id,
-        time: trade.settledAt!.toLocaleTimeString(),
+        time: formatTime(trade.settledAt),
         size: trade.amount,
         equity: trade.result === 'win' ? `$${(trade.payout || 0).toFixed(2)}` : `$0.00`,
         hit: trade.result === 'win' ? 'Won' : 'Lost',

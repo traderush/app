@@ -54,7 +54,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
     displayName: '0.5 Second',
     shortName: '0.5s',
     ironCondor: {
-      numColumns: 25,
+      numColumns: 20,
       columnsBehind: 5,
       rowsAbove: 10,
       rowsBelow: 10,
@@ -64,14 +64,14 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       columnsBehind: 5,
     },
     boxHeight: 0.05,
-    contractGenerationOffset: 25000,
+    contractGenerationOffset: 20 * TimeFrame.HALF_SECOND,
     contractExpiryBuffer: 50,
   },
   [TimeFrame.SECOND]: {
     displayName: '1 Second',
     shortName: '1s',
     ironCondor: {
-      numColumns: 25,
+      numColumns: 20,
       columnsBehind: 5,
       rowsAbove: 10,
       rowsBelow: 10,
@@ -81,14 +81,14 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       columnsBehind: 5,
     },
     boxHeight: 0.08,
-    contractGenerationOffset: 25000,
+    contractGenerationOffset: 20 * TimeFrame.SECOND,
     contractExpiryBuffer: 50,
   },
   [TimeFrame.TWO_SECONDS]: {
     displayName: '2 Seconds',
     shortName: '2s',
     ironCondor: {
-      numColumns: 25,
+      numColumns: 20,
       columnsBehind: 8,
       rowsAbove: 10,
       rowsBelow: 10,
@@ -98,14 +98,14 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       columnsBehind: 8,
     },
     boxHeight: 0.1,
-    contractGenerationOffset: 50000,
+    contractGenerationOffset: 20 * TimeFrame.TWO_SECONDS,
     contractExpiryBuffer: 100,
   },
   [TimeFrame.FOUR_SECONDS]: {
     displayName: '4 Seconds',
     shortName: '4s',
     ironCondor: {
-      numColumns: 25,
+      numColumns: 20,
       columnsBehind: 10,
       rowsAbove: 10,
       rowsBelow: 10,
@@ -115,7 +115,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       columnsBehind: 10,
     },
     boxHeight: 0.15,
-    contractGenerationOffset: 100000,
+    contractGenerationOffset: 20 * TimeFrame.FOUR_SECONDS,
     contractExpiryBuffer: 200,
   },
 
@@ -123,7 +123,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
     displayName: '10 Seconds',
     shortName: '10s',
     ironCondor: {
-      numColumns: 25,
+      numColumns: 20,
       columnsBehind: 15,
       rowsAbove: 10,
       rowsBelow: 10,
@@ -133,7 +133,7 @@ export const TIMEFRAME_CONFIGS: Record<TimeFrame, TimeframeConfig> = {
       columnsBehind: 15,
     },
     boxHeight: 0.25,
-    contractGenerationOffset: 250000,
+    contractGenerationOffset: 20 * TimeFrame.TEN_SECONDS,
     contractExpiryBuffer: 500,
   },
 };

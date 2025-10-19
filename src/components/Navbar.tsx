@@ -1,45 +1,35 @@
 'use client';
+import Image from 'next/image';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell, Wallet } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import clsx from 'clsx';
-import { useState, useRef } from 'react';
-import ScrollableGameTabs, { type GameTab } from './ScrollableGameTabs';
-// Lazy load popup components
-const NotificationsPopup = React.lazy(() => import('./NotificationsModal'));
-const DepositPopup = React.lazy(() => import('./DepositPopup'));
+import ScrollableGameTabs from './ScrollableGameTabs';
 import { useUIStore } from '@/stores';
 import { useUserStore } from '@/stores/userStore';
-
-const gameTabs: GameTab[] = [
-  { href: '/box-hit', label: 'Box Hit' },
-  { href: '/towers',  label: 'Towers'  },
-  { href: '/sketch',  label: 'Sketch'  },
-  { href: '/ahead',   label: 'Ahead'   },
-  // locked previews:
-  { label: 'Soon', locked: true },
-  { label: 'Soon', locked: true },
-  { label: 'Soon', locked: true },
-  { label: 'Soon', locked: true },
-];
-
-const menuItems = [
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/leaderboard', label: 'Leaderboard' },
-  { href: '/refer', label: 'Refer & Earn' },
-];
+import {
+  GAME_TABS,
+  PRIMARY_NAVIGATION,
+  NOTIFICATION_COUNT,
+  PROFILE_AVATAR,
+} from '@/components/constants/navigation';
 
 interface NavbarProps {
   onDepositOpen: () => void;
+  depositButtonRef: React.RefObject<HTMLButtonElement | null>;
   onNotificationsOpen: () => void;
   notificationsButtonRef: React.RefObject<HTMLButtonElement | null>;
-  onSettingsOpen: () => void;
-  settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
   onProfileOpen: () => void;
 }
 
-const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, notificationsButtonRef, onSettingsOpen, settingsButtonRef, onProfileOpen }: NavbarProps) {
+const Navbar = React.memo(function Navbar({
+  onDepositOpen,
+  depositButtonRef,
+  onNotificationsOpen,
+  notificationsButtonRef,
+  onProfileOpen,
+}: NavbarProps) {
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
   const balance = useUserStore((state) => state.balance);
@@ -50,27 +40,30 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
         <div className="w-full h-14 px-4 flex items-center gap-4">
           {/* Brand */}
           <Link href="/" className="flex items-center">
-            <img 
-              src="https://i.ibb.co/DPzsQbm0/a-logo.png" 
-              alt="TradeRush Logo" 
+            <Image
+              src="https://i.ibb.co/DPzsQbm0/a-logo.png"
+              alt="TradeRush Logo"
+              width={96}
+              height={24}
               className="h-6 w-auto"
+              priority
             />
           </Link>
 
           {/* Scrollable game tabs */}
-          <ScrollableGameTabs items={gameTabs} bg="#09090B" />
+          <ScrollableGameTabs items={GAME_TABS} bg="#09090B" />
 
           {/* Separator */}
           <div className="hidden lg:block w-px h-5 bg-white/20 mx-2" />
 
           {/* Additional menu items */}
           <nav className="hidden md:flex items-center gap-4">
-            {menuItems.map(t => {
-              const active = path.startsWith(t.href);
+            {PRIMARY_NAVIGATION.map((item) => {
+              const active = path.startsWith(item.href);
               return (
-                <a
-                  key={t.href}
-                  href={t.href}
+                <Link
+                  key={item.href}
+                  href={item.href}
                   className={clsx(
                     'text-[14px] transition cursor-pointer hover:text-white',
                     active
@@ -79,8 +72,8 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
                   )}
                   style={{fontWeight: 500}}
                 >
-                  {t.label}
-                </a>
+                  {item.label}
+                </Link>
               );
             })}
           </nav>
@@ -97,6 +90,7 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
           <div className="flex items-center gap-4">
             {/* Deposit button */}
             <button 
+              ref={depositButtonRef}
               onClick={onDepositOpen}
               className="px-4 py-2 text-sm rounded transition-colors cursor-pointer"
               style={{
@@ -116,42 +110,48 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
                 className="relative grid place-items-center w-8 h-8 text-zinc-300 hover:text-white transition-colors cursor-pointer"
               >
                 <Bell size={18} />
-                <div className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center" style={{ 
+                {NOTIFICATION_COUNT > 0 && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center" style={{ 
                   backgroundColor: signatureColor,
                   borderRadius: '7px' 
                 }}>
-                  <span className="text-[10px]" style={{fontWeight: 600, color: '#09090B'}}>12</span>
-                </div>
+                  <span className="text-[10px]" style={{fontWeight: 600, color: '#09090B'}}>
+                      {Math.min(NOTIFICATION_COUNT, 99)}
+                    </span>
+                  </div>
+                )}
               </button>
               
 
             </div>
             
             {/* Daily leaderboard ranking */}
-            <a href="/leaderboard" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
+            <Link href="/leaderboard" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
               <div className="text-xs text-zinc-400" style={{fontWeight: 500}}>Rank</div>
               <div className="text-zinc-100 text-sm" style={{fontWeight: 600}}>#23 Today</div>
-            </a>
+            </Link>
             
             {/* Vertical separator */}
             <div className="w-px h-5 bg-zinc-700" />
             
             {/* Portfolio */}
-            <a href="/portfolio" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
+            <Link href="/portfolio" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
               <div className="text-xs text-zinc-400" style={{fontWeight: 500}}>Portfolio</div>
               <div className="text-zinc-100 text-sm" style={{fontWeight: 600}}>
                 ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-            </a>
+            </Link>
             
             {/* Profile image */}
             <button 
               onClick={onProfileOpen}
               className="flex items-center cursor-pointer"
             >
-              <img 
-                src="https://i.imgflip.com/2/1vq853.jpg" 
-                alt="Profile" 
+              <Image
+                src={PROFILE_AVATAR}
+                alt="Profile"
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded object-cover hover:opacity-80 transition-opacity"
               />
             </button>

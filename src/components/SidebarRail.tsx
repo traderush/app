@@ -1,10 +1,10 @@
 'use client';
-import React, { useEffect } from 'react';
-import { Play, Globe, Gift, Settings, Volume2, VolumeX, Coins } from 'lucide-react';
+import Image from 'next/image';
+import React, { useEffect, useMemo } from 'react';
+import { Play, Globe, Gift, Settings, Volume2, VolumeX } from 'lucide-react';
 import clsx from 'clsx';
 import { useUIStore, usePlayerStore, type WatchedPlayer } from '@/stores';
-
-// WatchedPlayer interface is now imported from usePlayerData hook
+import { TOP_PLAYERS } from '@/components/constants/sidebar';
 
 interface SidebarRailProps {
   isCollapsed?: boolean;
@@ -50,6 +50,11 @@ const SidebarRail = React.memo(function SidebarRail({
     setIsClient(true);
   }, []);
 
+  const topPlayers = useMemo(
+    () => TOP_PLAYERS,
+    [],
+  );
+
   return (
     <aside className={clsx(
       "hidden md:block h-[calc(100vh-56px-32px)] transition-all duration-300",
@@ -67,7 +72,6 @@ const SidebarRail = React.memo(function SidebarRail({
           <button
             ref={howToPlayButtonRef}
             onClick={() => {
-              console.log('How to Play button clicked');
               onHowToPlayOpen?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
@@ -79,7 +83,6 @@ const SidebarRail = React.memo(function SidebarRail({
           <button
             ref={newsUpdatesButtonRef}
             onClick={() => {
-              console.log('News & Updates button clicked');
               onNewsUpdatesOpen?.();
             }}
             className="relative grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
@@ -98,7 +101,6 @@ const SidebarRail = React.memo(function SidebarRail({
           <button
             ref={rewardsButtonRef}
             onClick={() => {
-              console.log('Rewards button clicked');
               onRewardsOpen?.();
             }}
             className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
@@ -107,105 +109,37 @@ const SidebarRail = React.memo(function SidebarRail({
             <Gift size={26} strokeWidth={1.4} />
           </button>
           
-          {/* Top 3 Players */}
-          <div className="relative">
-            <img 
-              src="https://i.ibb.co/cXskDgbs/gasg.png" 
-              alt="Top Player 1" 
-              className="w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ 
-                borderRadius: '4px',
-                border: '1px solid #FFD700'
-              }}
-              title="Top Player 1"
-              loading="lazy"
-              onClick={() => onPlayerClick?.({
-                id: 'top1',
-                name: 'Top Player 1',
-                address: '0x1234...5678',
-                avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
-                game: 'Box Hit',
-                isOnline: true
-              })}
-            />
-            {/* Rank indicator circle */}
-            <div 
-              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ 
-                backgroundColor: '#FFD700',
-                border: '1px solid #09090B'
-              }}
-              title="Rank 1"
-            >
-              <span className="text-[10px] font-bold" style={{ color: '#09090B' }}>1</span>
+          {/* Top players */}
+          {topPlayers.map((player) => (
+            <div className="relative" key={player.id}>
+              <Image
+                src={player.avatar}
+                alt={player.name}
+                width={44}
+                height={44}
+                className="w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                style={{
+                  borderRadius: '4px',
+                  border: `1px solid ${player.accent}`,
+                }}
+                title={`Top Player ${player.rank}`}
+                loading="lazy"
+                onClick={() => onPlayerClick?.(player)}
+              />
+              <div
+                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: player.accent,
+                  border: '1px solid #09090B',
+                }}
+                title={`Rank ${player.rank}`}
+              >
+                <span className="text-[10px] font-bold" style={{ color: '#09090B' }}>
+                  {player.rank}
+                </span>
+              </div>
             </div>
-          </div>
-          
-          <div className="relative">
-            <img 
-              src="https://pbs.twimg.com/profile_images/1848910264051052546/Mu18BSYv_400x400.jpg" 
-              alt="Top Player 2" 
-              className="w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ 
-                borderRadius: '4px',
-                border: '1px solid #C0C0C0'
-              }}
-              title="Top Player 2"
-              loading="lazy"
-              onClick={() => onPlayerClick?.({
-                id: 'top2',
-                name: 'Top Player 2',
-                address: '0x2345...6789',
-                avatar: 'https://pbs.twimg.com/profile_images/1848910264051052546/Mu18BSYv_400x400.jpg',
-                game: 'Box Hit',
-                isOnline: true
-              })}
-            />
-            {/* Rank indicator circle */}
-            <div 
-              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ 
-                backgroundColor: '#C0C0C0',
-                border: '1px solid #09090B'
-              }}
-              title="Rank 2"
-            >
-              <span className="text-[10px] font-bold" style={{ color: '#09090B' }}>2</span>
-            </div>
-          </div>
-          
-          <div className="relative">
-            <img 
-              src="https://i.ibb.co/cXskDgbs/gasg.png" 
-              alt="Top Player 3" 
-              className="w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ 
-                borderRadius: '4px',
-                border: '1px solid #CD7F32'
-              }}
-              title="Top Player 3"
-              loading="lazy"
-              onClick={() => onPlayerClick?.({
-                id: 'top3',
-                name: 'Top Player 3',
-                address: '0x3456...7890',
-                avatar: 'https://i.ibb.co/cXskDgbs/gasg.png',
-                game: 'Box Hit',
-                isOnline: true
-              })}
-            />
-            {/* Rank indicator circle */}
-            <div 
-              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ 
-                backgroundColor: '#CD7F32',
-                border: '1px solid #09090B'
-              }}
-              title="Rank 3"
-            >
-              <span className="text-[10px] font-bold" style={{ color: '#09090B' }}>3</span>
-            </div>
-          </div>
+          ))}
         </div>
         
         {/* Separator */}
@@ -220,22 +154,25 @@ const SidebarRail = React.memo(function SidebarRail({
           isCollapsed && "opacity-0 scale-95"
         )}>
           {/* Dynamic watchlist players - only render on client to avoid hydration mismatch */}
-          {isClient && displayPlayers.map((player) => (
-            <div key={player.id} className="relative">
-              <img 
-                src={player.avatar}
-                alt={player.name} 
-                className={`w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity ${
-                  !player.isOnline ? 'opacity-50' : ''
-                }`}
-                style={{ 
-                  borderRadius: '4px',
-                  border: `1px solid ${player.isOnline ? signatureColor : '#6B7280'}`
-                }}
-                title={player.name}
-                loading="lazy"
-                onClick={() => onPlayerClick?.(player)}
-              />
+          {isClient &&
+            displayPlayers.map((player) => (
+              <div key={player.id} className="relative">
+                <Image
+                  src={player.avatar}
+                  alt={player.name}
+                  width={44}
+                  height={44}
+                  className={`w-11 h-11 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity ${
+                    !player.isOnline ? 'opacity-50' : ''
+                  }`}
+                  style={{
+                    borderRadius: '4px',
+                    border: `1px solid ${player.isOnline ? signatureColor : '#6B7280'}`,
+                  }}
+                  title={player.name}
+                  loading="lazy"
+                  onClick={() => onPlayerClick?.(player)}
+                />
               {/* Game indicator circle - only show if player is online */}
               {player.isOnline && (
                 <div 

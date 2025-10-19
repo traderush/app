@@ -1,10 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
+import React, { useEffect, useMemo, useState } from 'react';
+import { TRADING_COLORS } from '@/constants/theme';
+import { ASSETS } from '@/app/box-hit/constants';
 
-/** centralized trading colors */
-const TRADING_COLORS = {
-  positive: '#2fe3ac',  // Green for positive values (gains, up movements)
-  negative: '#ec397a',  // Red for negative values (losses, down movements)
-} as const;
+type PerformanceWithMemory = Performance & {
+  memory?: {
+    usedJSHeapSize: number;
+  };
+};
+
+const MARKET_SUMMARY = [
+  { key: 'BTC', color: '#FFA21C', icon: ASSETS.BTC.icon },
+  { key: 'ETH', color: '#5080A0', icon: ASSETS.ETH.icon },
+  { key: 'SOL', color: '#26FFA4', icon: ASSETS.SOL.icon },
+] as const;
 
 // Client-side only memory display component to prevent hydration mismatch
 const MemoryDisplay: React.FC = () => {
@@ -15,12 +24,16 @@ const MemoryDisplay: React.FC = () => {
     setIsClient(true);
     
     const updateMemoryUsage = () => {
-      if (typeof performance !== 'undefined' && (performance as any).memory) {
-        const used = Math.round((performance as any).memory.usedJSHeapSize / 1048576);
-        setMemoryUsage(`${used}MB`);
-      } else {
-        setMemoryUsage('N/A');
+      if (typeof performance !== 'undefined') {
+        const perf = performance as PerformanceWithMemory;
+        if (perf.memory) {
+          const used = Math.round(perf.memory.usedJSHeapSize / 1048576);
+          setMemoryUsage(`${used}MB`);
+          return;
+        }
       }
+
+      setMemoryUsage('N/A');
     };
 
     updateMemoryUsage();
@@ -51,7 +64,6 @@ const Footer = React.memo(function Footer({
   isBackendConnected = false
 }: FooterProps) {
   // Performance metrics
-  const [latency, setLatency] = React.useState(0);
   const [fps, setFps] = React.useState(60);
   
   
@@ -78,50 +90,40 @@ const Footer = React.memo(function Footer({
     return () => cancelAnimationFrame(animationId);
   }, []);
   
-  // Set static latency since we're not using dynamic price updates
-  React.useEffect(() => {
-    setLatency(1); // Static 1 second latency
-  }, []);
+  const latencySeconds = 1;
+  const playerCount = useMemo(() => '1,247', []);
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
       <div className="h-8 px-4 flex items-center justify-between text-xs text-zinc-400">
         <div className="flex items-center gap-4">
-          <span>Players Online: 1,247</span>
+          <span>Players Online: {playerCount}</span>
           <div className="flex items-center gap-2">
             <span>Volatility Index:</span>
             <span style={{color: TRADING_COLORS.positive}}>+12.4%</span>
           </div>
           <div className="w-px h-4 bg-white/20"></div>
-          <div className="flex items-center gap-2">
-            <img 
-                              src="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/fd/f6/d8fdf69a-e716-1018-1740-b344df03476a/AppIcon-0-0-1x_U007epad-0-11-0-sRGB-85-220.png/460x0w.webp" 
-              alt="Bitcoin" 
-              className="w-4 h-4 rounded object-cover"
-            />
-            <span style={{color: '#FFA21C'}}>
-              $65.2K
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <img 
-              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSs-O63J4u38kjYToo_vgMds4su_KK9BbHD0A&s" 
-              alt="Ethereum" 
-              className="w-4 h-4 rounded object-cover"
-            />
-            <span style={{color: '#5080A0'}}>
-              $3,420
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <img 
-              src="https://static.crypto.com/token/icons/solana/color_icon.png" 
-              alt="Solana" 
-              className="w-4 h-4 rounded object-cover"
-            />
-            <span style={{color: '#26FFA4'}}>
-              $142.50
-            </span>
-          </div>
+          {MARKET_SUMMARY.map(({ key, color, icon }) => {
+            const asset = ASSETS[key];
+            return (
+              <div className="flex items-center gap-2" key={key}>
+                <span className="relative w-4 h-4 rounded overflow-hidden">
+                  <Image
+                    src={icon}
+                    alt={asset.name}
+                    fill
+                    className="object-cover"
+                    sizes="16px"
+                  />
+                </span>
+                <span style={{ color }}>
+                  {asset.price.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+            );
+          })}
           
           {/* Connection Status - Dynamic styling based on connection */}
           <div className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 relative group" style={{ 
@@ -166,8 +168,8 @@ const Footer = React.memo(function Footer({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Latency:</span>
-                        <span style={{ color: latency <= 1 ? TRADING_COLORS.positive : latency <= 3 ? '#facc15' : TRADING_COLORS.negative }}>
-                          {latency}s
+                        <span style={{ color: latencySeconds <= 1 ? TRADING_COLORS.positive : latencySeconds <= 3 ? '#facc15' : TRADING_COLORS.negative }}>
+                          {latencySeconds}s
                         </span>
                       </div>
                       <div className="flex justify-between">

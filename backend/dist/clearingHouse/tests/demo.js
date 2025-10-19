@@ -24,7 +24,6 @@ const moveCursor = (x, y) => `\x1b[${y};${x}H`;
 const hideCursor = '\x1b[?25l';
 const showCursor = '\x1b[?25h';
 const clearScreen = '\x1b[2J';
-// Helper functions for colored output
 const color = (text, colorCode) => `${colorCode}${text}${colors.reset}`;
 const bold = (text) => `${colors.bold}${text}${colors.reset}`;
 const dim = (text) => `${colors.dim}${text}${colors.reset}`;
@@ -36,21 +35,17 @@ const cyan = (text) => color(text, colors.cyan);
 const gray = (text) => color(text, colors.gray);
 class ClearingHouseDemo {
     constructor() {
+        this.service = new ClearingHouseService_1.ClearingHouseService();
         this.currentPrice = 0;
         this.priceHistory = [];
         this.maxHistoryLength = 50;
         this.userBalances = new Map();
         this.selectedView = 'iron_condor';
         this.selectedTimeframe = types_1.TimeFrame.TWO_SECONDS;
-        this.service = new ClearingHouseService_1.ClearingHouseService();
-        // Access the private orderbooks through reflection (for demo purposes)
-        this.ironCondorOrderbooks = this.service.ironCondorOrderbooks;
-        this.spreadOrderbooks = this.service.spreadOrderbooks;
         this.setupEventListeners();
         this.initializeUsers();
     }
     initializeUsers() {
-        // Initialize demo users
         const users = ['alice', 'bob', 'charlie'];
         users.forEach((userId) => {
             this.service.initializeUser(userId);
@@ -58,7 +53,6 @@ class ClearingHouseDemo {
         });
     }
     setupEventListeners() {
-        // Price updates
         this.service.on('price_update', (data) => {
             this.currentPrice = data.price;
             this.priceHistory.push(data.price);
@@ -67,27 +61,19 @@ class ClearingHouseDemo {
             }
             this.updateDisplay();
         });
-        // Balance updates
         this.service.on('balance_updated', (data) => {
             this.userBalances.set(data.userId, data.balance);
         });
-        // Update display on contract updates
-        this.service.on('iron_condor_contracts_updated', () => {
-            if (this.selectedView === 'iron_condor') {
+        this.service.on('contracts_updated', (payload) => {
+            if ((payload.product === 'iron_condor' && this.selectedView === 'iron_condor') ||
+                (payload.product === 'spread' && this.selectedView === 'spread')) {
                 this.updateDisplay();
             }
         });
-        this.service.on('contracts_updated', () => {
-            if (this.selectedView === 'spread') {
-                this.updateDisplay();
-            }
-        });
-        // Listen for keyboard input
         process.stdin.setRawMode(true);
         process.stdin.on('data', (key) => {
             const k = key.toString();
             if (k === '\u0003') {
-                // Ctrl+C
                 this.shutdown();
             }
             else if (k === '1') {
@@ -115,13 +101,10 @@ class ClearingHouseDemo {
         process.exit(0);
     }
     updateDisplay() {
-        // Clear screen and move cursor to top
         process.stdout.write(clearScreen + moveCursor(1, 1));
-        // Header
         console.log(cyan('═══════════════════════════════════════════════════════════════════════════════'));
         console.log(cyan('                           CLEARINGHOUSE VISUALIZATION                          '));
         console.log(cyan('═══════════════════════════════════════════════════════════════════════════════'));
-        // Price and Controls
         const priceChange = this.priceHistory.length > 1
             ? this.currentPrice - this.priceHistory[this.priceHistory.length - 2]
             : 0;
@@ -131,73 +114,110 @@ class ClearingHouseDemo {
         console.log(`Current Price: ${priceDisplay}  |  View: ${bold(this.selectedView === 'iron_condor' ? 'Iron Condor' : 'Spread')}  |  Timeframe: ${bold(this.selectedTimeframe + 'ms')}`);
         console.log(gray('Controls: [1] Iron Condor  [2] Spread  [t] 2s  [s] 10s  [Ctrl+C] Exit'));
         console.log('───────────────────────────────────────────────────────────────────────────────');
-        // Display the appropriate view
         if (this.selectedView === 'iron_condor') {
             this.renderIronCondorTable();
         }
         else {
             this.renderSpreadTable();
         }
-        // User Balances at bottom
         console.log('\n' + yellow(bold('User Balances:')));
         let balanceStr = '';
         this.userBalances.forEach((balance, userId) => {
             const profit = balance - 1000;
-            const profitDisplay = profit >= 0
-                ? green(`+${profit.toFixed(0)}`)
-                : red(`${profit.toFixed(0)}`);
+            const profitDisplay = profit >= 0 ? green(`+${profit.toFixed(0)}`) : red(`${profit.toFixed(0)}`);
             balanceStr += `${userId}: $${balance.toFixed(0)} (${profitDisplay})  `;
         });
         console.log(balanceStr);
     }
     renderIronCondorTable() {
-        const orderbook = this.ironCondorOrderbooks.get(this.selectedTimeframe);
-        if (!orderbook)
+        const contracts = this.service.getActiveIronCondorContracts(this.selectedTimeframe);
+        if (contracts.length === 0) {
+            console.log(red('\nNo active iron condor contracts'));
             return;
-        // Get the contracts array through reflection
-        const contracts = orderbook
-            .contracts;
-        const currentColumnIndex = orderbook.currentColumnIndex;
-        const config = orderbook.config;
+        }
+        const grouped = this.groupContractsByWindow(contracts, (c) => c.exerciseWindow.start);
+        const sortedStarts = Array.from(grouped.keys()).sort((a, b) => a - b);
+        const visibleStarts = sortedStarts.slice(0, 10);
+        const strikeLevels = Array.from(new Set(contracts.map((c) => c.strikeRange.lower))).sort((a, b) => b - a);
         console.log(bold(`\nIron Condor Table (${this.selectedTimeframe}ms timeframe):`));
         console.log(gray('Each cell shows: [multiplier]x $volume (positions)'));
         console.log();
-        // Calculate visible columns (show 10 columns)
-        const visibleColumns = Math.min(10, contracts.length - currentColumnIndex);
-        const startCol = currentColumnIndex;
-        // Header row with time offsets
         let header = '     ';
-        for (let col = 0; col < visibleColumns; col++) {
-            const timeOffset = (col * this.selectedTimeframe) / 1000;
-            header += `   +${timeOffset.toFixed(1)}s  `;
-        }
+        const now = Date.now();
+        visibleStarts.forEach((start) => {
+            const seconds = Math.max(0, (start - now) / 1000);
+            header += `   +${seconds.toFixed(1)}s  `;
+        });
         console.log(gray(header));
-        console.log('     ' + '─'.repeat(visibleColumns * 9));
-        // Contract rows
-        const totalRows = config.rowsAbove + config.rowsBelow + 1;
-        const centerRow = config.rowsBelow;
-        for (let row = totalRows - 1; row >= 0; row--) {
-            const rowOffset = row - centerRow;
-            const priceLevel = this.currentPrice + rowOffset * 1;
-            let line = `${priceLevel.toFixed(0).padStart(4)} │`;
-            for (let col = 0; col < visibleColumns; col++) {
-                const contract = contracts[startCol + col]?.[row];
+        console.log('     ' + '─'.repeat(visibleStarts.length * 9));
+        const centerPrice = this.currentPrice;
+        strikeLevels.forEach((strike) => {
+            const midPrice = strike + (contracts[0].strikeRange.upper - contracts[0].strikeRange.lower) / 2;
+            let line = `${strike.toFixed(0).padStart(4)} │`;
+            visibleStarts.forEach((start) => {
+                const column = grouped.get(start) ?? [];
+                const contract = column.find((c) => c.strikeRange.lower === strike);
                 if (!contract) {
                     line += '   ---  ';
                 }
                 else {
-                    const cell = this.formatIronCondorCell(contract);
-                    line += cell;
+                    line += this.formatIronCondorCell(contract);
                 }
-            }
-            // Mark current price row
-            if (Math.abs(priceLevel - this.currentPrice) < 0.5) {
+            });
+            if (Math.abs(midPrice - centerPrice) < 0.5) {
                 console.log(yellow(line) + ' ← current');
             }
             else {
                 console.log(line);
             }
+        });
+    }
+    renderSpreadTable() {
+        const contracts = this.service.getActiveSpreadContracts(this.selectedTimeframe);
+        if (contracts.length === 0) {
+            console.log(red('\nNo active spread contracts'));
+            return;
         }
+        const grouped = this.groupContractsByWindow(contracts, (c) => c.exerciseWindow.start);
+        const sortedStarts = Array.from(grouped.keys()).sort((a, b) => a - b);
+        const visibleStarts = sortedStarts.slice(0, 10);
+        const now = Date.now();
+        console.log(bold(`\nSpread Table (${this.selectedTimeframe}ms timeframe):`));
+        console.log(gray('Each row shows: [type] strike @ multiplierx $volume'));
+        console.log();
+        let header = '          ';
+        visibleStarts.forEach((start) => {
+            const seconds = Math.max(0, (start - now) / 1000);
+            header += `  +${seconds.toFixed(1)}s  `;
+        });
+        console.log(gray(header));
+        console.log('          ' + '─'.repeat(visibleStarts.length * 8));
+        let callRow = 'CALL  │ ';
+        visibleStarts.forEach((start) => {
+            const column = grouped.get(start) ?? [];
+            const call = column.find((c) => c.spreadType === types_1.SpreadType.CALL);
+            callRow += call ? this.formatSpreadCell(call) : '  ---  ';
+        });
+        console.log(callRow);
+        console.log(yellow(`      │ ${'═'.repeat(Math.max(2, visibleStarts.length * 8 - 2))} Price: ${this.currentPrice.toFixed(2)}`));
+        let putRow = 'PUT   │ ';
+        visibleStarts.forEach((start) => {
+            const column = grouped.get(start) ?? [];
+            const put = column.find((c) => c.spreadType === types_1.SpreadType.PUT);
+            putRow += put ? this.formatSpreadCell(put) : '  ---  ';
+        });
+        console.log(putRow);
+    }
+    groupContractsByWindow(contracts, keyFn) {
+        const grouped = new Map();
+        contracts.forEach((contract) => {
+            const key = keyFn(contract);
+            if (!grouped.has(key)) {
+                grouped.set(key, []);
+            }
+            grouped.get(key).push(contract);
+        });
+        return grouped;
     }
     formatIronCondorCell(contract) {
         const multiplier = contract.returnMultiplier.toFixed(1);
@@ -216,59 +236,7 @@ class ClearingHouseDemo {
         if (volume > 0) {
             return color(` ${content.padEnd(4)}`, cellColor) + ' ';
         }
-        else {
-            return dim(` ${content.padEnd(4)}`) + ' ';
-        }
-    }
-    renderSpreadTable() {
-        const orderbook = this.spreadOrderbooks.get(this.selectedTimeframe);
-        if (!orderbook) {
-            console.log(red('\nSpread orderbook not available for this timeframe'));
-            return;
-        }
-        // Get the contracts array through reflection
-        const contracts = orderbook.contracts;
-        const currentColumnIndex = orderbook.currentColumnIndex;
-        console.log(bold(`\nSpread Table (${this.selectedTimeframe}ms timeframe):`));
-        console.log(gray('Each row shows: [type] strike @ multiplierx $volume'));
-        console.log();
-        // Calculate visible columns (show 10 columns)
-        const visibleColumns = Math.min(10, contracts.length - currentColumnIndex);
-        const startCol = currentColumnIndex;
-        // Header row with time offsets
-        let header = '          ';
-        for (let col = 0; col < visibleColumns; col++) {
-            const timeOffset = (col * this.selectedTimeframe) / 1000;
-            header += `  +${timeOffset.toFixed(1)}s  `;
-        }
-        console.log(gray(header));
-        console.log('          ' + '─'.repeat(visibleColumns * 8));
-        // Call contracts row
-        let callRow = 'CALL  │ ';
-        for (let col = 0; col < visibleColumns; col++) {
-            const [call] = contracts[startCol + col] || [null, null];
-            if (call) {
-                callRow += this.formatSpreadCell(call);
-            }
-            else {
-                callRow += '  ---  ';
-            }
-        }
-        console.log(callRow);
-        // Current price indicator
-        console.log(yellow(`      │ ${'═'.repeat(visibleColumns * 8 - 2)} Price: ${this.currentPrice.toFixed(2)}`));
-        // Put contracts row
-        let putRow = 'PUT   │ ';
-        for (let col = 0; col < visibleColumns; col++) {
-            const [, put] = contracts[startCol + col] || [null, null];
-            if (put) {
-                putRow += this.formatSpreadCell(put);
-            }
-            else {
-                putRow += '  ---  ';
-            }
-        }
-        console.log(putRow);
+        return dim(` ${content.padEnd(4)}`) + ' ';
     }
     formatSpreadCell(contract) {
         const multiplier = contract.returnMultiplier.toFixed(1);
@@ -287,75 +255,52 @@ class ClearingHouseDemo {
         if (volume > 0) {
             return color(` ${content.padEnd(5)}`, cellColor) + ' ';
         }
-        else {
-            return dim(` ${content.padEnd(5)}`) + ' ';
-        }
+        return dim(` ${content.padEnd(5)}`) + ' ';
     }
     async run() {
         console.log(green(bold('Starting Clearinghouse Demo...')));
         console.log(hideCursor);
-        // Start price feed
         this.service.startPriceFeed();
-        // Initial display
         this.updateDisplay();
-        // Simulate some trading activity
         this.simulateTrading();
-        // Handle graceful shutdown
-        process.on('SIGINT', () => {
-            this.shutdown();
-        });
-        // Keep the process running
+        process.on('SIGINT', () => this.shutdown());
         await new Promise(() => { });
     }
-    async simulateTrading() {
-        // Simulate random trades every few seconds
+    simulateTrading() {
         setInterval(() => {
             const users = Array.from(this.userBalances.keys());
             const user = users[Math.floor(Math.random() * users.length)];
             const balance = this.userBalances.get(user) || 0;
             if (balance < 10)
-                return; // Skip if low balance
-            // Randomly choose contract type
-            const contractType = Math.random() > 0.5 ? 'ironCondor' : 'spread';
-            if (contractType === 'ironCondor') {
+                return;
+            if (Math.random() > 0.5) {
                 const timeframes = (0, types_1.getAllTimeframes)();
                 const timeframe = timeframes[Math.floor(Math.random() * timeframes.length)];
                 const contracts = this.service.getActiveIronCondorContracts(timeframe);
-                if (contracts.length > 0) {
-                    const contract = contracts[Math.floor(Math.random() * contracts.length)];
-                    const amount = Math.min(10 + Math.floor(Math.random() * 40), balance);
-                    try {
-                        const success = this.service.placeIronCondorPosition(user, contract.id, amount, timeframe);
-                        if (success) {
-                            console.log(blue(`\n→ ${user} placed $${amount} on Iron Condor ${contract.returnMultiplier}x`));
-                        }
-                    }
-                    catch (error) {
-                        // Position failed, ignore
-                    }
+                if (!contracts.length)
+                    return;
+                const contract = contracts[Math.floor(Math.random() * contracts.length)];
+                const amount = Math.min(10 + Math.floor(Math.random() * 40), balance);
+                const success = this.service.placeIronCondorPosition(user, contract.id, amount, timeframe);
+                if (success) {
+                    console.log(blue(`\n→ ${user} placed $${amount} on Iron Condor ${contract.returnMultiplier}x (${timeframe}ms)`));
                 }
             }
             else {
-                const timeframes = [types_1.TimeFrame.TWO_SECONDS, types_1.TimeFrame.TEN_SECONDS];
-                const timeframe = timeframes[Math.floor(Math.random() * timeframes.length)];
+                const timeframeOptions = [types_1.TimeFrame.TWO_SECONDS, types_1.TimeFrame.TEN_SECONDS];
+                const timeframe = timeframeOptions[Math.floor(Math.random() * timeframeOptions.length)];
                 const contracts = this.service.getActiveSpreadContracts(timeframe);
-                if (contracts.length > 0) {
-                    const contract = contracts[Math.floor(Math.random() * contracts.length)];
-                    const amount = Math.min(10 + Math.floor(Math.random() * 40), balance);
-                    try {
-                        const result = this.service.placeSpreadPosition(user, contract.id, amount, timeframe);
-                        if (result.success) {
-                            console.log(blue(`\n→ ${user} placed $${amount} on ${contract.spreadType} Spread ${contract.returnMultiplier}x`));
-                        }
-                    }
-                    catch (error) {
-                        // Position failed, ignore
-                    }
+                if (!contracts.length)
+                    return;
+                const contract = contracts[Math.floor(Math.random() * contracts.length)];
+                const amount = Math.min(10 + Math.floor(Math.random() * 40), balance);
+                const result = this.service.placeSpreadPosition(user, contract.id, amount, timeframe);
+                if (result.success) {
+                    console.log(blue(`\n→ ${user} placed $${amount} on ${contract.spreadType} Spread ${contract.returnMultiplier}x (${timeframe}ms)`));
                 }
             }
-        }, 3000); // Every 3 seconds
+        }, 3000);
     }
 }
-// Run the demo
 const demo = new ClearingHouseDemo();
 demo.run().catch(console.error);

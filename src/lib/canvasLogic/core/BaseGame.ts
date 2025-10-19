@@ -67,18 +67,9 @@ export abstract class BaseGame extends EventEmitter {
 
     this.ctx = ctx;
     
-    console.log('Appending canvas to container:', {
-      container: this.container,
-      canvas: this.canvas,
-      containerChildren: this.container.children.length
-    });
-    
     try {
       this.container.appendChild(this.canvas);
-      console.log('Canvas appended successfully, container now has', this.container.children.length, 'children');
-      console.log('Canvas parent:', this.canvas.parentElement);
-      console.log('Canvas in DOM:', document.body.contains(this.canvas));
-      
+
       // Add mutation observer to track if canvas gets removed
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
@@ -102,28 +93,6 @@ export abstract class BaseGame extends EventEmitter {
 
     this.setupCanvas();
     this.setupEventListeners();
-    
-    // Check canvas visibility immediately and after a frame
-    console.log('Canvas initial visibility:', {
-      display: this.canvas.style.display,
-      visibility: this.canvas.style.visibility,
-      opacity: this.canvas.style.opacity,
-      width: this.canvas.style.width,
-      height: this.canvas.style.height,
-      offsetWidth: this.canvas.offsetWidth,
-      offsetHeight: this.canvas.offsetHeight
-    });
-    
-    requestAnimationFrame(() => {
-      console.log('Canvas visibility after frame:', {
-        inDOM: document.body.contains(this.canvas),
-        parent: this.canvas.parentElement,
-        display: this.canvas.style.display,
-        offsetWidth: this.canvas.offsetWidth,
-        offsetHeight: this.canvas.offsetHeight,
-        containerChildren: this.container.children.length
-      });
-    });
   }
 
   protected setupCanvas(): void {

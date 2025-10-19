@@ -162,18 +162,13 @@ export default function PositionsTable({ selectedCount, selectedMultipliers, bet
           const existingMultipliers = new Set(prev.map(p => p.multiplier));
           const filteredNewPositions = newPositions.filter(pos => !existingMultipliers.has(pos.multiplier));
           
-          console.log('Adding new positions:', filteredNewPositions.length, 'Total positions:', prev.length + filteredNewPositions.length);
           return [...prev, ...filteredNewPositions];
         });
       }
       
       // Remove positions for deselected boxes
       const selectedMultipliersSet = new Set(stableSelectedMultipliers);
-      setActivePositions(prev => {
-        const filtered = prev.filter(pos => selectedMultipliersSet.has(pos.multiplier));
-        console.log('Filtering positions:', prev.length, '->', filtered.length, 'Removed:', prev.length - filtered.length);
-        return filtered;
-      });
+      setActivePositions(prev => prev.filter(pos => selectedMultipliersSet.has(pos.multiplier)));
       
     } else if (stableSelectedCount === 0) {
       // Clear all active positions when no boxes are selected

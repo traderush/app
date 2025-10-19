@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 interface SettingsPopupProps {
@@ -9,16 +9,7 @@ interface SettingsPopupProps {
 }
 
 export default function SettingsPopup({ isOpen, onClose, triggerRef }: SettingsPopupProps) {
-  const [isAnimating, setIsAnimating] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-    } else {
-      setIsAnimating(false);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

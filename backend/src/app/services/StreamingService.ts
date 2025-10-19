@@ -8,7 +8,6 @@ import {
   GameMode,
   GameContract,
   BoxHitContract,
-  TowersContract,
   PriceUpdatePayload,
   ContractUpdatePayload,
   BalanceUpdatePayload,
@@ -280,19 +279,6 @@ export class StreamingService {
         startTime: c.exerciseWindow.start,
         endTime: c.exerciseWindow.end,
       } as BoxHitContract));
-    } else if (gameMode === GameMode.TOWERS) {
-      // Transform Spread contracts
-      transformedContracts = newContracts.map(c => ({
-        contractId: c.id,
-        returnMultiplier: c.returnMultiplier,
-        isActive: c.status === 'active',
-        totalVolume: c.totalVolume,
-        playerCount: c.positions.size,
-        strikePrice: c.strikePrice,
-        type: c.spreadType,
-        startTime: c.exerciseWindow.start,
-        endTime: c.exerciseWindow.end,
-      } as TowersContract));
     }
 
     const payload: ContractUpdatePayload = {

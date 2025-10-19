@@ -6,22 +6,13 @@ export { usePriceStore } from './priceStore';
 export { useConnectionStore } from './connectionStore';
 export { useUserStore } from './userStore';
 
-// Hook exports from hooks.ts
-export { 
-  useWebSocketHandler,
-  useGameSession,
-  useConnectionStatus,
-  usePriceData,
-  useModalManager,
-  useSignatureColor
-} from './hooks';
-
 // Store types
 export type { GameCell, GamePosition, GameSettings, GameStats } from './gameStore';
 export type { WatchedPlayer, PlayerStats, PlayerPreferences } from './playerStore';
-export type { ModalState, ToastNotification, UITheme, UILayout, UISettings } from './uiStore';
+export type { ModalState, ToastNotification, UITheme, UILayout, UISettings, PnLCustomization } from './uiStore';
 export type { PricePoint, PriceDataConfig, WebSocketConnection, PriceStats } from './priceStore';
-export type { ConnectionStatus, WebSocketMessage } from './connectionStore';
+export type { ConnectionStatus } from './connectionStore';
+export type { WebSocketMessage } from '@/types/websocket';
 export type { Trade, UserProfile, UserStats } from './userStore';
 
 // Store utilities
@@ -31,6 +22,10 @@ import { useUIStore } from './uiStore';
 import { usePriceStore } from './priceStore';
 import { useConnectionStore } from './connectionStore';
 import { useUserStore } from './userStore';
+import type { GameSettings, GameStats } from './gameStore';
+import type { WatchedPlayer, PlayerPreferences } from './playerStore';
+import type { UITheme, UILayout, UISettings, PnLCustomization } from './uiStore';
+import type { PriceDataConfig } from './priceStore';
 
 /**
  * Hook to get all store states for debugging or global state access
@@ -77,6 +72,31 @@ export const useResetAllStores = () => {
 /**
  * Store persistence utilities
  */
+type PersistedStoresSnapshot = {
+  game?: {
+    gameSettings?: Partial<GameSettings>;
+    gameStats?: Partial<GameStats>;
+  };
+  player?: {
+    watchedPlayers?: WatchedPlayer[];
+    preferences?: Partial<PlayerPreferences>;
+  };
+  ui?: {
+    theme?: Partial<UITheme>;
+    layout?: Partial<UILayout>;
+    settings?: Partial<UISettings>;
+    signatureColor?: string;
+    pnLCustomization?: Partial<PnLCustomization>;
+    favoriteAssets?: Array<'BTC' | 'ETH' | 'SOL' | 'DEMO'>;
+  };
+  price?: {
+    config?: Partial<PriceDataConfig>;
+  };
+};
+
+const isPersistedStoresSnapshot = (value: unknown): value is PersistedStoresSnapshot =>
+  typeof value === 'object' && value !== null;
+
 export const storeUtils = {
   /**
    * Export all store data to JSON
@@ -100,6 +120,9 @@ export const storeUtils = {
         theme: uiData.theme,
         layout: uiData.layout,
         settings: uiData.settings,
+        signatureColor: uiData.signatureColor,
+        pnLCustomization: uiData.pnLCustomization,
+        favoriteAssets: Array.from(uiData.favoriteAssets),
       },
       price: {
         config: priceData.config,
@@ -111,25 +134,43 @@ export const storeUtils = {
   /**
    * Import store data from JSON
    */
-  importStores: (data: unknown) => {
-    if (data.game) {
-      useGameStore.getState().updateGameSettings(data.game.gameSettings || {});
-      useGameStore.getState().updateGameStats(data.game.gameStats || {});
+  importStores: (snapshot: unknown) => {
+    if (!isPersistedStoresSnapshot(snapshot)) {
+      return;
     }
 
-    if (data.player) {
-      usePlayerStore.getState().setWatchedPlayers(data.player.watchedPlayers || []);
-      usePlayerStore.getState().updatePreferences(data.player.preferences || {});
+    if (snapshot.game) {
+      useGameStore.getState().updateGameSettings(snapshot.game.gameSettings || {});
+      useGameStore.getState().updateGameStats(snapshot.game.gameStats || {});
     }
 
-    if (data.ui) {
-      useUIStore.getState().updateTheme(data.ui.theme || {});
-      useUIStore.getState().updateLayout(data.ui.layout || {});
-      useUIStore.getState().updateSettings(data.ui.settings || {});
+    if (snapshot.player) {
+      usePlayerStore.getState().setWatchedPlayers(snapshot.player.watchedPlayers || []);
+      usePlayerStore.getState().updatePreferences(snapshot.player.preferences || {});
     }
 
-    if (data.price) {
-      usePriceStore.getState().updateConfig(data.price.config || {});
+    if (snapshot.ui) {
+      useUIStore.getState().updateTheme(snapshot.ui.theme || {});
+      useUIStore.getState().updateLayout(snapshot.ui.layout || {});
+      useUIStore.getState().updateSettings(snapshot.ui.settings || {});
+
+      if (Array.isArray(snapshot.ui.favoriteAssets)) {
+        useUIStore.getState().setFavoriteAssets(snapshot.ui.favoriteAssets);
+      }
+
+      if (snapshot.ui.signatureColor) {
+        useUIStore.getState().setSignatureColor(snapshot.ui.signatureColor);
+      }
+
+      if (snapshot.ui.pnLCustomization) {
+        useUIStore
+          .getState()
+          .updatePnLCustomization(snapshot.ui.pnLCustomization);
+      }
+    }
+
+    if (snapshot.price) {
+      usePriceStore.getState().updateConfig(snapshot.price.config || {});
     }
   },
 
@@ -146,16 +187,20 @@ export const storeUtils = {
 /**
  * Store subscription utilities for debugging
  */
+type StoreKey = 'game' | 'player' | 'ui' | 'price';
+
 export const storeDebug = {
   /**
    * Subscribe to all store changes for debugging
    */
-  subscribeToAll: (callback: (state: unknown, prevState: unknown, action: string) => void) => {
+  subscribeToAll: (
+    callback: (state: unknown, prevState: unknown, store: StoreKey) => void
+  ) => {
     const unsubscribeFunctions = [
-      useGameStore.subscribe(callback),
-      usePlayerStore.subscribe(callback),
-      useUIStore.subscribe(callback),
-      usePriceStore.subscribe(callback),
+      useGameStore.subscribe((state, prevState) => callback(state, prevState, 'game')),
+      usePlayerStore.subscribe((state, prevState) => callback(state, prevState, 'player')),
+      useUIStore.subscribe((state, prevState) => callback(state, prevState, 'ui')),
+      usePriceStore.subscribe((state, prevState) => callback(state, prevState, 'price')),
     ];
 
     return () => {
@@ -180,9 +225,9 @@ export const storeDebug = {
    */
   enableLogging: () => {
     if (process.env.NODE_ENV === 'development') {
-      return storeDebug.subscribeToAll((state, prevState, action) => {
+      return storeDebug.subscribeToAll((state, prevState, store) => {
         console.log('Store Update:', {
-          action,
+          store,
           state,
           prevState,
           timestamp: new Date().toISOString(),
