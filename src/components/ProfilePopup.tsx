@@ -1,25 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import { useEffect, useRef } from 'react';
 import { X, User, Settings, LogOut, Shield, CreditCard, Bell } from 'lucide-react';
 
 interface ProfilePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLElement | null>;
 }
 
-export default function ProfilePopup({ isOpen, onClose, triggerRef }: ProfilePopupProps) {
-  const [isAnimating, setIsAnimating] = useState(false);
+export default function ProfilePopup({ isOpen, onClose }: ProfilePopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-    } else {
-      setIsAnimating(false);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -37,14 +28,14 @@ export default function ProfilePopup({ isOpen, onClose, triggerRef }: ProfilePop
     };
   }, [isOpen, onClose]);
 
-
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div
       ref={popupRef}
-      className={`fixed inset-0 z-[1001] flex items-center justify-center transition-all duration-300 ease-out ${
-        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}
+      className="fixed inset-0 z-[1001] flex items-center justify-center transition-all duration-300 ease-out"
     >
       {/* Overlay */}
       <div 
@@ -53,9 +44,7 @@ export default function ProfilePopup({ isOpen, onClose, triggerRef }: ProfilePop
       />
       
       {/* Modal */}
-      <div className={`relative w-96 border border-zinc-800 rounded shadow-2xl transition-all duration-300 ease-out ${
-        isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-      }`} style={{ backgroundColor: '#0E0E0E' }}>
+      <div className="relative w-96 border border-zinc-800 rounded shadow-2xl transition-all duration-300 ease-out opacity-100 scale-100" style={{ backgroundColor: '#0E0E0E' }}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-zinc-800">
           <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Profile</h2>
@@ -71,9 +60,11 @@ export default function ProfilePopup({ isOpen, onClose, triggerRef }: ProfilePop
         <div className="p-4 space-y-4">
           {/* Profile Info */}
           <div className="flex items-center gap-3">
-            <img 
-              src="https://i.imgflip.com/2/1vq853.jpg" 
-              alt="Profile" 
+            <Image
+              src="https://i.imgflip.com/2/1vq853.jpg"
+              alt="Profile"
+              width={48}
+              height={48}
               className="w-12 h-12 rounded object-cover"
             />
             <div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 interface CustomSliderProps {
   min: number;
@@ -27,22 +27,7 @@ const CustomSlider = React.memo(function CustomSlider({
   // Calculate percentage position
   const percentage = ((value - min) / (max - min)) * 100;
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    updateValue(e);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging) {
-      updateValue(e);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const updateValue = (e: MouseEvent | React.MouseEvent) => {
+  const updateValue = useCallback((e: MouseEvent | React.MouseEvent) => {
     if (!sliderRef.current) return;
 
     const rect = sliderRef.current.getBoundingClientRect();
@@ -53,18 +38,34 @@ const CustomSlider = React.memo(function CustomSlider({
     const clampedValue = Math.max(min, Math.min(max, steppedValue));
     
     onChange(clampedValue);
+  }, [max, min, onChange, step]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    updateValue(e);
   };
 
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
+    if (!isDragging) {
+      return;
     }
-  }, [isDragging]);
+
+    const handleMouseMove = (event: MouseEvent) => {
+      updateValue(event);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, updateValue]);
 
   return (
     <div className={`relative w-full ${className}`} style={{ height: '24px', padding: '8px 0' }}>

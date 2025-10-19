@@ -1,0 +1,17 @@
+{
+  "name": "clearinghouse",
+  "private": true,
+  "type": "module",
+  "module": "src/index.ts",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "test": "bun test",
+    "visualizer": "bun run src/devtools/orderbook-visualizer.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

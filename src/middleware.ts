@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function middleware(_request: NextRequest) {
   const isDev = process.env.NODE_ENV === 'development';
   
   const response = NextResponse.next();
@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https: blob:",
         "font-src 'self' data: https://fonts.gstatic.com",
-        "connect-src 'self' https: wss: ws: https://*.binance.com wss://*.binance.com",
+        "connect-src 'self' http://localhost:8080 https: wss: ws: https://*.binance.com wss://*.binance.com",
         "media-src 'self' data: blob:",
         "worker-src 'self' blob:",
       ].join('; ')
@@ -32,7 +32,7 @@ export function middleware(request: NextRequest) {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https: blob:",
         "font-src 'self' data: https://fonts.gstatic.com",
-        "connect-src 'self' https: wss: ws://localhost:8080 https://*.binance.com wss://*.binance.com",
+        "connect-src 'self' http://localhost:8080 https: wss: ws://localhost:8080 https://*.binance.com wss://*.binance.com",
         "media-src 'self' data: blob:",
         "object-src 'none'",
         "base-uri 'self'",
@@ -49,4 +49,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: '/:path*',
 };
-

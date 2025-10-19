@@ -201,23 +201,25 @@ export async function handleGetGameConfig(
     const timeframe = (message.payload as any)?.timeframe || 2000;
 
     // Get configuration based on game mode and timeframe
+    const timeframeConfig = getTimeframeConfig(timeframe);
+    const ironCondorConfig =
+      CLEARING_HOUSE_CONFIG.ironCondor.timeframes[timeframe as TimeFrame];
+    const spreadConfig =
+      CLEARING_HOUSE_CONFIG.spreads.timeframes[timeframe as TimeFrame];
+
     const config = {
-      priceStep: getTimeframeConfig(timeframe).boxHeight,
-      timeStep: timeframe, // Use the actual timeframe
+      priceStep: timeframeConfig.boxHeight,
+      timeStep: timeframe,
       numRows:
         gameMode === GameMode.BOX_HIT
-          ? CLEARING_HOUSE_CONFIG.ironCondor.timeframes[timeframe as TimeFrame]
-              .rowsAbove +
-            CLEARING_HOUSE_CONFIG.ironCondor.timeframes[timeframe as TimeFrame]
-              .rowsBelow +
+          ? (ironCondorConfig?.rowsAbove ?? 10) +
+            (ironCondorConfig?.rowsBelow ?? 10) +
             1
-          : 20, // Default for towers
+          : 20,
       numColumns:
         gameMode === GameMode.BOX_HIT
-          ? CLEARING_HOUSE_CONFIG.ironCondor.timeframes[timeframe as TimeFrame]
-              .numColumns
-          : CLEARING_HOUSE_CONFIG.spreads.timeframes[timeframe as TimeFrame]
-              .numColumns,
+          ? ironCondorConfig?.numColumns ?? 20
+          : spreadConfig?.numColumns ?? 20,
       basePrice: CLEARING_HOUSE_CONFIG.constants.initialPrice,
     };
 

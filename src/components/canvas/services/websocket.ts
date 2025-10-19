@@ -14,6 +14,12 @@ export interface WebSocketConfig {
   reconnectDelay?: number;
 }
 
+const debugLog = (...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.debug(...args);
+  }
+};
+
 class WebSocketService {
   private ws: WebSocket | null = null;
   private messageHandlers = new Map<string, Set<MessageHandler>>();
@@ -50,13 +56,13 @@ class WebSocketService {
       }, 5000); // 5 second timeout
 
       try {
-        console.log('Attempting to connect to WebSocket:', this.config.url);
-        console.log('WebSocket constructor called at:', new Date().toISOString());
+        debugLog('Attempting to connect to WebSocket:', this.config.url);
+        debugLog('WebSocket constructor called at:', new Date().toISOString());
         this.ws = new WebSocket(this.config.url);
-        console.log('WebSocket object created, readyState:', this.ws.readyState);
+        debugLog('WebSocket object created, readyState:', this.ws.readyState);
         
         this.ws.onopen = () => {
-          console.log('🔍 WebSocket connected successfully to:', this.config.url);
+          debugLog('🔍 WebSocket connected successfully to:', this.config.url);
           clearTimeout(timeoutId); // Clear the timeout
           this.reconnectAttempts = 0;
           
@@ -117,13 +123,13 @@ class WebSocketService {
         };
         
         this.ws.onclose = (event) => {
-          console.log('WebSocket disconnected', {
+          debugLog('WebSocket disconnected', {
             code: event.code,
             reason: event.reason,
             wasClean: event.wasClean,
             timestamp: new Date().toISOString()
           });
-          console.log('WebSocket close codes:', {
+          debugLog('WebSocket close codes:', {
             NORMAL_CLOSURE: 1000,
             GOING_AWAY: 1001,
             PROTOCOL_ERROR: 1002,
@@ -150,7 +156,7 @@ class WebSocketService {
           // Attempt reconnection
           if (this.reconnectAttempts < this.config.reconnectAttempts) {
             setTimeout(() => {
-              console.log(`Reconnecting... (attempt ${this.reconnectAttempts + 1})`);
+              debugLog(`Reconnecting... (attempt ${this.reconnectAttempts + 1})`);
               this.reconnect(username);
             }, this.config.reconnectDelay * Math.pow(2, this.reconnectAttempts));
             this.reconnectAttempts++;

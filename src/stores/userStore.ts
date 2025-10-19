@@ -89,9 +89,15 @@ const initialStats: UserStats = {
   currentStreak: 0,
 };
 
+type PersistedUserState = Pick<
+  UserState,
+  'user' | 'isAuthenticated' | 'balance' | 'balanceHistory' | 'tradeHistory' | 'stats'
+>;
+
 export const useUserStore = create<UserState>()(
-  persist(
-    subscribeWithSelector((set, get) => ({
+  subscribeWithSelector(
+    persist<UserState, [], [], PersistedUserState>(
+      (set, get) => ({
       // Initial State
       user: null,
       isAuthenticated: false,
@@ -160,23 +166,19 @@ export const useUserStore = create<UserState>()(
       
       // Trade Actions
       addTrade: (tradeData) =>
-        set((state) => {
-          const newTrade: Trade = {
-            ...tradeData,
-            id: tradeData.id || tradeData.contractId || `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            result: 'pending',
-          };
-          
-          console.log('➕ userStore.addTrade called:', {
-            tradeData,
-            newTrade,
-            activeTradesCount: state.activeTrades.length
-          });
-          
-          return {
-            activeTrades: [...state.activeTrades, newTrade],
-          };
-        }),
+        set((state) => ({
+          activeTrades: [
+            ...state.activeTrades,
+            {
+              ...tradeData,
+              id:
+                tradeData.id ||
+                tradeData.contractId ||
+                `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              result: 'pending',
+            },
+          ],
+        })),
       
       updateTrade: (tradeId, updates) =>
         set((state) => ({
@@ -195,9 +197,6 @@ export const useUserStore = create<UserState>()(
       
       settleTrade: (tradeId, result, payout = 0) =>
         set((state) => {
-          console.log('🔄 userStore.settleTrade called:', { tradeId, result, payout });
-          console.log('📋 Current activeTrades:', state.activeTrades.map(t => ({ id: t.id, contractId: t.contractId, amount: t.amount, result: t.result })));
-          
           const trade = state.activeTrades.find((t) => t.id === tradeId);
           if (!trade) {
             console.warn('⚠️ Trade not found in activeTrades:', tradeId);
@@ -230,24 +229,6 @@ export const useUserStore = create<UserState>()(
             if (t.result === 'loss') return sum - t.amount;
             return sum;
           }, 0);
-          
-          console.log('📊 userStore.settleTrade - Profit calculation:', {
-            settledTradesCount: settledTrades.length,
-            tradeBreakdown: settledTrades.map(t => ({
-              id: t.id,
-              result: t.result,
-              amount: t.amount,
-              payout: t.payout,
-              profit: t.result === 'win' ? (t.payout || 0) - t.amount : -t.amount
-            })),
-            totalProfit,
-            calculationBreakdown: settledTrades.map(t => {
-              if (t.result === 'win' && t.payout) return `${t.payout} - ${t.amount} = ${t.payout - t.amount}`;
-              if (t.result === 'loss') return `-${t.amount}`;
-              return '0';
-            })
-          });
-          
           // Calculate best streak
           let currentStreak = 0;
           let bestStreak = 0;
@@ -380,19 +361,20 @@ export const useUserStore = create<UserState>()(
           activeTrades: [],
           tradeHistory: [],
           stats: initialStats,
-        }),
-    })),
-    {
-      name: 'user-store',
-      storage: createPersistentStorage('user'),
-      partialize: (state) => ({
-        user: state.user,
-        balance: state.balance,
-        balanceHistory: state.balanceHistory,
-        tradeHistory: state.tradeHistory.slice(0, 100), // Only persist last 100 trades
-        stats: state.stats,
+        })
       }),
-    }
+      {
+        name: 'user-store',
+        storage: createPersistentStorage<PersistedUserState>('user'),
+        partialize: (state) => ({
+          user: state.user,
+          isAuthenticated: state.isAuthenticated,
+          balance: state.balance,
+          balanceHistory: state.balanceHistory,
+          tradeHistory: state.tradeHistory.slice(0, 100),
+          stats: state.stats,
+        }),
+      }
+    )
   )
 );
-

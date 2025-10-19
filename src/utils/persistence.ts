@@ -1,39 +1,32 @@
-import { StateStorage } from 'zustand/middleware';
+import { createJSONStorage, type PersistStorage, type StateStorage } from 'zustand/middleware';
 
 /**
  * Custom localStorage implementation for Zustand persistence
  * Handles serialization/deserialization and error handling
  */
-export const createPersistentStorage = (name: string): StateStorage => ({
-  getItem: (key: string): string | null => {
-    try {
-      if (typeof window === 'undefined') return null;
-      const value = localStorage.getItem(`${name}_${key}`);
-      return value;
-    } catch (error) {
-      console.warn(`Failed to get item from localStorage: ${key}`, error);
-      return null;
-    }
-  },
-  
-  setItem: (key: string, value: string): void => {
-    try {
-      if (typeof window === 'undefined') return;
-      localStorage.setItem(`${name}_${key}`, value);
-    } catch (error) {
-      console.warn(`Failed to set item in localStorage: ${key}`, error);
-    }
-  },
-  
-  removeItem: (key: string): void => {
-    try {
-      if (typeof window === 'undefined') return;
-      localStorage.removeItem(`${name}_${key}`);
-    } catch (error) {
-      console.warn(`Failed to remove item from localStorage: ${key}`, error);
-    }
-  },
-});
+const createNamespacedStateStorage = (name: string): StateStorage => {
+  if (typeof window === 'undefined') {
+    return {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+  }
+
+  return {
+    getItem: (key) => window.localStorage.getItem(`${name}_${key}`),
+    setItem: (key, value) => window.localStorage.setItem(`${name}_${key}`, value),
+    removeItem: (key) => window.localStorage.removeItem(`${name}_${key}`),
+  };
+};
+
+export const createPersistentStorage = <T>(name: string): PersistStorage<T> => {
+  const storage = createJSONStorage<T>(() => createNamespacedStateStorage(name));
+  if (!storage) {
+    throw new Error('Failed to create JSON storage');
+  }
+  return storage;
+};
 
 /**
  * Custom sessionStorage implementation for temporary data

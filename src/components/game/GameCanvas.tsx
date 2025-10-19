@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useGameIntegration } from '@/hooks/useGameIntegration';
-import { useUIStore, useSignatureColor } from '@/stores';
+import { useUIStore } from '@/stores';
 
 interface GameCanvasProps {
   rows?: number;
@@ -34,8 +34,8 @@ export function GameCanvas({
   zoomLevel = 1.0,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { signatureColor: contextColor } = useSignatureColor();
-  const effectiveSignatureColor = signatureColor || contextColor;
+  const storeSignatureColor = useUIStore((state) => state.signatureColor);
+  const effectiveSignatureColor = signatureColor || storeSignatureColor;
 
   // Use our Zustand-integrated hook
   const {

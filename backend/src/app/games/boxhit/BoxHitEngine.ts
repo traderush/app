@@ -5,6 +5,7 @@
 import { EventEmitter } from 'events';
 import { clearingHouseAPI } from '../../../clearingHouse';
 import { TimeFrame } from '../../../clearingHouse/types';
+import { FillOrderPayload } from '../../../clearingHouse/core/types';
 import {
   BoxHitContract,
   BoxHitGameState,
@@ -69,10 +70,9 @@ export class BoxHitEngine extends EventEmitter implements IGameEngine {
     });
 
     // Get contract from clearing house
-    const chContracts =
-      clearingHouseAPI.clearingHouse.getActiveIronCondorContracts(
-        this.timeframe
-      );
+    const chContracts = clearingHouseAPI.getActiveIronCondorContracts(
+      this.timeframe
+    );
 
     const chContract = chContracts.find((c) => c.id === contractId);
     if (!chContract) {
@@ -81,6 +81,14 @@ export class BoxHitEngine extends EventEmitter implements IGameEngine {
         availableContracts: chContracts
           .slice(0, 5)
           .map((c) => ({ id: c.id, status: c.status })),
+      });
+      return false;
+    }
+
+    if (chContract.columnIndex !== 0) {
+      logger.warn('Attempted to place bet on non-current column', {
+        contractId,
+        columnIndex: chContract.columnIndex,
       });
       return false;
     }
@@ -100,37 +108,44 @@ export class BoxHitEngine extends EventEmitter implements IGameEngine {
     }
 
     // Place bet in clearing house
-    const success = clearingHouseAPI.clearingHouse.placeIronCondorPosition(
+    const payload: FillOrderPayload = {
+      orderId: chContract.orderId,
       userId,
-      contractId,
-      amount,
-      this.timeframe
-    );
+      size: amount,
+      priceAtFill: clearingHouseAPI.clearingHouse.getCurrentPrice(
+        chContract.orderbookId
+      ),
+      timestamp: Date.now(),
+    };
 
-    if (success) {
-      // Emit bet placed event
+    try {
+      clearingHouseAPI.fillOrder(payload);
       this.emit('betPlaced', {
         userId,
         contractId,
         amount,
       });
+      return true;
+    } catch (error) {
+      logger.warn('Failed to place bet', { error });
+      return false;
     }
-
-    return success;
   }
 
   getActiveContracts(): GameContract[] {
     // Get fresh contracts directly from clearing house
-    const contracts =
-      clearingHouseAPI.clearingHouse.getActiveIronCondorContracts(
-        this.timeframe
-      );
+    const contracts = clearingHouseAPI.getActiveIronCondorContracts(
+      this.timeframe
+    );
 
     // Transform clearing house contracts to game contracts
     const gameContracts: GameContract[] = [];
 
     for (const chContract of contracts) {
-      // Include all active contracts
+      if (chContract.columnIndex !== 0) {
+        continue;
+      }
+
       const boxHitContract: BoxHitContract = {
         contractId: chContract.id,
         returnMultiplier: chContract.returnMultiplier,
@@ -169,10 +184,9 @@ export class BoxHitEngine extends EventEmitter implements IGameEngine {
     }
 
     // Get active contracts from clearing house
-    const chContracts =
-      clearingHouseAPI.clearingHouse.getActiveIronCondorContracts(
-        this.timeframe
-      );
+    const chContracts = clearingHouseAPI.getActiveIronCondorContracts(
+      this.timeframe
+    );
 
     // Check if price hits any contracts
     for (const chContract of chContracts) {

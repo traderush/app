@@ -1,15 +1,15 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { X, Menu, Copy, Info, ArrowDown, Check } from 'lucide-react';
+import { X, Copy, Info, ArrowDown, Check } from 'lucide-react';
 
 interface DepositPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLElement | null>;
 }
 
-export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPopupProps) {
+export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -119,11 +119,15 @@ export default function DepositPopup({ isOpen, onClose, triggerRef }: DepositPop
               <div className="flex items-center justify-between">
                 <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Token</span>
                 <button className="flex items-center gap-2 px-2 py-1 rounded border border-zinc-600 bg-zinc-800/50 hover:bg-zinc-700/50 hover:border-zinc-500 transition-colors">
-                  <img 
-                    src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png" 
-                    alt="SOL" 
-                    className="w-4 h-4"
-                  />
+                  <span className="relative w-4 h-4">
+                    <Image
+                      src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png"
+                      alt="SOL"
+                      fill
+                      className="object-contain"
+                      sizes="16px"
+                    />
+                  </span>
                   <span className="text-xs text-white">SOL</span>
                 </button>
               </div>

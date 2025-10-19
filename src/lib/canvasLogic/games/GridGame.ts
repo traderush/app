@@ -90,6 +90,11 @@ export class GridGame extends BaseGame {
   
   // Debug logging throttle
   private lastDebugLog: number = 0;
+  private debug(...args: unknown[]) {
+    if (this.config.debugMode || process.env.NODE_ENV === 'development') {
+      console.debug(...args);
+    }
+  }
 
   protected smoothLineEndX: number = 0;
   protected smoothLineEndY: number = 0;
@@ -338,7 +343,7 @@ export class GridGame extends BaseGame {
               progress: 0,
             });
             // Play selection sound
-            console.log('🔊 About to play selection sound for box:', clickedSquareId);
+            this.debug('🔊 About to play selection sound for box:', clickedSquareId);
             playSelectionSound();
             this.emit('squareSelected', { squareId: clickedSquareId });
           } else if (!this.selectedSquareIds.has(clickedSquareId)) {
@@ -837,7 +842,7 @@ export class GridGame extends BaseGame {
 
     const now = Date.now();
     if (now - this.lastDebugLog > 2000) {
-      console.log('🔍 GridGame: Heatmap rendering', {
+      this.debug('🔍 GridGame: Heatmap rendering', {
         backendBoxes: Object.keys(this.backendMultipliers).length,
         emptyBoxes: Object.keys(this.emptyBoxes).length,
         totalBoxes: Object.keys(allBoxes).length,
@@ -939,7 +944,7 @@ export class GridGame extends BaseGame {
     });
 
     if (now - this.lastDebugLog > 2000) {
-      console.log('🔍 GridGame: Heatmap rendering complete', {
+      this.debug('🔍 GridGame: Heatmap rendering complete', {
         rendered: renderedCount,
         skipped: {
           visibility: skippedVisibility,
@@ -1682,7 +1687,7 @@ export class GridGame extends BaseGame {
   ): void {
     const now = Date.now();
     if (now - this.lastDebugLog > 2000) {
-      console.log('🔍 GridGame: updateMultipliers called', {
+      this.debug('🔍 GridGame: updateMultipliers called', {
         newMultiplierCount: Object.keys(multipliers).length,
         existingBoxCount: Object.keys(this.backendMultipliers).length,
       });
@@ -1786,7 +1791,7 @@ export class GridGame extends BaseGame {
       // Log cleanup for debugging
       const now = Date.now();
       if (now - this.lastDebugLog > 5000) {
-        console.log('🧹 Backend cleanup:', {
+        this.debug('🧹 Backend cleanup:', {
           totalBefore: boxCount,
           keptBoxes: boxesToKeep.length,
           removedBoxes: boxesToRemove.length,
@@ -2032,9 +2037,9 @@ export class GridGame extends BaseGame {
    * @param newConfig - Partial configuration to merge with existing config
    */
   public updateConfig(newConfig: Partial<GridGameConfig>): void {
-    console.log('🎯 GridGame: updateConfig called with:', newConfig);
+    this.debug('🎯 GridGame: updateConfig called with:', newConfig);
     this.config = { ...this.config, ...newConfig };
-    console.log('🎯 GridGame: Updated config showOtherPlayers:', this.config.showOtherPlayers);
+    this.debug('🎯 GridGame: Updated config showOtherPlayers:', this.config.showOtherPlayers);
   }
 
   public setOtherPlayerData(
@@ -2318,7 +2323,7 @@ export class GridGame extends BaseGame {
     // Log cleanup periodically for debugging
     const now = Date.now();
     if (removedCount > 0 && now - this.lastDebugLog > 5000) {
-      console.log('🧹 Cleaned up old empty boxes:', {
+      this.debug('🧹 Cleaned up old empty boxes:', {
         removed: removedCount,
         remaining: Object.keys(this.emptyBoxes).length,
         nowLineX: currentWorldX.toFixed(0),

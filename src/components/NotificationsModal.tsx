@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { MOCK_NOTIFICATIONS } from '@/components/constants/notifications';
 
 interface NotificationsPopupProps {
   isOpen: boolean;
@@ -94,10 +95,7 @@ export default function NotificationsPopup({ isOpen, onClose, triggerRef }: Noti
           <div className="flex items-center gap-2">
             <button
               className="text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:opacity-90 active:opacity-80 transition-colors"
-              onClick={() => {
-                // Demo: Clear all notifications
-                console.log('Clear all notifications clicked');
-              }}
+              onClick={onClose}
             >
               Clear All
             </button>
@@ -113,35 +111,43 @@ export default function NotificationsPopup({ isOpen, onClose, triggerRef }: Noti
         
         {/* Content */}
         <div className="max-h-96 overflow-auto">
-          {/* Demo notification */}
-          <div className="p-3 border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors">
-            <div className="flex items-start gap-3">
-              {/* Notification content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  {/* Notification icon */}
-                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                  <div className="text-zinc-100 text-sm font-medium">
-                    Trade Executed Successfully
+          {MOCK_NOTIFICATIONS.map((notification) => (
+            <div
+              key={notification.id}
+              className="p-3 border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{
+                      backgroundColor:
+                        notification.type === 'success'
+                          ? '#22c55e'
+                          : notification.type === 'warning'
+                            ? '#facc15'
+                            : '#3b82f6',
+                    }} />
+                    <div className="text-zinc-100 text-sm font-medium">
+                      {notification.title}
+                    </div>
+                  </div>
+                  <div className="text-zinc-400 text-xs leading-relaxed">
+                    {notification.message}
+                  </div>
+                  <div className="text-zinc-500 text-xs mt-1">
+                    {notification.timestamp}
                   </div>
                 </div>
-                <div className="text-zinc-400 text-xs leading-relaxed">
-                  Your trade for 2.5x multiplier has been executed. Profit: +$150.00
-                </div>
-                <div className="text-zinc-500 text-xs mt-1">
-                  2 minutes ago
-                </div>
+                <button
+                  className="w-5 h-5 rounded hover:bg-zinc-800/50 flex items-center justify-center transition-colors flex-shrink-0"
+                  aria-label="Dismiss notification"
+                  onClick={onClose}
+                >
+                  <X size={12} className="text-zinc-500" />
+                </button>
               </div>
-              
-              {/* Close button */}
-              <button 
-                className="w-5 h-5 rounded hover:bg-zinc-800/50 flex items-center justify-center transition-colors flex-shrink-0"
-                aria-label="Dismiss notification"
-              >
-                <X size={12} className="text-zinc-500" />
-              </button>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </>

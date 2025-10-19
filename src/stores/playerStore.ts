@@ -163,8 +163,10 @@ const initialPreferences: PlayerPreferences = {
   showStats: true,
 };
 
+type PersistedPlayerState = Pick<PlayerState, 'watchedPlayers' | 'preferences'>;
+
 export const usePlayerStore = create<PlayerState>()(
-  persist(
+  persist<PlayerState, [], [], PersistedPlayerState>(
     (set, get) => ({
       // Initial State
       watchedPlayers: defaultWatchlist,
@@ -333,17 +335,32 @@ export const usePlayerStore = create<PlayerState>()(
         }
 
         // Apply sorting
+        const direction = state.preferences.sortOrder === 'asc' ? 1 : -1;
         filtered.sort((a, b) => {
-          const aValue = a[state.preferences.sortBy];
-          const bValue = b[state.preferences.sortBy];
+          const getValue = (player: WatchedPlayer) => {
+            switch (state.preferences.sortBy) {
+              case 'name':
+                return player.name.toLowerCase();
+              case 'winRate':
+                return player.winRate ?? 0;
+              case 'streak':
+                return player.currentStreak ?? 0;
+              case 'lastSeen':
+                return player.lastSeen ?? 0;
+              default:
+                return 0;
+            }
+          };
+
+          const aValue = getValue(a);
+          const bValue = getValue(b);
 
           if (typeof aValue === 'number' && typeof bValue === 'number') {
-            return state.preferences.sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+            return (aValue - bValue) * direction;
           }
 
           if (typeof aValue === 'string' && typeof bValue === 'string') {
-            const result = aValue.localeCompare(bValue);
-            return state.preferences.sortOrder === 'asc' ? result : -result;
+            return aValue.localeCompare(bValue) * direction;
           }
 
           return 0;
@@ -377,7 +394,7 @@ export const usePlayerStore = create<PlayerState>()(
     }),
     {
       name: 'player-store',
-      storage: createPersistentStorage('player'),
+      storage: createPersistentStorage<PersistedPlayerState>('player'),
       partialize: (state) => ({
         watchedPlayers: state.watchedPlayers,
         preferences: state.preferences,

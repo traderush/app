@@ -110,37 +110,21 @@ class ClearingHouseAPI extends events_1.EventEmitter {
     }
     // Contract Information
     async getIronCondorContracts(timeframe) {
-        const orderbook = this.clearingHouse.ironCondorOrderbooks.get(timeframe);
-        if (!orderbook)
-            return { timeframe, contracts: [] };
-        const contracts = Array.from(orderbook.getActiveContracts().values());
+        const contracts = this.clearingHouse
+            .getActiveContracts(messages_1.MarketType.IRON_CONDOR, timeframe)
+            .map((contract) => this.clearingHouse.formatContractForClient(messages_1.MarketType.IRON_CONDOR, contract));
         return {
             timeframe,
-            contracts: contracts.map((c) => ({
-                contractId: c.id,
-                returnMultiplier: c.returnMultiplier,
-                lowerStrike: c.strikeRange.lower,
-                upperStrike: c.strikeRange.upper,
-                isActive: c.status === 'active',
-                totalVolume: c.totalVolume,
-            })),
+            contracts: contracts,
         };
     }
     async getSpreadContracts(timeframe) {
-        const orderbook = this.clearingHouse.spreadOrderbooks.get(timeframe);
-        if (!orderbook)
-            return { timeframe, contracts: [] };
-        const contracts = Array.from(orderbook.getActiveContracts().values());
+        const contracts = this.clearingHouse
+            .getActiveContracts(messages_1.MarketType.SPREAD, timeframe)
+            .map((contract) => this.clearingHouse.formatContractForClient(messages_1.MarketType.SPREAD, contract));
         return {
             timeframe,
-            contracts: contracts.map((c) => ({
-                contractId: c.id,
-                returnMultiplier: c.returnMultiplier,
-                strikePrice: c.strikePrice,
-                type: c.spreadType,
-                isActive: c.status === 'active',
-                totalVolume: c.totalVolume,
-            })),
+            contracts: contracts,
         };
     }
     // Balance Operations
@@ -203,40 +187,86 @@ class ClearingHouseAPI extends events_1.EventEmitter {
     onContractSettlement(callback) {
         this.on('contract.settlement', callback);
     }
+    contractEventName(product, suffix) {
+        switch (product) {
+            case messages_1.MarketType.IRON_CONDOR:
+                return `iron_condor_${suffix}`;
+            case messages_1.MarketType.SPREAD:
+                return `spread_${suffix}`;
+            default:
+                return `${product}_${suffix}`;
+        }
+    }
+    contractTypeLabel(product) {
+        switch (product) {
+            case messages_1.MarketType.IRON_CONDOR:
+                return 'ironCondor';
+            case messages_1.MarketType.SPREAD:
+                return 'spread';
+            default:
+                return product;
+        }
+    }
     setupEventForwarding() {
-        // Forward relevant events from clearing house
         this.clearingHouse.on('price_update', (pricePoint) => {
             this.emit('price.update', pricePoint.price, pricePoint.timestamp);
         });
         this.clearingHouse.on('balance_updated', (data) => {
             this.emit('balance.update', data.userId, data.balance);
         });
-        this.clearingHouse.on('iron_condor_exercised', (data) => {
-            this.emit('contract.settlement', {
-                type: 'ironCondor',
-                ...data,
+        this.clearingHouse.on('contracts_generated', (payload) => {
+            const formatted = payload.contracts.map((contract) => this.clearingHouse.formatContractForClient(payload.product, contract));
+            this.emit(this.contractEventName(payload.product, 'contracts_generated'), {
+                product: payload.product,
+                timeframe: payload.timeframe,
+                contracts: formatted,
+                timestamp: payload.timestamp,
             });
         });
-        // Handle expired contracts (losses)
-        this.clearingHouse.on('iron_condor_expired', (data) => {
-            // Transform expired positions into settlements with 0 payout
-            const settlements = data.expiredPositions.map((pos) => ({
-                userId: pos.userId,
-                position: pos.position,
-                payout: 0, // No payout for expired contracts
+        this.clearingHouse.on('contracts_updated', (payload) => {
+            const formatted = payload.contracts.map((contract) => this.clearingHouse.formatContractForClient(payload.product, contract));
+            this.emit(this.contractEventName(payload.product, 'contracts_updated'), {
+                product: payload.product,
+                timeframe: payload.timeframe,
+                contracts: formatted,
+                timestamp: payload.timestamp,
+            });
+        });
+        this.clearingHouse.on('contract_settled', (payload) => {
+            const type = this.contractTypeLabel(payload.product);
+            const settlements = payload.settlements.map((settlement) => ({
+                userId: settlement.userId,
+                position: settlement.amount,
+                payout: settlement.payout,
             }));
             this.emit('contract.settlement', {
-                type: 'ironCondor',
-                contractId: data.contractId,
+                type,
+                contractId: payload.contract.id,
                 settlements,
-                timestamp: data.timestamp,
+                timestamp: payload.timestamp,
+                contract: this.clearingHouse.formatContractForClient(payload.product, payload.contract),
             });
         });
-        this.clearingHouse.on('spread_triggered', (data) => {
+        this.clearingHouse.on('contract_expired', (payload) => {
+            const type = this.contractTypeLabel(payload.product);
+            const settlements = payload.expiredPositions.map((pos) => ({
+                userId: pos.userId,
+                position: pos.amount,
+                payout: 0,
+            }));
             this.emit('contract.settlement', {
-                type: 'spread',
-                ...data,
+                type,
+                contractId: payload.contract.id,
+                settlements,
+                timestamp: payload.timestamp,
+                contract: this.clearingHouse.formatContractForClient(payload.product, payload.contract),
             });
+        });
+        this.clearingHouse.on('position_confirmed', (payload) => {
+            this.emit('position.confirmed', payload);
+        });
+        this.clearingHouse.on('position_rejected', (payload) => {
+            this.emit('position.rejected', payload);
         });
     }
 }

@@ -22,6 +22,7 @@ const logger = (0, logger_1.createLogger)('TradeRushApp');
 class TradeRushApp {
     constructor(config) {
         this.config = config;
+        this.intervals = []; // Track intervals for cleanup
         // Initialize services
         this.connectionManager = new ConnectionManager_1.ConnectionManager();
         this.userService = new UserService_1.UserService();
@@ -94,6 +95,9 @@ class TradeRushApp {
     async stop() {
         try {
             logger.info('Stopping TradeRush app...');
+            // Clear all intervals first
+            this.intervals.forEach(interval => clearInterval(interval));
+            this.intervals = [];
             // Stop streaming service
             this.streamingService.stop();
             // Stop game engines
@@ -112,24 +116,36 @@ class TradeRushApp {
      */
     startPeriodicTasks() {
         // Clean up stale connections every minute
-        setInterval(() => {
+        this.intervals.push(setInterval(() => {
             const removed = this.connectionManager.cleanupStale();
             if (removed > 0) {
                 logger.info('Cleaned up stale connections', { removed });
             }
-        }, 60000);
+        }, 60000));
         // Clean up expired sessions every 5 minutes
-        setInterval(() => {
+        this.intervals.push(setInterval(() => {
             const cleaned = this.sessionManager.cleanupExpiredSessions();
             if (cleaned > 0) {
                 logger.info('Cleaned up expired sessions', { cleaned });
             }
-        }, 300000);
+        }, 300000));
         // Log statistics every minute
-        setInterval(() => {
+        this.intervals.push(setInterval(() => {
             const stats = this.getStats();
-            logger.info('Application statistics', stats);
-        }, 60000);
+            logger.info('Application statistics', {
+                ...stats,
+                connectionManagerDebug: {
+                    totalConnections: stats.connections.totalConnections,
+                    totalUsers: stats.connections.totalUsers,
+                    allConnections: this.connectionManager.getAllConnections().map(conn => ({
+                        connectionId: conn.connectionId,
+                        userId: conn.userId,
+                        lastHeartbeat: new Date(conn.lastHeartbeat).toISOString(),
+                        connectedAt: new Date(conn.connectedAt).toISOString()
+                    }))
+                }
+            });
+        }, 60000));
     }
     /**
      * Get application statistics

@@ -1,16 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Pencil, RotateCcw } from 'lucide-react';
 import { useUserStore } from '@/stores/userStore';
 
 interface PnLTrackerPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
-  isCustomizeOpen: boolean;
   onCustomizeOpen: () => void;
-  onCustomizeClose: () => void;
   customization: {
     backgroundImage?: string;
     backgroundOpacity?: number;
@@ -24,10 +21,7 @@ interface PnLTrackerPopupProps {
 const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   isOpen,
   onClose,
-  triggerRef,
-  isCustomizeOpen,
   onCustomizeOpen,
-  onCustomizeClose,
   customization
 }) => {
   // Get live data from userStore
@@ -53,15 +47,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
     longestLossStreak: 0
   });
 
-  // Calculate recent trades from tradeHistory
-  const [recentTrades, setRecentTrades] = useState<Array<{
-    id: string;
-    timestamp: Date;
-    multiplier: number;
-    pnl: number;
-    type: 'win' | 'loss';
-  }>>([]);
-
   // Draggable and resizable state
   const [position, setPosition] = useState({ x: 50, y: 100 });
   const [size, setSize] = useState({ width: 320, height: 80 });
@@ -76,19 +61,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   // Update PnL data from live userStore data
   useEffect(() => {
     if (!isOpen) return;
-
-    console.log('📊 PnL Tracker updating with data:', {
-      balance,
-      stats: {
-        totalProfit: stats.totalProfit,
-        totalTrades: stats.totalTrades,
-        totalWins: stats.totalWins,
-        totalLosses: stats.totalLosses,
-        winRate: stats.winRate
-      },
-      tradeHistoryLength: tradeHistory.length,
-      balanceHistoryLength: balanceHistory.length
-    });
 
     // Calculate today's PnL from today's trades (more accurate calculation)
     const today = new Date();
@@ -106,23 +78,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       }
       return sum;
     }, 0);
-
-    console.log('📊 Today PnL calculation:', {
-      todayTradesCount: todayTrades.length,
-      todayTrades: todayTrades.map(t => ({ 
-        id: t.id, 
-        result: t.result, 
-        amount: t.amount, 
-        payout: t.payout,
-        profit: t.result === 'win' ? (t.payout || 0) - t.amount : -t.amount
-      })),
-      todayPnL,
-      calculationBreakdown: todayTrades.map(t => {
-        if (t.result === 'win' && t.payout) return `${t.payout} - ${t.amount} = ${t.payout - t.amount}`;
-        if (t.result === 'loss') return `-${t.amount}`;
-        return '0 (pending)';
-      })
-    });
 
     // Calculate best win and worst loss
     const wins = tradeHistory.filter(trade => trade.result === 'win' && trade.payout);
@@ -158,13 +113,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       return sum;
     }, 0);
 
-    console.log('📊 Actual total PnL calculation:', {
-      settledTradesCount: settledTrades.length,
-      actualTotalPnL,
-      statsTotalProfit: stats.totalProfit,
-      difference: actualTotalPnL - stats.totalProfit
-    });
-
     setPnlData({
       balance: balance,
       totalPnL: actualTotalPnL, // Use calculated total PnL instead of stats
@@ -180,17 +128,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       longestLossStreak: longestLossStreak
     });
 
-    // Update recent trades from tradeHistory
-    const recentTradeData = tradeHistory.slice(0, 10).map(trade => ({
-      id: trade.id,
-      timestamp: trade.settledAt || trade.placedAt,
-      multiplier: trade.payout && trade.result === 'win' ? trade.payout / trade.amount : 1,
-      pnl: trade.result === 'win' && trade.payout ? trade.payout - trade.amount : 
-           trade.result === 'loss' ? -trade.amount : 0,
-      type: trade.result === 'win' ? 'win' as const : 'loss' as const
-    }));
-    
-    setRecentTrades(recentTradeData);
   }, [isOpen, balance, stats, tradeHistory, balanceHistory]);
 
   // Handle dragging and resizing
@@ -226,7 +163,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
     else if (isNearRight) handle = 'e';
     
     if (handle) {
-      console.log('Starting resize with handle:', handle);
       setIsResizing(true);
       setResizeHandle(handle);
       setDragStart({
@@ -236,7 +172,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       return;
     }
     
-    console.log('Starting drag');
     setIsDragging(true);
     setDragStart({
       x: e.clientX - position.x,
@@ -244,14 +179,13 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
     });
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (isDragging) {
       setPosition({
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y
       });
     } else if (isResizing && resizeHandle) {
-      console.log('Resizing with handle:', resizeHandle);
       const deltaX = e.clientX - dragStart.x;
       const deltaY = e.clientY - dragStart.y;
       
@@ -307,24 +241,27 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       setPosition({ x: newX, y: newY });
       setDragStart({ x: e.clientX, y: e.clientY });
     }
-  };
+  }, [dragStart, isDragging, isResizing, position, resizeHandle, size]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
-  };
+  }, []);
 
   useEffect(() => {
-    if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
+    if (!isDragging && !isResizing) {
+      return undefined;
     }
-  }, [isDragging, isResizing, dragStart, resizeHandle]);
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp, isDragging, isResizing]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -333,10 +270,6 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(amount);
-  };
-
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(1)}%`;
   };
 
   // Calculate adaptive font sizes based on card dimensions
@@ -526,10 +459,9 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
                       bestWin: 0,
                       worstLoss: 0,
                       currentStreak: 0,
-                      longestWinStreak: 0,
-                      longestLossStreak: 0
-                    }));
-                    setRecentTrades([]);
+                    longestWinStreak: 0,
+                    longestLossStreak: 0
+                  }));
                   }}
                   className="p-1.5 hover:bg-white/10 rounded mr-1"
                   title="Reset PnL Stats"

@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const ClearingHouseService_1 = require("../services/ClearingHouseService");
 const types_1 = require("../types");
-// ANSI escape codes for colors and cursor manipulation
 const colors = {
     reset: '\x1b[0m',
     bold: '\x1b[1m',
@@ -11,32 +10,28 @@ const colors = {
     green: '\x1b[32m',
     yellow: '\x1b[33m',
     blue: '\x1b[34m',
-    magenta: '\x1b[35m',
     cyan: '\x1b[36m',
     gray: '\x1b[90m',
-    bgRed: '\x1b[41m',
     bgGreen: '\x1b[42m',
-    bgYellow: '\x1b[43m',
+    bgRed: '\x1b[41m',
 };
 const clearScreen = '\x1b[2J';
 const moveCursor = (x, y) => `\x1b[${y};${x}H`;
 const hideCursor = '\x1b[?25l';
 const showCursor = '\x1b[?25h';
-// Helper functions for colored output
-const color = (text, colorCode) => `${colorCode}${text}${colors.reset}`;
+const color = (text, code) => `${code}${text}${colors.reset}`;
 const bold = (text) => `${colors.bold}${text}${colors.reset}`;
 const dim = (text) => `${colors.dim}${text}${colors.reset}`;
-const red = (text) => color(text, colors.red);
+const cyan = (text) => color(text, colors.cyan);
 const green = (text) => color(text, colors.green);
 const yellow = (text) => color(text, colors.yellow);
-const cyan = (text) => color(text, colors.cyan);
+const red = (text) => color(text, colors.red);
 const gray = (text) => color(text, colors.gray);
 class IronCondorDemo {
     constructor(timeframe) {
+        this.service = new ClearingHouseService_1.ClearingHouseService();
         this.currentPrice = 0;
         this.userBalances = new Map();
-        this.updateInterval = null;
-        // Parse timeframe parameter
         switch (timeframe) {
             case '2s':
             case '2000':
@@ -47,203 +42,144 @@ class IronCondorDemo {
                 this.timeframe = types_1.TimeFrame.TEN_SECONDS;
                 break;
             default:
-                console.error('Invalid timeframe. Use: 2s or 10s');
+                console.error('Invalid timeframe. Use 2s or 10s');
                 process.exit(1);
         }
-        this.service = new ClearingHouseService_1.ClearingHouseService();
-        // Access the orderbook through reflection
-        const orderbooks = this.service.ironCondorOrderbooks;
-        this.orderbook = orderbooks.get(this.timeframe);
-        this.setupEventListeners();
+        this.setupListeners();
         this.initializeUsers();
     }
-    initializeUsers() {
-        const users = ['alice', 'bob', 'charlie', 'david'];
-        users.forEach((userId) => {
-            this.service.initializeUser(userId);
-            this.userBalances.set(userId, this.service.getUserBalance(userId));
+    setupListeners() {
+        this.service.on('price_update', (payload) => {
+            this.currentPrice = payload.price;
         });
-    }
-    setupEventListeners() {
-        // Price updates
-        this.service.on('price_update', (data) => {
-            this.currentPrice = data.price;
+        this.service.on('balance_updated', (payload) => {
+            this.userBalances.set(payload.userId, payload.balance);
         });
-        // Balance updates
-        this.service.on('balance_updated', (data) => {
-            this.userBalances.set(data.userId, data.balance);
-        });
-        // Handle keyboard input
         process.stdin.setRawMode(true);
         process.stdin.on('data', (key) => {
             if (key.toString() === '\u0003') {
-                // Ctrl+C
                 this.shutdown();
             }
         });
     }
-    updateDisplay() {
-        // Clear screen and move cursor to top
-        process.stdout.write(clearScreen + moveCursor(1, 1));
-        // Header
-        console.log(cyan('════════════════════════════════════════════════════════════════════════════════'));
-        console.log(cyan(`                     IRON CONDOR ORDERBOOK - ${this.timeframe}ms                     `));
-        console.log(cyan('════════════════════════════════════════════════════════════════════════════════'));
-        // Current price
-        console.log(`Current Price: ${bold(green(`$${this.currentPrice.toFixed(2)}`))}  |  Time: ${new Date().toLocaleTimeString()}`);
-        console.log(gray('Each cell shows: [multiplier]x | $volume | positions | status'));
-        console.log('────────────────────────────────────────────────────────────────────────────────');
-        this.renderIronCondorTable();
-        // User balances
-        console.log('\n' + yellow(bold('User Balances:')));
-        let balanceStr = '';
-        this.userBalances.forEach((balance, userId) => {
-            const profit = balance - 1000;
-            const profitColor = profit >= 0 ? green : red;
-            balanceStr += `${userId}: $${balance.toFixed(0)} (${profitColor(`${profit >= 0 ? '+' : ''}${profit.toFixed(0)}`)})  `;
+    initializeUsers() {
+        ['alice', 'bob', 'charlie', 'david'].forEach((user) => {
+            this.service.initializeUser(user);
+            this.userBalances.set(user, this.service.getUserBalance(user));
         });
-        console.log(balanceStr);
+    }
+    render() {
+        process.stdout.write(clearScreen + moveCursor(1, 1));
+        console.log(cyan('════════════════════════════════ IRON CONDOR ORDERBOOK ════════════════════════════════'));
+        console.log(cyan(`Timeframe: ${this.timeframe}ms  |  Price: ${this.currentPrice.toFixed(2)}  |  ${new Date().toLocaleTimeString()}`));
+        console.log(gray('Cells show: multiplier × | $volume | open positions | status'));
+        console.log('────────────────────────────────────────────────────────────────────────────────────');
+        const contracts = this.service.getActiveIronCondorContracts(this.timeframe);
+        if (!contracts.length) {
+            console.log(red('\nNo active contracts'));
+            return;
+        }
+        const grouped = this.groupByWindow(contracts);
+        const starts = Array.from(grouped.keys()).sort((a, b) => a - b).slice(0, 15);
+        const strikeLevels = Array.from(new Set(contracts.map((c) => c.strikeRange.lower))).sort((a, b) => b - a);
+        const now = Date.now();
+        let header = '     ';
+        starts.forEach((start, idx) => {
+            const seconds = Math.max(0, (start - now) / 1000);
+            header += idx === 0 ? cyan('[NOW]'.padEnd(12)) : `+${seconds.toFixed(1)}s`.padEnd(12);
+        });
+        console.log(bold(header));
+        console.log('     ' + '─'.repeat(starts.length * 12));
+        const rangeSize = contracts[0].strikeRange.upper - contracts[0].strikeRange.lower;
+        strikeLevels.forEach((strike) => {
+            const midPoint = strike + rangeSize / 2;
+            let row = `${strike.toFixed(0).padStart(4)} │`;
+            starts.forEach((start) => {
+                const column = grouped.get(start) ?? [];
+                const contract = column.find((c) => c.strikeRange.lower === strike);
+                row += contract ? this.formatCell(contract) : gray('    ---    ');
+                row += ' ';
+            });
+            if (Math.abs(midPoint - this.currentPrice) < rangeSize / 2) {
+                console.log(yellow(bold(row)) + cyan(' ← current'));
+            }
+            else {
+                console.log(row);
+            }
+        });
+        console.log('\n' + yellow(bold('User Balances')));
+        let balances = '';
+        this.userBalances.forEach((balance, user) => {
+            const profit = balance - 1000;
+            const profitText = profit >= 0 ? green(`+${profit.toFixed(0)}`) : red(`${profit.toFixed(0)}`);
+            balances += `${user}: $${balance.toFixed(0)} (${profitText})  `;
+        });
+        console.log(balances);
         console.log('\n' + gray('Press Ctrl+C to exit'));
     }
-    renderIronCondorTable() {
-        // Get the contracts array through reflection
-        const contracts = this.orderbook
-            .contracts;
-        const currentColumnIndex = this.orderbook
-            .currentColumnIndex;
-        const config = this.orderbook.config;
-        const priceSpread = this.orderbook.priceSpread;
-        // Calculate visible columns (show 15 columns)
-        const visibleColumns = Math.min(15, contracts.length - currentColumnIndex);
-        const startCol = currentColumnIndex;
-        // Header row with time offsets
-        let header = '     ';
-        for (let col = 0; col < visibleColumns; col++) {
-            const timeOffset = (col * this.timeframe) / 1000;
-            header +=
-                col === 0
-                    ? cyan(`[NOW]`.padEnd(12))
-                    : `+${timeOffset.toFixed(1)}s`.padEnd(12);
-        }
-        console.log(bold(header));
-        console.log('     ' + '─'.repeat(visibleColumns * 12));
-        // Contract rows
-        const totalRows = config.rowsAbove + config.rowsBelow + 1;
-        const centerRow = config.rowsBelow;
-        for (let row = totalRows - 1; row >= 0; row--) {
-            const rowOffset = row - centerRow;
-            const priceLevel = this.currentPrice + rowOffset * priceSpread;
-            const isCurrentPriceRow = Math.abs(priceLevel - this.currentPrice) < priceSpread / 2;
-            let line = `${priceLevel.toFixed(0).padStart(4)} │`;
-            for (let col = 0; col < visibleColumns; col++) {
-                const contract = contracts[startCol + col]?.[row];
-                if (!contract) {
-                    line += gray('    ---    ');
-                }
-                else {
-                    line += this.formatIronCondorCell(contract, col === 0);
-                }
-                line += ' ';
+    groupByWindow(contracts) {
+        const grouped = new Map();
+        contracts.forEach((contract) => {
+            const key = contract.exerciseWindow.start;
+            if (!grouped.has(key)) {
+                grouped.set(key, []);
             }
-            // Mark current price row
-            if (isCurrentPriceRow) {
-                console.log(yellow(bold(line)) + cyan(' ← current'));
-            }
-            else {
-                console.log(line);
-            }
-        }
-        // Show column shift info
-        if (currentColumnIndex > 0) {
-            console.log(`\n${gray(`Columns shifted: ${currentColumnIndex} | Time elapsed: ${((currentColumnIndex * this.timeframe) / 1000).toFixed(1)}s`)}`);
-        }
+            grouped.get(key).push(contract);
+        });
+        return grouped;
     }
-    formatIronCondorCell(contract, isCurrentColumn) {
-        const multiplier = contract.returnMultiplier.toFixed(1);
-        const volume = contract.totalVolume;
-        let cellContent = `${multiplier}x`;
+    formatCell(contract) {
+        const multiplier = contract.returnMultiplier.toFixed(1).padEnd(4);
+        const volume = contract.totalVolume.toFixed(0).padStart(4);
+        const positions = `${contract.positions.size}`.padStart(2);
+        let background = colors.reset;
         if (contract.status === types_1.ContractStatus.EXERCISED) {
-            return color(` ✓${cellContent}`.padEnd(10), colors.bgGreen);
+            background = colors.bgGreen;
         }
         else if (contract.status === types_1.ContractStatus.EXPIRED) {
-            return color(` ✗${cellContent}`.padEnd(10), colors.bgRed);
+            background = colors.bgRed;
         }
-        else if (volume > 0) {
-            const volStr = volume >= 1000 ? `${(volume / 1000).toFixed(0)}k` : volume.toString();
-            cellContent = `${multiplier}x $${volStr}`;
-            if (isCurrentColumn) {
-                return color(cellContent.padEnd(10), colors.bgYellow);
-            }
-            else {
-                return cyan(cellContent.padEnd(10));
-            }
+        else if (contract.totalVolume > 0) {
+            background = colors.cyan;
         }
-        else {
-            return dim(cellContent.padEnd(10));
+        const status = contract.status === types_1.ContractStatus.ACTIVE ? 'A' : contract.status[0];
+        const payload = `${multiplier}|${volume}|${positions}|${status}`;
+        if (background !== colors.reset) {
+            return color(` ${payload} `, background);
         }
+        return dim(` ${payload} `);
     }
-    simulateTrading() {
-        setInterval(() => {
-            const users = Array.from(this.userBalances.keys());
-            const user = users[Math.floor(Math.random() * users.length)];
-            const balance = this.userBalances.get(user) || 0;
-            if (balance < 10)
-                return;
-            const contracts = this.service.getActiveIronCondorContracts(this.timeframe);
-            if (contracts.length > 0) {
-                // Pick a random contract, preferring ones closer to current time
-                const weights = contracts.map((_, i) => Math.exp(-i * 0.1));
-                const totalWeight = weights.reduce((a, b) => a + b, 0);
-                let random = Math.random() * totalWeight;
-                let selectedIndex = 0;
-                for (let i = 0; i < weights.length; i++) {
-                    random -= weights[i];
-                    if (random <= 0) {
-                        selectedIndex = i;
-                        break;
-                    }
-                }
-                const contract = contracts[selectedIndex];
-                const amount = Math.min(10 + Math.floor(Math.random() * 90), balance * 0.1);
-                try {
-                    const success = this.service.placeIronCondorPosition(user, contract.id, amount, this.timeframe);
-                    if (success) {
-                        // Position placed - will be shown in table
-                    }
-                }
-                catch (error) {
-                    // Position failed
-                }
-            }
-        }, 1000); // Every second
+    async run() {
+        console.log(hideCursor);
+        this.service.startPriceFeed();
+        this.updateLoop();
+        setInterval(() => this.simulateTrades(), 2500);
+        process.on('SIGINT', () => this.shutdown());
+        await new Promise(() => { });
+    }
+    updateLoop() {
+        this.render();
+        setTimeout(() => this.updateLoop(), 1000);
+    }
+    simulateTrades() {
+        const users = Array.from(this.userBalances.keys());
+        const user = users[Math.floor(Math.random() * users.length)];
+        const balance = this.userBalances.get(user) ?? 0;
+        if (balance < 10)
+            return;
+        const contracts = this.service.getActiveIronCondorContracts(this.timeframe);
+        if (!contracts.length)
+            return;
+        const contract = contracts[Math.floor(Math.random() * contracts.length)];
+        const amount = Math.min(10 + Math.floor(Math.random() * 40), balance);
+        this.service.placeIronCondorPosition(user, contract.id, amount, this.timeframe);
     }
     shutdown() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-        }
         console.log(showCursor);
-        console.log(red(bold('\n\nShutting down...')));
         this.service.destroy();
         process.exit(0);
     }
-    async run() {
-        console.log(green(bold(`Starting Iron Condor Demo (${this.timeframe}ms)...`)));
-        console.log(hideCursor);
-        // Start price feed
-        this.service.startPriceFeed();
-        // Start display updates
-        this.updateInterval = setInterval(() => this.updateDisplay(), 100);
-        // Simulate trading activity
-        this.simulateTrading();
-        // Handle graceful shutdown
-        process.on('SIGINT', () => {
-            this.shutdown();
-        });
-        // Keep the process running
-        await new Promise(() => { });
-    }
 }
-// Get timeframe from command line argument
-const timeframe = process.argv[2] || '2s';
-const demo = new IronCondorDemo(timeframe);
+const timeframeArg = process.argv[2] ?? '2s';
+const demo = new IronCondorDemo(timeframeArg);
 demo.run().catch(console.error);

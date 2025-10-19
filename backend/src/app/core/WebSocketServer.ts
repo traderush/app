@@ -8,13 +8,16 @@ import { ConnectionManager } from './ConnectionManager';
 import { MessageRouter } from './MessageRouter';
 import { validateClientMessage } from '../utils/validators';
 import { handleWebSocketError } from '../utils/errors';
-import { 
-  ClientMessage, 
-  ServerMessage, 
+import {
+  ClientMessage,
+  ServerMessage,
   createMessage,
   ServerMessageType,
-  Connection
+  Connection,
 } from '../types';
+import { clearingHouseAPI } from '../../clearingHouse';
+import { IRON_CONDOR_TIMEFRAMES } from '../../clearingHouse/setup/ironCondorBootstrap';
+import { IRON_CONDOR_PRODUCT_ID } from '../../clearingHouse/products/ironCondor';
 
 const logger = createLogger('WebSocketServer');
 
@@ -105,6 +108,13 @@ export class WebSocketServer {
   private handleHttpRequest(request: Request, server: Server): Response | Promise<Response> {
     const url = new URL(request.url);
 
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: this.corsHeaders(),
+      });
+    }
+
     // Health check endpoint
     if (url.pathname === '/health') {
       return new Response(JSON.stringify({
@@ -112,8 +122,69 @@ export class WebSocketServer {
         connections: this.connectionManager.getConnectionCount(),
         uptime: process.uptime()
       }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.corsHeaders(),
+        }
       });
+    }
+
+    if (url.pathname === '/api/explorer/orderbooks') {
+      const snapshots = IRON_CONDOR_TIMEFRAMES.map((timeframe) => {
+        const orderbookId = `${IRON_CONDOR_PRODUCT_ID}:${timeframe}`;
+        const config = clearingHouseAPI.clearingHouse.getOrderbookConfig(orderbookId);
+        const contracts = clearingHouseAPI.getActiveIronCondorContracts(timeframe);
+        const serialized = contracts.map((contract) => {
+          const positions = Array.from(contract.positions.entries()).map(
+            ([userId, entries]) => ({
+              userId,
+              totalSize: entries.reduce((sum, entry) => sum + entry.amount, 0),
+              fills: entries.map((entry) => ({
+                amount: entry.amount,
+                timestamp: entry.timestamp,
+              })),
+            })
+          );
+
+          const openInterest = positions.reduce(
+            (sum, entry) => sum + entry.totalSize,
+            0
+          );
+
+          return {
+            id: contract.id,
+            returnMultiplier: contract.returnMultiplier,
+            status: contract.status,
+            strikeRange: contract.strikeRange,
+            exerciseWindow: contract.exerciseWindow,
+            totalVolume: contract.totalVolume,
+            openInterest,
+            positions,
+            columnIndex: contract.columnIndex,
+            anchorPrice: contract.anchorPrice,
+          };
+        });
+
+        return {
+          timeframe,
+          price: clearingHouseAPI.clearingHouse.getCurrentPrice(),
+          timeframeMs: config.timeframeMs,
+          timeWindowMs: config.timeWindow.horizonMs,
+          priceWindow: config.priceWindow,
+          priceStep: config.priceStep,
+          contracts: serialized,
+        };
+      });
+
+      return new Response(
+        JSON.stringify({ snapshots, generatedAt: Date.now() }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...this.corsHeaders(),
+          },
+        }
+      );
     }
 
     // WebSocket upgrade
@@ -130,6 +201,14 @@ export class WebSocketServer {
     }
 
     return new Response('Not found', { status: 404 });
+  }
+
+  private corsHeaders(): Record<string, string> {
+    return {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
   }
 
   private async handleOpen(ws: any): Promise<void> {
@@ -159,6 +238,19 @@ export class WebSocketServer {
       // Log raw message for debugging validation errors
       if (!data || typeof data !== 'object') {
         logger.error('Invalid message format', { connectionId, rawMessage: message });
+      }
+
+      if (data?.type === 'ping') {
+        if (connectionId && this.connectionManager.hasConnection(connectionId)) {
+          this.connectionManager.updateActivity(connectionId);
+        }
+        this.sendMessage(
+          ws,
+          createMessage(ServerMessageType.HEARTBEAT, {
+            serverTime: Date.now(),
+          })
+        );
+        return;
       }
 
       // Validate message format
