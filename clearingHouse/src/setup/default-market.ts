@@ -13,17 +13,29 @@ import {
 } from "../core/products/iron-condor";
 import type { ProductRuntime } from "../core/products/types";
 
-export const DEFAULT_ORDERBOOK_TEMPLATES: MarketMakerOrderbookTemplate[] = [
-  {
-    productTypeId: IRON_CONDOR_PRODUCT_ID,
-    timeframe: Timeframe.TF_1S,
-    priceStep: 1,
-    placeOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 20_000 },
-    updateOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 20_000 },
-    cancelOrdersBounds: { pricePlusBound: 15, priceMinusBound: 15, timeBuffer: 0, timeLimit: 10_000 },
-    symbol: Asset.BTC,
-  },
+const SUPPORTED_TIMEFRAMES: Timeframe[] = [
+  Timeframe.TF_500MS,
+  Timeframe.TF_1S,
+  Timeframe.TF_2S,
+  Timeframe.TF_5S,
+  Timeframe.TF_10S,
 ];
+
+const BASE_TEMPLATE_CONFIG = {
+  productTypeId: IRON_CONDOR_PRODUCT_ID,
+  priceStep: 1,
+  placeOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 20_000 },
+  updateOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 20_000 },
+  cancelOrdersBounds: { pricePlusBound: 15, priceMinusBound: 15, timeBuffer: 0, timeLimit: 10_000 },
+  symbol: Asset.BTC,
+} as const;
+
+export const DEFAULT_ORDERBOOK_TEMPLATES: MarketMakerOrderbookTemplate[] = SUPPORTED_TIMEFRAMES.map(
+  (timeframe) => ({
+    ...BASE_TEMPLATE_CONFIG,
+    timeframe,
+  }),
+);
 
 export const INITIAL_PRICE_SEEDS: Array<{ asset: Asset; price: number }> = [
   { asset: Asset.BTC, price: 100 },

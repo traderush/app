@@ -78,6 +78,7 @@ export class GridGame extends BaseGame {
 
   // Drag functionality state
   private isDragging: boolean = false;
+  private isPointerDown: boolean = false;
   private dragStartX: number = 0;
   private dragStartY: number = 0;
   private dragStartCameraX: number = 0;
@@ -120,6 +121,11 @@ export class GridGame extends BaseGame {
     isClickable: boolean;
     value?: number; // Random multiplier for heatmap visualization
   }> = {}; // Generated empty boxes to fill viewport
+  private msPerPointEstimate: number = 500;
+  private gridColumnWidth: number = 50;
+  private gridRowHeight: number = 1;
+  private gridColumnOrigin: number = 0;
+  private gridRowOrigin: number = 0;
   
   // CRITICAL: Store grid offset once and never recalculate
   // Prevents grid from shifting when old boxes are cleaned up after 150+ seconds
@@ -208,6 +214,7 @@ export class GridGame extends BaseGame {
     }
 
     this.world = new WorldCoordinateSystem(this.camera);
+    this.world.setPixelsPerPoint(this.config.pixelsPerPoint);
     this.squareRenderer = new SquareRenderer(this.ctx, this.theme);
     this.lineRenderer = new LineRenderer(this.ctx, this.theme);
 
@@ -240,8 +247,9 @@ export class GridGame extends BaseGame {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Start drag
-    this.isDragging = true;
+    // Prepare for possible drag
+    this.isPointerDown = true;
+    this.isDragging = false;
     this.dragStartX = x;
     this.dragStartY = y;
     this.dragStartCameraX = this.camera.x;
@@ -251,24 +259,17 @@ export class GridGame extends BaseGame {
   }
 
   protected handleMouseUp(e: MouseEvent): void {
-    if (this.isDragging) {
-      this.isDragging = false;
-      this.canvas.style.cursor = 'default';
-      
-      // If the user dragged significantly, disable price following
-      const rect = this.canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const dragDistance = Math.sqrt(
-        Math.pow(x - this.dragStartX, 2) + Math.pow(y - this.dragStartY, 2)
-      );
-      
-      // If dragged more than 10 pixels, disable price following
-      if (dragDistance > 10) {
-        this.isFollowingPrice = false;
-        this.emit('cameraFollowingChanged', { isFollowing: false });
-      }
+    const wasDragging = this.isDragging;
+    this.isPointerDown = false;
+    this.isDragging = false;
+    this.canvas.style.cursor = 'default';
+
+    if (!wasDragging && !this.isFollowingPrice) {
+      this.isFollowingPrice = true;
+      this.emit('cameraFollowingChanged', { isFollowing: true });
     }
+
+    super.handleMouseUp(e);
   }
 
   protected handleClick(e: MouseEvent): void {
@@ -368,9 +369,20 @@ export class GridGame extends BaseGame {
     this.mouseY = e.clientY - rect.top;
 
     // Handle dragging
-    if (this.isDragging) {
+    if (this.isPointerDown) {
       const deltaX = this.mouseX - this.dragStartX;
       const deltaY = this.mouseY - this.dragStartY;
+      const dragDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      if (!this.isDragging && dragDistance > 18) {
+        this.isDragging = true;
+        this.isFollowingPrice = false;
+        this.emit('cameraFollowingChanged', { isFollowing: false });
+      }
+
+      if (!this.isDragging) {
+        return;
+      }
       
       // Convert screen delta to world delta
       // For X: screen space maps 1:1 to world space
@@ -430,11 +442,11 @@ export class GridGame extends BaseGame {
     this.mouseX = -1;
     this.mouseY = -1;
     this.canvas.style.cursor = 'default';
+    this.isPointerDown = false;
+    this.isDragging = false;
     
     // Also handle as mouse up to stop dragging when leaving canvas
-    if (this.isDragging) {
-      this.handleMouseUp(e);
-    }
+    this.handleMouseUp(e);
     
     super.handleMouseLeave(e);
   }
@@ -449,26 +461,58 @@ export class GridGame extends BaseGame {
     const viewportBottom = this.height - verticalMargin;
     const viewportHeight = viewportBottom - viewportTop;
 
-    // Calculate visible price range
-    this.visiblePriceRange = viewportHeight * this.config.pricePerPixel;
+    // Base range fallback when we don't have enough data yet.
+    // Keep modest so small price moves remain visible.
+    const basePriceRange = 12;
+    let targetPriceRange = basePriceRange;
 
-    // If we have backend boxes, use their actual height
+    // Use backend box heights when available so future contracts fit on screen.
     const boxValues = Object.values(this.backendMultipliers);
     if (boxValues.length > 0 && boxValues[0]) {
-      const boxHeight = boxValues[0].height;
-      // Show more boxes for sketch and cobra games (30 boxes vs 10)
+      const boxHeight = Math.max(0.1, boxValues[0].height);
       const boxesVisible =
         this.config.gameType === GameType.SKETCH ||
         this.config.gameType === GameType.COBRA
           ? 30
           : 10;
-      this.visiblePriceRange = boxHeight * boxesVisible;
+      targetPriceRange = Math.max(targetPriceRange, boxHeight * boxesVisible);
     }
 
-    // Update world viewport
+    const data = this.priceData;
+    if (data.length >= 2) {
+      const sampleCount = Math.min(data.length, 240);
+      let minPrice = Number.POSITIVE_INFINITY;
+      let maxPrice = Number.NEGATIVE_INFINITY;
+      for (let i = data.length - sampleCount; i < data.length; i++) {
+        const price = Math.max(0, data[i].price);
+        if (price < minPrice) minPrice = price;
+        if (price > maxPrice) maxPrice = price;
+      }
+      if (Number.isFinite(minPrice) && Number.isFinite(maxPrice)) {
+        const dataRange = Math.max(0.05, maxPrice - minPrice);
+        const paddedRange = Math.max(0.5, dataRange * 1.8);
+        targetPriceRange = Math.max(paddedRange, targetPriceRange);
+      }
+    }
+
+    if (!Number.isFinite(targetPriceRange) || targetPriceRange <= 0) {
+      targetPriceRange = basePriceRange;
+    }
+
+    const smoothing = 0.85;
+    if (this.visiblePriceRange === 0) {
+      this.visiblePriceRange = targetPriceRange;
+    } else {
+      this.visiblePriceRange =
+        this.visiblePriceRange * smoothing + targetPriceRange * (1 - smoothing);
+    }
+
+    // Clamp to sane bounds to avoid over-zooming
+    this.visiblePriceRange = Math.max(0.5, Math.min(this.visiblePriceRange, 500));
+
+    // Update world viewport with smoothed range
     this.world.updateViewport(viewportHeight, this.visiblePriceRange);
 
-    const data = this.priceData;
     if (data.length < 2) {
       // Even without price data, we should still update camera for box visibility
       // Set initial camera position
@@ -502,25 +546,12 @@ export class GridGame extends BaseGame {
       const newTargetX = lineEndWorldX - targetOffsetX;
       this.camera.targetX = Math.max(0, newTargetX);
 
-      // Camera Y following behavior
+      // Always follow the latest price vertically to keep movement visible.
+      this.camera.targetY = lineEndWorldY;
+
       if (this.config.gameType === GameType.SKETCH) {
-        // For sketch game: directly set camera Y to keep price centered (no smoothing)
-        this.camera.targetY = lineEndWorldY;
         this.camera.smoothY = lineEndWorldY;
         this.camera.y = lineEndWorldY;
-      } else {
-        // For other games: smart camera following - only follow when price is outside 40-59% bounds
-        const currentPriceScreenY =
-          this.height / 2 -
-          (lineEndWorldY - this.camera.y) *
-            (viewportHeight / this.visiblePriceRange);
-        const screenPercent = currentPriceScreenY / this.height;
-
-        // Only update target Y if price is outside 40-59% range
-        if (screenPercent < 0.4 || screenPercent > 0.59) {
-          this.camera.targetY = lineEndWorldY;
-        }
-        // Otherwise keep current target (don't follow)
       }
     }
 
@@ -571,8 +602,10 @@ export class GridGame extends BaseGame {
   protected render(): void {
     this.clearCanvas();
 
-    // Draw dashed grid first (if enabled)
-    if (this.config.showDashedGrid) {
+    const hasBoxes = Object.keys(this.backendMultipliers).length > 0;
+
+    // Draw dashed grid first (if enabled and no backend boxes yet)
+    if (this.config.showDashedGrid && !hasBoxes) {
       this.renderDashedGrid();
     }
 
@@ -1102,13 +1135,10 @@ export class GridGame extends BaseGame {
         if (boxCenterX < this.smoothLineEndX) {
           // Calculate distance from NOW line (in pixels)
           const distanceFromNow = this.smoothLineEndX - boxCenterX;
-          
-          // Fade out over 200 pixels
-          const fadeDistance = 200;
+          const fadeDistance = Math.max(200, Math.abs(screenWidth) * 3.5);
           const fadeAmount = Math.min(distanceFromNow / fadeDistance, 1.0);
-          
-          // Opacity ranges from 1.0 (at NOW line) to 0.3 (far past)
-          opacity = 1.0 - (fadeAmount * 0.7);
+          const eased = 1 - Math.pow(1 - fadeAmount, 2);
+          opacity = 1.0 - (eased * 0.75);
         }
       }
 
@@ -1282,69 +1312,78 @@ export class GridGame extends BaseGame {
     ctx.lineTo(this.width, axisY);
     ctx.stroke();
 
-    // Get world bounds
     const worldBounds = this.world.getVisibleWorldBounds(0);
+    const startTimestamp = this.getTimestampForWorldX(worldBounds.left);
+    const endTimestamp = this.getTimestampForWorldX(worldBounds.right);
 
-    // Calculate dynamic tick interval based on zoom level
-    const worldRange = worldBounds.right - worldBounds.left;
-    const minPixelsPerTick = 80; // Minimum pixels between ticks for readability
-    const maxTicks = Math.floor(this.width / minPixelsPerTick);
+    if (
+      startTimestamp !== null
+      && endTimestamp !== null
+      && endTimestamp !== startTimestamp
+    ) {
+      const timeRangeMs = Math.max(1, endTimestamp - startTimestamp);
+      const minPixelsPerTick = 100;
+      const maxTicks = Math.max(1, Math.floor(this.width / minPixelsPerTick));
+      const rawIntervalMs = timeRangeMs / maxTicks;
 
-    // Find a nice round interval in seconds
-    // Convert world range to seconds (50 pixels = 1 second)
-    const timeRangeSeconds = worldRange / 50;
-    const rawIntervalSeconds = timeRangeSeconds / maxTicks;
+      const intervalsMs = [
+        250, 500, 1000, 2000, 5000, 10_000, 15_000, 30_000,
+        60_000, 120_000, 300_000, 600_000, 1_800_000, 3_600_000,
+      ];
+      let tickIntervalMs = intervalsMs[intervalsMs.length - 1];
+      for (const candidate of intervalsMs) {
+        if (rawIntervalMs <= candidate) {
+          tickIntervalMs = candidate;
+          break;
+        }
+      }
 
-    // Round to nice time intervals (1s, 2s, 5s, 10s, 20s, 30s, 60s, etc.)
-    let tickIntervalSeconds: number;
-    if (rawIntervalSeconds <= 1) tickIntervalSeconds = 1;
-    else if (rawIntervalSeconds <= 2) tickIntervalSeconds = 2;
-    else if (rawIntervalSeconds <= 5) tickIntervalSeconds = 5;
-    else if (rawIntervalSeconds <= 10) tickIntervalSeconds = 10;
-    else if (rawIntervalSeconds <= 20) tickIntervalSeconds = 20;
-    else if (rawIntervalSeconds <= 30) tickIntervalSeconds = 30;
-    else if (rawIntervalSeconds <= 60) tickIntervalSeconds = 60;
-    else tickIntervalSeconds = Math.ceil(rawIntervalSeconds / 60) * 60;
+      const includeMillis = tickIntervalMs < 1000;
+      const firstTickTs = Math.floor(startTimestamp / tickIntervalMs) * tickIntervalMs;
 
-    // Convert back to world units
-    const tickInterval = tickIntervalSeconds * 50;
+      // Draw major ticks with formatted labels
+      ctx.strokeStyle = `rgba(255, 255, 255, ${axisOpacity})`;
+      for (
+        let ts = firstTickTs;
+        ts <= endTimestamp + tickIntervalMs;
+        ts += tickIntervalMs
+      ) {
+        const worldPos = this.getWorldXForTimestamp(ts);
+        if (worldPos === null) continue;
+        const screenX = this.world.worldToScreen(worldPos, 0).x;
+        if (screenX < -40 || screenX > this.width + 40) continue;
 
-    const startTick =
-      Math.floor(worldBounds.left / tickInterval) * tickInterval;
-    const endTick = Math.ceil(worldBounds.right / tickInterval) * tickInterval;
+        ctx.beginPath();
+        ctx.moveTo(screenX, axisY - 5);
+        ctx.lineTo(screenX, axisY + 5);
+        ctx.stroke();
 
-    // Draw major ticks
-    for (let worldX = startTick; worldX <= endTick; worldX += tickInterval) {
-      const screenX = this.world.worldToScreen(worldX, 0).x;
+        ctx.fillText(
+          this.formatTimestampLabel(ts, includeMillis),
+          screenX,
+          axisY + 8,
+        );
+      }
 
-      if (screenX < 0 || screenX > this.width) continue;
+      // Draw minor ticks (without labels)
+      const minorDivisions = tickIntervalMs >= 60_000 ? 4 : 5;
+      const minorIntervalMs = tickIntervalMs / minorDivisions;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${axisOpacity * 0.6})`;
+      for (let ts = firstTickTs; ts <= endTimestamp + tickIntervalMs; ts += minorIntervalMs) {
+        const offset = (ts - firstTickTs) % tickIntervalMs;
+        if (Math.abs(offset) < 1) {
+          continue;
+        }
+        const worldPos = this.getWorldXForTimestamp(ts);
+        if (worldPos === null) continue;
+        const screenX = this.world.worldToScreen(worldPos, 0).x;
+        if (screenX < -40 || screenX > this.width + 40) continue;
 
-      // Draw tick
-      ctx.beginPath();
-      ctx.moveTo(screenX, axisY - 5);
-      ctx.lineTo(screenX, axisY + 5);
-      ctx.stroke();
-
-      // Draw label - convert world units to seconds
-      // Price moves at 5 pixels per 100ms = 50 pixels per second
-      const timeInSeconds = worldX / 50;
-      ctx.fillText(`${timeInSeconds.toFixed(0)}s`, screenX, axisY + 8);
-    }
-
-    // Draw minor ticks (no labels)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    // Minor ticks at 0.2 second intervals if major ticks are >= 1s
-    const minorInterval = tickIntervalSeconds >= 1 ? 10 : tickInterval / 5; // 10 world units = 0.2s
-    for (let worldX = startTick; worldX <= endTick; worldX += minorInterval) {
-      if (worldX % tickInterval === 0) continue; // Skip major ticks
-
-      const screenX = this.world.worldToScreen(worldX, 0).x;
-      if (screenX < 0 || screenX > this.width) continue;
-
-      ctx.beginPath();
-      ctx.moveTo(screenX, axisY - 2);
-      ctx.lineTo(screenX, axisY + 2);
-      ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(screenX, axisY - 2);
+        ctx.lineTo(screenX, axisY + 2);
+        ctx.stroke();
+      }
     }
 
     // Draw current price position if we have data
@@ -1367,68 +1406,96 @@ export class GridGame extends BaseGame {
 
       // Label current position
       ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
-      const currentTimeSeconds = currentWorldX / 50;
-      ctx.fillText(
-        `Now (${currentTimeSeconds.toFixed(1)}s)`,
-        screenX,
-        axisY + 15
-      );
+      const lastTimestamp = this.priceData[this.priceData.length - 1]?.timestamp;
+      const nowLabel = lastTimestamp
+        ? this.formatTimestampLabel(lastTimestamp, false)
+        : `${(currentWorldX / 50).toFixed(1)}s`;
+      ctx.fillText(`Now (${nowLabel})`, screenX, axisY + 15);
     }
 
     ctx.restore();
   }
 
   private renderYAxis(): void {
-    // Render price labels in $0.10 increments
-    // No vertical axis line, no background panel, just clean price labels
-
+    const ctx = this.ctx;
     const verticalMargin = this.height * this.config.verticalMarginRatio;
-    const viewportTop = verticalMargin;
-    const viewportBottom = this.height - verticalMargin;
-    const viewportHeight = viewportBottom - viewportTop;
-    const visiblePriceRange = viewportHeight * this.config.pricePerPixel;
+    const viewportHeight = this.height - 2 * verticalMargin;
+    const pricePerPixel = this.visiblePriceRange > 0 ? this.visiblePriceRange / viewportHeight : 1;
+    const minVisiblePrice = this.camera.y - this.visiblePriceRange / 2;
+    const maxVisiblePrice = this.camera.y + this.visiblePriceRange / 2;
 
-    const canvasHeight = this.height;
-    const extendedPriceRange =
-      visiblePriceRange * (canvasHeight / viewportHeight);
-    const centerPrice = this.camera.y;
-    const minPrice = centerPrice - extendedPriceRange / 2;
-    const maxPrice = centerPrice + extendedPriceRange / 2;
+    const axisWidth = 46;
+    const axisX = this.width - axisWidth;
 
-    this.ctx.save();
+    ctx.save();
 
-    // No background panel or vertical line - clean labels only
-    
-    // Price increment of 0.10
-    const priceIncrement = 0.10;
-    
-    // Start at the first price that ends with .00, .10, .20, etc.
-    const startPrice = Math.floor(minPrice / priceIncrement) * priceIncrement;
+    // Draw background strip similar to X-axis styling
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(axisX, 0, axisWidth, this.height);
 
-    // Draw price label every $0.10
-    this.ctx.font = '11px Arial';
-    this.ctx.textAlign = 'left';
-    
-    // Make Y-axis labels more visible when heatmap is enabled
-    const labelOpacity = this.config.showProbabilities ? 0.9 : 0.6;
-    this.ctx.fillStyle = `rgba(255, 255, 255, ${labelOpacity})`;
+    const axisOpacity = this.config.showProbabilities ? 0.6 : 0.3;
+    const textOpacity = this.config.showProbabilities ? 0.9 : 0.65;
 
-    for (let price = startPrice; price <= maxPrice; price += priceIncrement) {
-      // Round to avoid floating point errors
-      price = Math.round(price * 100) / 100;
-      
-      // Use world-to-screen transformation to find Y position
+    ctx.strokeStyle = `rgba(255, 255, 255, ${axisOpacity})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(axisX, 0);
+    ctx.lineTo(axisX, this.height);
+    ctx.stroke();
+
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+
+    // Choose nice step based on visible range
+    const targetTickCount = Math.max(5, Math.floor(this.height / 120));
+    const roughStep = this.visiblePriceRange / targetTickCount;
+    const niceSteps = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50];
+    const step = niceSteps.find((value) => roughStep <= value) ?? niceSteps[niceSteps.length - 1];
+
+    const startPrice = Math.floor(minVisiblePrice / step) * step;
+    const endPrice = Math.ceil(maxVisiblePrice / step) * step;
+
+    for (let price = startPrice; price <= endPrice; price += step) {
       const screenPos = this.world.worldToScreen(0, price);
       const y = screenPos.y;
+      if (y < 10 || y > this.height - 10) continue;
 
-      // Only render if on screen
-      if (y < 10 || y > canvasHeight - 10) continue;
+      // Tick mark
+      ctx.strokeStyle = `rgba(255, 255, 255, ${axisOpacity})`;
+      ctx.beginPath();
+      ctx.moveTo(axisX, y);
+      ctx.lineTo(axisX + 6, y);
+      ctx.stroke();
 
-      // Draw price label at left edge (ending with .X0)
-      this.ctx.fillText(`$${price.toFixed(2)}`, 5, y + 4);
+      ctx.fillText(`$${price.toFixed(step < 1 ? 2 : 0)}`, axisX + 10, y);
     }
 
-    this.ctx.restore();
+    // Minor ticks between major intervals (match X-axis styling)
+    const minorDivisions = step >= 1 ? 5 : 4;
+    const minorStep = step / minorDivisions;
+    const minorOpacity = axisOpacity * 0.6;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${minorOpacity})`;
+
+    for (let price = startPrice; price < endPrice; price += step) {
+      for (let i = 1; i < minorDivisions; i++) {
+        const minorPrice = price + i * minorStep;
+        if (minorPrice <= minVisiblePrice || minorPrice >= maxVisiblePrice) {
+          continue;
+        }
+        const screenPos = this.world.worldToScreen(0, minorPrice);
+        const y = screenPos.y;
+        if (y < 10 || y > this.height - 10) continue;
+
+        ctx.beginPath();
+        ctx.moveTo(axisX, y);
+        ctx.lineTo(axisX + 4, y);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
   }
 
   private calculatePriceStep(priceRange: number): number {
@@ -1474,35 +1541,116 @@ export class GridGame extends BaseGame {
   }
 
   private renderDashedGrid(): void {
-    // Use fixed grid size in screen coordinates to prevent grid movement
-    const gridSize = 50; // Fixed grid size in pixels
-    const buffer = gridSize * 2; // Buffer for grid lines
+    const ctx = this.ctx;
+    const gridSize = 50;
+    ctx.save();
 
-    this.ctx.save();
-    
-    // Make grid lines more visible when heatmap is enabled (like normal box-hit canvas)
-    const gridOpacity = this.config.showProbabilities ? 0.4 : 0.15;
-    this.ctx.strokeStyle = `rgba(180, 180, 180, ${gridOpacity})`;
-    this.ctx.lineWidth = 1;
-    this.ctx.setLineDash([3, 3]);
+    const gridOpacity = this.config.showProbabilities ? 0.4 : 0.18;
+    ctx.strokeStyle = `rgba(180, 180, 180, ${gridOpacity})`;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
 
-    // Draw vertical lines - use screen coordinates directly
-    for (let x = 0; x <= this.width + buffer; x += gridSize) {
-        this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.height);
-        this.ctx.stroke();
+    // Vertical lines follow camera.x
+    const startWorldX = Math.floor((this.camera.x - gridSize * 2) / gridSize) * gridSize;
+    const endWorldX = this.camera.x + this.width + gridSize * 2;
+
+    for (let worldX = startWorldX; worldX <= endWorldX; worldX += gridSize) {
+      const screenX = this.world.worldToScreen(worldX, this.camera.y).x;
+      if (screenX < -gridSize || screenX > this.width + gridSize) continue;
+      ctx.beginPath();
+      ctx.moveTo(screenX, 0);
+      ctx.lineTo(screenX, this.height);
+      ctx.stroke();
     }
 
-    // Draw horizontal lines - use screen coordinates directly
-    for (let y = 0; y <= this.height + buffer; y += gridSize) {
-        this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.width, y);
-        this.ctx.stroke();
+    // Horizontal lines track price scale
+    const verticalMargin = this.height * this.config.verticalMarginRatio;
+    const viewportHeight = this.height - 2 * verticalMargin;
+    const pricePerPixel = this.visiblePriceRange > 0 ? this.visiblePriceRange / viewportHeight : 1;
+    const gridStepPrice = gridSize * pricePerPixel;
+    if (!Number.isFinite(gridStepPrice) || gridStepPrice <= 0) {
+      ctx.restore();
+      return;
+    }
+    const minPrice = this.camera.y - this.visiblePriceRange / 2 - gridStepPrice * 2;
+    const maxPrice = this.camera.y + this.visiblePriceRange / 2 + gridStepPrice * 2;
+
+    for (
+      let price = Math.floor(minPrice / gridStepPrice) * gridStepPrice;
+      price <= maxPrice;
+      price += gridStepPrice
+    ) {
+      const screenY = this.world.worldToScreen(0, price).y;
+      if (screenY < -gridSize || screenY > this.height + gridSize) continue;
+      ctx.beginPath();
+      ctx.moveTo(0, screenY);
+      ctx.lineTo(this.width, screenY);
+      ctx.stroke();
     }
 
-    this.ctx.restore();
+    ctx.restore();
+  }
+
+  private getWorldXForTimestamp(timestamp: number): number | null {
+    if (!this.priceData.length) {
+      return null;
+    }
+    const lastPoint = this.priceData[this.priceData.length - 1];
+    if (!lastPoint?.timestamp) {
+      return null;
+    }
+    const deltaMs = timestamp - lastPoint.timestamp;
+    const currentWorldX = (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
+    const offsetPoints = deltaMs / Math.max(1, this.msPerPointEstimate);
+    return currentWorldX + offsetPoints * this.config.pixelsPerPoint;
+  }
+
+  private getTimestampForWorldX(worldX: number): number | null {
+    if (!this.priceData.length) {
+      return null;
+    }
+    const lastPoint = this.priceData[this.priceData.length - 1];
+    if (!lastPoint?.timestamp) {
+      return null;
+    }
+    const currentWorldX = (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
+    const deltaPoints = (worldX - currentWorldX) / this.config.pixelsPerPoint;
+    return lastPoint.timestamp + deltaPoints * this.msPerPointEstimate;
+  }
+
+  private formatTimestampLabel(timestamp: number, includeMillis: boolean = false): string {
+    const date = new Date(timestamp);
+    if (includeMillis) {
+      const millis = String(date.getMilliseconds()).padStart(3, '0');
+      return `${date.toLocaleTimeString('en-US', { hour12: false })}.${millis}`;
+    }
+    return date.toLocaleTimeString('en-US', { hour12: false });
+  }
+
+  public getWorldPositionForTimestamp(timestamp: number): { worldX: number } | null {
+    const worldX = this.getWorldXForTimestamp(timestamp);
+    if (worldX === null) {
+      return null;
+    }
+    return { worldX };
+  }
+
+  public setGridScale(columnWidth: number, rowHeight: number): void {
+    if (Number.isFinite(columnWidth) && columnWidth > 0) {
+      this.gridColumnWidth = columnWidth;
+    }
+    if (Number.isFinite(rowHeight) && rowHeight > 0) {
+      this.gridRowHeight = rowHeight;
+    }
+  }
+
+  public setGridOrigin(columnOrigin: number, rowOrigin: number): void {
+    if (Number.isFinite(columnOrigin)) {
+      this.gridColumnOrigin = columnOrigin;
+    }
+    if (Number.isFinite(rowOrigin)) {
+      this.gridRowOrigin = rowOrigin;
+    }
   }
 
   private renderUnifiedBorderGrid(): void {
@@ -1514,50 +1662,46 @@ export class GridGame extends BaseGame {
     this.ctx.lineWidth = 0.6;
     this.ctx.setLineDash([]);
 
-    // Get all unique positions from multiplier boxes to create grid lines (filler grid archived)
-    const allBoxes = {
-      ...this.backendMultipliers
-      // ...this.emptyBoxes - DISABLED: filler grid archived
-    };
+    const columnWidth = Math.max(this.config.pixelsPerPoint, this.gridColumnWidth);
+    const rowHeight = Math.max(0.05, this.gridRowHeight);
 
-    const uniqueXPositions = new Set<number>();
-    const uniqueYPositions = new Set<number>();
+    const startWorldX = Math.floor((this.camera.x - columnWidth * 3 - this.gridColumnOrigin) / columnWidth) * columnWidth + this.gridColumnOrigin;
+    const endWorldX = this.camera.x + this.width + columnWidth * 3;
 
-    // Collect all unique X and Y positions
-    Object.values(allBoxes).forEach(box => {
-      const topLeft = this.world.worldToScreen(box.worldX, box.worldY + box.height);
-      const bottomRight = this.world.worldToScreen(box.worldX + box.width, box.worldY);
-      
-      // Only add positions that are on screen
-      if (topLeft.x >= 0 && topLeft.x <= this.width) {
-        uniqueXPositions.add(Math.round(topLeft.x));
-      }
-      if (bottomRight.x >= 0 && bottomRight.x <= this.width) {
-        uniqueXPositions.add(Math.round(bottomRight.x));
-      }
-      if (topLeft.y >= 0 && topLeft.y <= this.height) {
-        uniqueYPositions.add(Math.round(topLeft.y));
-      }
-      if (bottomRight.y >= 0 && bottomRight.y <= this.height) {
-        uniqueYPositions.add(Math.round(bottomRight.y));
-      }
-    });
-
-    // Draw vertical grid lines
-    uniqueXPositions.forEach(x => {
+    for (let worldX = startWorldX; worldX <= endWorldX; worldX += columnWidth) {
+      const screenX = this.world.worldToScreen(worldX, 0).x;
+      if (screenX < -columnWidth || screenX > this.width + columnWidth) continue;
+      const alignedX = Math.round(screenX) + 0.5;
       this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.height);
+      this.ctx.moveTo(alignedX, 0);
+      this.ctx.lineTo(alignedX, this.height);
       this.ctx.stroke();
-    });
+    }
 
-    // Draw horizontal grid lines
-    uniqueYPositions.forEach(y => {
+    const verticalMargin = this.height * this.config.verticalMarginRatio;
+    const viewportHeight = this.height - 2 * verticalMargin;
+    const pricePerPixel = this.visiblePriceRange > 0 ? this.visiblePriceRange / viewportHeight : 1;
+    const gridStepPrice = rowHeight;
+    if (!Number.isFinite(gridStepPrice) || gridStepPrice <= 0) {
+      this.ctx.restore();
+      return;
+    }
+    const minPrice = this.camera.y - this.visiblePriceRange / 2 - gridStepPrice * 2;
+    const maxPrice = this.camera.y + this.visiblePriceRange / 2 + gridStepPrice * 2;
+
+    for (
+      let price = Math.floor((minPrice - this.gridRowOrigin) / gridStepPrice) * gridStepPrice + this.gridRowOrigin;
+      price <= maxPrice;
+      price += gridStepPrice
+    ) {
+      const screenY = this.world.worldToScreen(0, price).y;
+      if (screenY < -columnWidth || screenY > this.height + columnWidth) continue;
+      const alignedY = Math.round(screenY) + 0.5;
       this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.width, y);
+      this.ctx.moveTo(0, alignedY);
+      this.ctx.lineTo(this.width, alignedY);
       this.ctx.stroke();
-    });
+    }
 
     this.ctx.restore();
   }
@@ -1642,6 +1786,21 @@ export class GridGame extends BaseGame {
       const lastPrice = this.priceData[this.priceData.length - 1].price;
       const smoothFactor = 0.85;
       data.price = lastPrice * (1 - smoothFactor) + data.price * smoothFactor;
+
+      const lastTimestamp = this.priceData[this.priceData.length - 1]?.timestamp;
+      if (
+        typeof lastTimestamp === 'number'
+        && typeof data.timestamp === 'number'
+      ) {
+        const delta = data.timestamp - lastTimestamp;
+        if (delta > 0 && delta < 60_000) {
+          const smoothing = 0.9;
+          this.msPerPointEstimate =
+            this.msPerPointEstimate * smoothing + delta * (1 - smoothing);
+        }
+      }
+    } else if (typeof data.timestamp === 'number') {
+      this.msPerPointEstimate = Math.max(1, this.msPerPointEstimate);
     }
 
     this.priceData.push(data);
@@ -2039,6 +2198,9 @@ export class GridGame extends BaseGame {
   public updateConfig(newConfig: Partial<GridGameConfig>): void {
     this.debug('🎯 GridGame: updateConfig called with:', newConfig);
     this.config = { ...this.config, ...newConfig };
+    if (newConfig.pixelsPerPoint !== undefined) {
+      this.world.setPixelsPerPoint(newConfig.pixelsPerPoint);
+    }
     this.debug('🎯 GridGame: Updated config showOtherPlayers:', this.config.showOtherPlayers);
   }
 

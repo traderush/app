@@ -16,6 +16,7 @@ export const MARKET_MAKER_BALANCE = 1_000_000_000_000;
 const LIQUIDITY_ORDER_SIZE = 10;
 const LIQUIDITY_MULTIPLIER_BASE = 5;
 const LIQUIDITY_MULTIPLIER_JITTER = 4;
+const FLOAT_EPSILON = 1e-8;
 
 export type MarketMakerOrderbookTemplate = Omit<OrderbookConfig, "id">;
 export type MarketMakerOrderbook = { id: OrderbookId; template: MarketMakerOrderbookTemplate };
@@ -78,8 +79,21 @@ class ContinuousMarketMaker implements MarketMaker {
 
     const priceMin = price - template.placeOrdersBounds.priceMinusBound;
     const priceMax = price + template.placeOrdersBounds.pricePlusBound;
-    const priceStart = alignDown(priceMin, template.priceStep);
-    const priceEnd = alignDown(priceMax, template.priceStep);
+
+    let priceStart = snapUp(priceMin, template.priceStep);
+    let priceEnd = snapDown(priceMax, template.priceStep);
+
+    priceStart = normalizePrice(priceStart, template.priceStep, priceMax, priceMin);
+    priceEnd = normalizePrice(priceEnd, template.priceStep, priceMax, priceMin);
+
+    if (priceStart > priceEnd + FLOAT_EPSILON) {
+      return;
+    }
+
+    const span = priceEnd - priceStart;
+    const priceStepCount = span <= FLOAT_EPSILON
+      ? 0
+      : Math.max(0, Math.round(span / template.priceStep));
 
     const earliestStart = now + template.placeOrdersBounds.timeBuffer;
     const latestStart = now + template.placeOrdersBounds.timeLimit;
@@ -90,7 +104,14 @@ class ContinuousMarketMaker implements MarketMaker {
       return;
     }
 
-    for (let priceLevel = priceStart; priceLevel <= priceEnd; priceLevel += template.priceStep) {
+    for (let priceIndex = 0; priceIndex <= priceStepCount; priceIndex++) {
+      const priceLevel = normalizePrice(
+        priceStart + priceIndex * template.priceStep,
+        template.priceStep,
+        priceMax,
+        priceMin,
+      );
+
       for (let windowStart = firstWindowStart; windowStart <= lastWindowStart; windowStart += template.timeframe) {
         const windowEnd = (windowStart + template.timeframe) as Timestamp;
         const key = this.toCacheKey(priceLevel, windowStart);
@@ -188,16 +209,32 @@ function alignDown(value: number, step: number): number {
   if (step <= 0) {
     return value;
   }
-  return Math.floor(value / step) * step;
+  return Math.floor((value + FLOAT_EPSILON) / step) * step;
 }
 
 function alignUp(value: number, step: number): number {
   if (step <= 0) {
     return value;
   }
-  const remainder = value % step;
-  if (remainder === 0) {
+  return Math.ceil((value - FLOAT_EPSILON) / step) * step;
+}
+
+function snapDown(value: number, step: number): number {
+  if (step <= 0) {
     return value;
   }
-  return value + (step - remainder);
+  return alignDown(value, step);
+}
+
+function snapUp(value: number, step: number): number {
+  if (step <= 0) {
+    return value;
+  }
+  return alignUp(value, step);
+}
+
+function normalizePrice(value: number, step: number, ceiling: number, floor: number = -Infinity): number {
+  const bounded = Math.min(Math.max(value, floor), ceiling);
+  const decimals = Math.min(8, Math.max(0, step.toString().split('.')[1]?.length ?? 0) + 2);
+  return Number(bounded.toFixed(decimals));
 }
