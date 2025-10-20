@@ -1,15 +1,14 @@
 // Contract Types matching the new backend architecture
 // These types are shared between frontend and backend
 
-import { IronCondorTimeframes, SpreadTimeframes } from './timeframe';
+import { TimeFrame } from './timeframe';
 
-// Type aliases for backward compatibility
-type IronCondorTimeframe = typeof IronCondorTimeframes[number];
-type SpreadTimeframe = typeof SpreadTimeframes[number];
+// Type aliases for backward compatibility (single TimeFrame for both for now)
+export type IronCondorTimeframe = TimeFrame;
+export type SpreadTimeframe = TimeFrame;
 
-// Re-export TimeFrame enum and types for convenience
+// Re-export TimeFrame enum for convenience
 export { TimeFrame } from './timeframe';
-export type { IronCondorTimeframe, SpreadTimeframe };
 
 // Contract ID patterns
 export type IronCondorId = `IC_${number}_${number}`;

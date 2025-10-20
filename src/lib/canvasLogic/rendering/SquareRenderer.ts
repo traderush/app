@@ -63,6 +63,7 @@ export class SquareRenderer {
     // Determine actual dimensions
     const actualWidth = width ?? size ?? 50;
     const actualHeight = height ?? size ?? 50;
+    const labelFontSize = Math.max(8, Math.min(12, actualWidth / 5));
 
     this.ctx.save();
 
@@ -99,8 +100,8 @@ export class SquareRenderer {
       this.ctx.fillStyle = 'rgba(255, 170, 0, 0.18)'; // Orange at 18% opacity
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else {
-      // Default state - dark background
-      this.ctx.fillStyle = '#0e0e0e';
+      // Default state - black background with slight fade for depth
+      this.ctx.fillStyle = 'rgba(12, 12, 12, 0.82)';
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     }
 
@@ -191,7 +192,7 @@ export class SquareRenderer {
                            (isSpecialState || !showUnifiedGrid);
     
     if (shouldDrawBorder) {
-      let borderColor = '#2b2b2b';
+      let borderColor = '#3f3f3f';
       let borderWidth = 0.6;
       
       if (state === 'activated' || state === 'selected') {
@@ -224,32 +225,28 @@ export class SquareRenderer {
 
     // Draw text
     if (text) {
-      // Adjust text color based on state
-      let textColor = 'rgba(255, 255, 255, 0.12)'; // Default faint text
-      
+      let textColor = 'rgba(255, 255, 255, 0.25)';
       if (state === 'selected' || state === 'activated') {
-        textColor = 'rgba(255, 255, 255, 1.0)'; // Bright text for selected/hit
+        textColor = 'rgba(255, 255, 255, 1.0)';
       } else if (state === 'missed') {
-        textColor = 'rgba(120, 120, 120, 0.6)'; // Greyed out text for missed
+        textColor = 'rgba(120, 120, 120, 0.6)';
       } else if (state === 'highlighted') {
-        textColor = 'rgba(255, 170, 0, 0.9)'; // Orange text for pending confirmation
+        textColor = 'rgba(255, 170, 0, 0.9)';
       } else if (state === 'hovered') {
-        textColor = 'rgba(255, 255, 255, 0.25)'; // Brighter on hover
+        textColor = 'rgba(255, 255, 255, 0.3)';
       }
-      
-      // Make text more visible when heatmap is enabled (like normal box-hit canvas)
       if (showProbabilities && state === 'default') {
-        textColor = `rgba(255,255,255,${0.8 * opacity})`; // Much brighter text for heatmap visibility
+        textColor = `rgba(255,255,255,${0.85 * opacity})`;
       }
-      
-      this.ctx.fillStyle = textColor;
-      this.ctx.font = '20px sans-serif';
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
 
-      const centerX = x + actualWidth / 2;
-      const centerY = y + actualHeight / 2;
-      this.ctx.fillText(text, centerX, centerY + 4);
+      this.ctx.fillStyle = textColor;
+      this.ctx.font = `${labelFontSize}px sans-serif`;
+      this.ctx.textAlign = 'right';
+      this.ctx.textBaseline = 'top';
+      const inset = Math.min(8, Math.max(4, actualWidth * 0.12));
+      const textX = x + actualWidth - inset;
+      const textY = y + inset;
+      this.ctx.fillText(text, textX, textY);
     }
 
     // Draw "HIT" or "MISS" badge for outcome states (matches regular box-hit canvas)

@@ -17,6 +17,7 @@ export class OracleService {
   private readonly supportedAssets = [Asset.BTC, Asset.USD]
   private updateInterval?: NodeJS.Timeout;
   private isRunning: boolean = false;
+  private price: number = 100;
 
   constructor(
     private readonly sendPriceUpdate: (symbol: Asset, price: number, time: Timestamp) => void | Promise<void>
@@ -52,7 +53,7 @@ export class OracleService {
       if (this.isRunning) {
         await this.generatePriceUpdates();
       }
-    }, 500);
+    }, 100);
   }
 
   private async generatePriceUpdates(): Promise<void> {
@@ -60,7 +61,8 @@ export class OracleService {
       if (asset === Asset.USD) {
         continue;
       }
-      await this.updatePriceAndTime(asset, 100, new Date().getTime() as Timestamp);
+      this.price = this.price + (Math.random() * 2 - 1) * 0.05;
+      await this.updatePriceAndTime(asset, this.price, new Date().getTime() as Timestamp);
     }
   }
 }

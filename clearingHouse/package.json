@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "test": "bun test",
-    "visualizer": "bun run src/devtools/orderbook-visualizer.ts"
+    "visualizer": "bun run src/devtools/orderbook-visualizer.ts",
+    "engine": "bun run src/server/engine-ws-server.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
