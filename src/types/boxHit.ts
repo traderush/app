@@ -19,7 +19,9 @@ export interface BoxHitPosition {
   tradeId: string;
   result?: 'win' | 'loss';
   payout?: number;
+  profit?: number;
   settledAt?: Date;
+  verifiedAt?: Date;
 }
 
 export type BoxHitPositionMap = Map<string, BoxHitPosition>;

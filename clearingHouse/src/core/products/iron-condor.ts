@@ -34,24 +34,37 @@ export const IronCondorProduct: ProductRuntime<IronCondorOrderData, IronCondorPo
     const totalSize = Math.min(size, order.sizeRemaining);
     const nextPositionSize = (existingPosition?.size ?? 0) + totalSize;
 
+    const previousCollateral = existingPosition?.collateralLocked ?? 0;
+    const collateralRequired = nextPositionSize;
+    const additionalLock = Math.max(0, collateralRequired - previousCollateral);
+
     const position: Position<IronCondorPositionData> = existingPosition
       ? {
           ...existingPosition,
           size: nextPositionSize,
+          collateralLocked: collateralRequired,
         }
       : {
           id:`pos_${accountId}_${order.id!}` as PositionId,
           size: totalSize,
           orderId: order.id!,
           userId: accountId,
-          collateralLocked: 0,
+          collateralLocked: collateralRequired,
           timeCreated: now,
           data: {} as IronCondorPositionData,
         };
 
     return {
       position,
-      locks: [],
+      locks: additionalLock > 0
+        ? [
+            {
+              accountId,
+              Asset: Asset.USD,
+              amount: additionalLock,
+            },
+          ]
+        : [],
     };
   },
   verifyHit(order, _position, price: number, _now: Timestamp, _timeWindow) {
@@ -66,7 +79,7 @@ export const IronCondorProduct: ProductRuntime<IronCondorOrderData, IronCondorPo
         {
           accountId: position.userId,
           Asset: Asset.USD,
-          amount: position.size,
+          amount: position.collateralLocked,
         }
       ],
       credits: [

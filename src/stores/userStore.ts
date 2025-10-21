@@ -11,6 +11,7 @@ export interface Trade {
   settledAt?: Date;
   result?: 'win' | 'loss' | 'pending';
   payout?: number;
+  profit?: number;
   asset?: string;
   type?: string;
 }
@@ -43,6 +44,8 @@ interface UserState {
   
   // Balance
   balance: number;
+  lockedBalance: number;
+  totalBalance: number;
   balanceHistory: Array<{ timestamp: number; balance: number; change: number }>;
   
   // Trades
@@ -58,7 +61,7 @@ interface UserState {
   clearUser: () => void;
   
   // Actions - Balance
-  updateBalance: (newBalance: number) => void;
+  updateBalance: (newBalance: number, lockedBalance?: number) => void;
   addBalanceChange: (change: number, reason?: string) => void;
   resetBalance: () => void;
   
@@ -91,7 +94,7 @@ const initialStats: UserStats = {
 
 type PersistedUserState = Pick<
   UserState,
-  'user' | 'isAuthenticated' | 'balance' | 'balanceHistory' | 'tradeHistory' | 'stats'
+  'user' | 'isAuthenticated' | 'balance' | 'lockedBalance' | 'totalBalance' | 'balanceHistory' | 'tradeHistory' | 'stats'
 >;
 
 export const useUserStore = create<UserState>()(
@@ -102,6 +105,8 @@ export const useUserStore = create<UserState>()(
       user: null,
       isAuthenticated: false,
       balance: 10000, // Starting balance
+      lockedBalance: 0,
+      totalBalance: 10000,
       balanceHistory: [],
       activeTrades: [],
       tradeHistory: [],
@@ -130,16 +135,22 @@ export const useUserStore = create<UserState>()(
         }),
       
       // Balance Actions
-      updateBalance: (newBalance) =>
+      updateBalance: (newBalance, lockedBalance) =>
         set((state) => {
-          const change = newBalance - state.balance;
+          const effectiveLocked = typeof lockedBalance === 'number'
+            ? lockedBalance
+            : state.lockedBalance;
+          const newTotalBalance = newBalance + effectiveLocked;
+          const change = newTotalBalance - state.totalBalance;
           const newHistory = [
             ...state.balanceHistory,
-            { timestamp: Date.now(), balance: newBalance, change },
+            { timestamp: Date.now(), balance: newTotalBalance, change },
           ].slice(-100); // Keep last 100 balance changes
           
           return {
             balance: newBalance,
+            lockedBalance: effectiveLocked,
+            totalBalance: newTotalBalance,
             balanceHistory: newHistory,
           };
         }),
@@ -147,13 +158,16 @@ export const useUserStore = create<UserState>()(
       addBalanceChange: (change) =>
         set((state) => {
           const newBalance = state.balance + change;
+          const newTotalBalance = newBalance + state.lockedBalance;
+          const totalChange = newTotalBalance - state.totalBalance;
           const newHistory = [
             ...state.balanceHistory,
-            { timestamp: Date.now(), balance: newBalance, change },
+            { timestamp: Date.now(), balance: newTotalBalance, change: totalChange },
           ].slice(-100);
           
           return {
             balance: newBalance,
+            totalBalance: newTotalBalance,
             balanceHistory: newHistory,
           };
         }),
@@ -161,6 +175,8 @@ export const useUserStore = create<UserState>()(
       resetBalance: () =>
         set({
           balance: 10000,
+          lockedBalance: 0,
+          totalBalance: 10000,
           balanceHistory: [],
         }),
       
@@ -203,16 +219,19 @@ export const useUserStore = create<UserState>()(
             return state;
           }
           
+          const balanceChange = result === 'win' ? payout : -trade.amount;
           const settledTrade: Trade = {
             ...trade,
             result,
             payout,
+            profit: balanceChange,
             settledAt: new Date(),
           };
           
           // Update balance
-          const balanceChange = result === 'win' ? payout : -trade.amount;
           const newBalance = state.balance + balanceChange;
+          const newTotalBalance = newBalance + state.lockedBalance;
+          const totalChange = newTotalBalance - state.totalBalance;
           
           // Calculate updated stats after settling trade
           const allTrades = [...state.tradeHistory, settledTrade];
@@ -225,6 +244,9 @@ export const useUserStore = create<UserState>()(
           
           const totalVolume = settledTrades.reduce((sum, t) => sum + t.amount, 0);
           const totalProfit = settledTrades.reduce((sum, t) => {
+            if (typeof t.profit === 'number') {
+              return sum + t.profit;
+            }
             if (t.result === 'win' && t.payout) return sum + (t.payout - t.amount);
             if (t.result === 'loss') return sum - t.amount;
             return sum;
@@ -260,9 +282,10 @@ export const useUserStore = create<UserState>()(
             activeTrades: state.activeTrades.filter((t) => t.id !== tradeId),
             tradeHistory: [settledTrade, ...state.tradeHistory].slice(0, 1000), // Keep last 1000 trades
             balance: newBalance,
+            totalBalance: newTotalBalance,
             balanceHistory: [
               ...state.balanceHistory,
-              { timestamp: Date.now(), balance: newBalance, change: balanceChange },
+              { timestamp: Date.now(), balance: newTotalBalance, change: totalChange },
             ].slice(-100),
             stats: {
               totalTrades,
@@ -300,6 +323,9 @@ export const useUserStore = create<UserState>()(
           
           const totalVolume = settledTrades.reduce((sum, t) => sum + t.amount, 0);
           const totalProfit = settledTrades.reduce((sum, t) => {
+            if (typeof t.profit === 'number') {
+              return sum + t.profit;
+            }
             if (t.result === 'win' && t.payout) return sum + (t.payout - t.amount);
             if (t.result === 'loss') return sum - t.amount;
             return sum;
@@ -357,6 +383,8 @@ export const useUserStore = create<UserState>()(
           user: null,
           isAuthenticated: false,
           balance: 10000,
+          lockedBalance: 0,
+          totalBalance: 10000,
           balanceHistory: [],
           activeTrades: [],
           tradeHistory: [],
@@ -370,6 +398,8 @@ export const useUserStore = create<UserState>()(
           user: state.user,
           isAuthenticated: state.isAuthenticated,
           balance: state.balance,
+          lockedBalance: state.lockedBalance,
+          totalBalance: state.totalBalance,
           balanceHistory: state.balanceHistory,
           tradeHistory: state.tradeHistory.slice(0, 100),
           stats: state.stats,

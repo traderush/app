@@ -26,6 +26,8 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
 }) => {
   // Get live data from userStore
   const balance = useUserStore((state) => state.balance);
+  const lockedBalance = useUserStore((state) => state.lockedBalance);
+  const totalBalanceStore = useUserStore((state) => state.totalBalance);
   const stats = useUserStore((state) => state.stats);
   const tradeHistory = useUserStore((state) => state.tradeHistory);
   const balanceHistory = useUserStore((state) => state.balanceHistory);
@@ -33,7 +35,9 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
   
   // Calculate live PnL data
   const [pnlData, setPnlData] = useState({
-    balance: balance,
+    availableBalance: balance,
+    lockedBalance: lockedBalance,
+    totalBalance: totalBalanceStore,
     totalPnL: stats.totalProfit,
     todayPnL: 0, // Will calculate from today's trades
     winRate: stats.winRate,
@@ -114,7 +118,9 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
     }, 0);
 
     setPnlData({
-      balance: balance,
+      availableBalance: balance,
+      lockedBalance: lockedBalance,
+      totalBalance: totalBalanceStore,
       totalPnL: actualTotalPnL, // Use calculated total PnL instead of stats
       todayPnL: todayPnL,
       winRate: stats.winRate,
@@ -128,7 +134,7 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
       longestLossStreak: longestLossStreak
     });
 
-  }, [isOpen, balance, stats, tradeHistory, balanceHistory]);
+  }, [isOpen, balance, lockedBalance, totalBalanceStore, stats, tradeHistory, balanceHistory]);
 
   // Handle dragging and resizing
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -402,7 +408,7 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
                   lineHeight: 1
                 }}
               >
-                {formatCurrency(pnlData.balance)}
+                {formatCurrency(pnlData.totalBalance)}
               </div>
               <div 
                 className="opacity-70"
@@ -413,7 +419,18 @@ const PnLTrackerPopup: React.FC<PnLTrackerPopupProps> = ({
                   lineHeight: 1.5
                 }}
               >
-                Balance
+                Total Balance
+              </div>
+              <div
+                className="opacity-70 mt-1"
+                style={{
+                  color: customization?.generalTextColor || '#ffffff',
+                  fontWeight: 400,
+                  fontSize: `${Math.max(fontSizes.labelSize - 2, 10)}px`,
+                  lineHeight: 1.2
+                }}
+              >
+                Active {formatCurrency(pnlData.availableBalance)} · Locked {formatCurrency(pnlData.lockedBalance)}
               </div>
             </div>
 

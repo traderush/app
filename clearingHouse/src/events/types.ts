@@ -17,7 +17,9 @@ export type EventName =
   | "clock_tick"
   | "verification_hit"
   | "payout_settled"
-  | "margin_violation";
+  | "payout_expired"
+  | "margin_violation"
+  | "balance_updated";
 
 export interface EventEnvelope<TName extends EventName, TPayload> {
   eventId: EventId;
@@ -61,6 +63,9 @@ export type OrderEventPayloads = {
       Asset: Asset;
       balance: Decimal;
       locked: Decimal;
+      delta?: Decimal;
+      reason?: string;
+      metadata?: Record<string, unknown>;
     }>;
   };
   price_update: {
@@ -90,7 +95,17 @@ export type OrderEventPayloads = {
       Asset: Asset;
       balance: Decimal;
       locked: Decimal;
+      delta?: Decimal;
+      reason?: string;
+      metadata?: Record<string, unknown>;
     }>;
+  };
+  payout_expired: {
+    orderId: OrderId;
+    positionId: PositionId;
+    makerId: AccountId;
+    userId: AccountId;
+    size: Decimal;
   };
   margin_violation: {
     entityId: AccountId;
@@ -98,6 +113,15 @@ export type OrderEventPayloads = {
     availableMargin: Decimal;
     policyAction: "order_blocked" | "fill_scaled";
     orderId: OrderId;
+  };
+  balance_updated: {
+    accountId: AccountId;
+    asset: Asset;
+    balance: Decimal;
+    locked: Decimal;
+    delta: Decimal;
+    reason?: string;
+    metadata?: Record<string, unknown>;
   };
 };
 

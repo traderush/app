@@ -12,8 +12,8 @@ import {
 } from "./domain/primitives";
 
 export const MARKET_MAKER_ID = "market_maker_trillion" as AccountId;
-export const MARKET_MAKER_BALANCE = 1_000_000_000_000;
-const LIQUIDITY_ORDER_SIZE = 10;
+export const MARKET_MAKER_BALANCE = 1_000_000_000_000_000;
+const LIQUIDITY_ORDER_SIZE = 1000;
 const LIQUIDITY_MULTIPLIER_BASE = 5;
 const LIQUIDITY_MULTIPLIER_JITTER = 4;
 const FLOAT_EPSILON = 1e-8;

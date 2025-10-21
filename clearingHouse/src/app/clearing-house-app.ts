@@ -6,6 +6,7 @@ import {
   type OrderbookConfig,
   type OrderbookStore,
   type SettlementReport,
+  type ExpirationReport,
   type VerificationReport,
 } from "../core/ephemeral-orderbook";
 import type { Order } from "../core/orders";
@@ -362,7 +363,7 @@ export class ClearingHouseApp {
       for (const orderbook of productMap.values()) {
         if (orderbook.config.symbol === symbol) {
           const orderbookId = orderbook.config.id as OrderbookId;
-          const { settlements, verificationHits } = orderbook.updatePriceAndTime(price, time);
+          const { settlements, verificationHits, expirations } = orderbook.updatePriceAndTime(price, time);
 
           this.publishPriceUpdateEvent(orderbookId, symbol, price);
           this.publishClockTickEvent(orderbookId, time, "price_update");
@@ -373,6 +374,10 @@ export class ClearingHouseApp {
 
           for (const settlement of settlements) {
             this.publishPayoutSettledEvent(orderbookId, settlement);
+          }
+
+          for (const expiration of expirations) {
+            this.publishPayoutExpiredEvent(orderbookId, expiration);
           }
         }
       }
@@ -440,6 +445,20 @@ export class ClearingHouseApp {
   }
 
   private publishOrderFilledEvent(orderbookId: OrderbookId, report: FillReport): void {
+    if (report.balances?.length) {
+      for (const balance of report.balances) {
+        this.publishBalanceUpdateEvent(
+          orderbookId,
+          balance.accountId,
+          balance.asset,
+          balance.balance,
+          balance.locked,
+          balance.delta ?? 0,
+          balance.reason ?? "order_fill",
+          balance.context,
+        );
+      }
+    }
     const balances = this.mapBalanceSnapshotsForEvent(report.balances);
     const event: ClearingHouseEvent<"order_filled"> = {
       eventId: randomUUID() as EventId,
@@ -462,6 +481,20 @@ export class ClearingHouseApp {
   }
 
   private publishPayoutSettledEvent(orderbookId: OrderbookId, settlement: SettlementReport): void {
+    if (settlement.balances?.length) {
+      for (const balance of settlement.balances) {
+        this.publishBalanceUpdateEvent(
+          orderbookId,
+          balance.accountId,
+          balance.asset,
+          balance.balance,
+          balance.locked,
+          balance.delta ?? 0,
+          balance.reason ?? "payout_settlement",
+          balance.context,
+        );
+      }
+    }
     const balances = this.mapBalanceSnapshotsForEvent(settlement.balances);
     const event: ClearingHouseEvent<"payout_settled"> = {
       eventId: randomUUID() as EventId,
@@ -476,6 +509,61 @@ export class ClearingHouseApp {
         makerId: settlement.makerId,
         userId: settlement.takerId,
         balances,
+      },
+    };
+
+    this.eventBus.publish(event);
+  }
+
+  private publishPayoutExpiredEvent(orderbookId: OrderbookId, expiration: ExpirationReport): void {
+    const event: ClearingHouseEvent<"payout_expired"> = {
+      eventId: randomUUID() as EventId,
+      name: "payout_expired",
+      orderbookId,
+      ts: this.now,
+      clockSeq: this.nextClockSeq(),
+      payload: {
+        orderId: expiration.orderId,
+        positionId: expiration.positionId,
+        makerId: expiration.makerId,
+        userId: expiration.takerId,
+        size: expiration.size,
+      },
+    };
+
+    this.eventBus.publish(event);
+  }
+
+  private publishBalanceUpdateEvent(
+    fallbackOrderbookId: OrderbookId | undefined,
+    accountId: AccountId,
+    asset: Asset,
+    balance: number,
+    locked: number,
+    delta: number,
+    reason?: string,
+    metadata?: Record<string, unknown>,
+  ): void {
+    const contextOrderbookId =
+      metadata && typeof metadata.orderbookId === "string"
+        ? (metadata.orderbookId as OrderbookId)
+        : undefined;
+    const orderbookId = fallbackOrderbookId ?? contextOrderbookId ?? ("system" as OrderbookId);
+
+    const event: ClearingHouseEvent<"balance_updated"> = {
+      eventId: randomUUID() as EventId,
+      name: "balance_updated",
+      orderbookId,
+      ts: this.touchNow(),
+      clockSeq: this.nextClockSeq(),
+      payload: {
+        accountId,
+        asset,
+        balance,
+        locked,
+        delta,
+        reason,
+        metadata,
       },
     };
 
@@ -535,7 +623,7 @@ export class ClearingHouseApp {
 
   private mapBalanceSnapshotsForEvent(
     snapshots: Array<{ accountId: AccountId; asset: Asset; balance: number; locked: number }>,
-  ): Array<{ accountId: AccountId; Asset: Asset; balance: number; locked: number }> | undefined {
+  ): Array<{ accountId: AccountId; Asset: Asset; balance: number; locked: number; delta?: number; reason?: string; metadata?: Record<string, unknown> }> | undefined {
     if (!snapshots.length) {
       return undefined;
     }
@@ -545,6 +633,9 @@ export class ClearingHouseApp {
       Asset: snapshot.asset,
       balance: snapshot.balance,
       locked: snapshot.locked,
+      delta: "delta" in snapshot ? snapshot.delta : undefined,
+      reason: "reason" in snapshot && typeof snapshot.reason === "string" ? snapshot.reason : undefined,
+      metadata: "context" in snapshot && snapshot.context ? snapshot.context : undefined,
     }));
   }
 
@@ -590,6 +681,53 @@ export class ClearingHouseApp {
       },
       metadata,
     });
+
+    const impacted = new Map<string, { accountId: AccountId; asset: Asset; delta: number }>();
+    const accumulate = (accountId: AccountId, asset: Asset, delta: number) => {
+      const key = `${accountId}:${asset}`;
+      const current = impacted.get(key);
+      if (current) {
+        current.delta += delta;
+        return;
+      }
+      impacted.set(key, { accountId, asset, delta });
+    };
+
+    for (const credit of credits) {
+      accumulate(credit.accountId, credit.Asset, credit.amount);
+    }
+    for (const debit of debits) {
+      accumulate(debit.accountId, debit.Asset, -debit.amount);
+    }
+    for (const lock of locks) {
+      accumulate(lock.accountId, lock.Asset, -lock.amount);
+    }
+    for (const unlock of unlocks) {
+      accumulate(unlock.accountId, unlock.Asset, unlock.amount);
+    }
+
+    if (impacted.size === 0) {
+      return;
+    }
+
+    const reason =
+      (metadata && typeof metadata.reason === "string" ? metadata.reason : undefined)
+      ?? (metadata && typeof metadata.commandType === "string" ? metadata.commandType : undefined);
+    const context = metadata ? { ...metadata } : undefined;
+    const orderbookIdFromContext = context?.orderbookId as OrderbookId | undefined;
+
+    for (const { accountId, asset, delta } of impacted.values()) {
+      this.publishBalanceUpdateEvent(
+        orderbookIdFromContext,
+        accountId,
+        asset,
+        this.balanceService.getBalance(accountId, asset),
+        this.balanceService.getLocked(accountId, asset),
+        delta,
+        reason,
+        context,
+      );
+    }
   }
 
   private ensurePositiveAmount(amount: number, message: string): void {

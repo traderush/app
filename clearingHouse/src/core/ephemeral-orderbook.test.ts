@@ -333,9 +333,10 @@ describe("EphemeralOrderbook", () => {
     orderbook.updatePriceAndTime(initialPrice, fillTime);
     orderbook.fillOrder(order.id!, 2, takerId);
 
-    const { settlements, verificationHits } = orderbook.updatePriceAndTime(order.data.hitPrice, fillTime + 1);
+    const { settlements, verificationHits, expirations } = orderbook.updatePriceAndTime(order.data.hitPrice, fillTime + 1);
     expect(verificationHits).toHaveLength(1);
     expect(settlements).toHaveLength(1);
+    expect(expirations).toHaveLength(0);
     const settlement = settlements[0]!;
     expect(settlement.totalCredit).toBe(24);
     expect(balanceService.getBalance(makerId, Asset.USD)).toBe(76);
@@ -396,6 +397,7 @@ describe("EphemeralOrderbook", () => {
     const result = orderbook.updatePriceAndTime(order.data.hitPrice, fillTime + 1);
     expect(result.settlements).toHaveLength(0);
     expect(result.verificationHits).toHaveLength(0);
+    expect(result.expirations).toHaveLength(0);
     expect(orderbook.getOrder(order.id!)).toBeUndefined();
     expect(balanceService.getLocked(takerId, Asset.USD)).toBe(0);
     expect(balanceService.getBalance(takerId, Asset.USD)).toBe(20);

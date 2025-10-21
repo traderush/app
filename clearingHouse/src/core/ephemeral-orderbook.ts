@@ -75,6 +75,9 @@ export interface AccountBalanceSnapshot {
   asset: Asset;
   balance: number;
   locked: number;
+  delta?: number;
+  reason?: string;
+  context?: Record<string, unknown>;
 }
 
 export interface TradeInfo {
@@ -115,6 +118,14 @@ export interface VerificationReport {
   triggerTs: Timestamp;
 }
 
+export interface ExpirationReport {
+  orderId: OrderId;
+  positionId: PositionId;
+  makerId: AccountId;
+  takerId: AccountId;
+  size: number;
+}
+
 export class OrderPlacementError extends Error {
   constructor(message: string, public readonly details?: Record<string, unknown>) {
     super(message);
@@ -143,11 +154,16 @@ export class EphemeralOrderbook<
   positions = new Map<PositionId, Position<TPositionData>>();
   cancelOnlyOrders = new Set<OrderId>();
 
-  updatePriceAndTime(price: number, now: Timestamp): { settlements: SettlementReport[]; verificationHits: VerificationReport[] } {
+  updatePriceAndTime(price: number, now: Timestamp): {
+    settlements: SettlementReport[];
+    verificationHits: VerificationReport[];
+    expirations: ExpirationReport[];
+  } {
     // drop old columns first
     this.time = now;
+    const expirations: ExpirationReport[] = [];
     while (this.head && this.time >= this.head.timewindow.end) {
-      this.advance();
+      expirations.push(...this.advance());
     }
 
     this.price = price;
@@ -156,13 +172,13 @@ export class EphemeralOrderbook<
 
     const column = this.head?.column;
     if (!column) {
-      return { settlements, verificationHits };
+      return { settlements, verificationHits, expirations };
     }
 
     const bucketKey = this.toBucketKey(price);
     const priceBucket = column.priceBuckets.get(bucketKey);
     if (!priceBucket) {
-      return { settlements, verificationHits };
+      return { settlements, verificationHits, expirations };
     }
 
     for (const order of priceBucket.orders) {
@@ -179,6 +195,8 @@ export class EphemeralOrderbook<
         payout: BalanceChanges;
       }> = [];
 
+      const settledPositionIds = new Set<PositionId>();
+
       for (const pending of order.pendingPositions) {
         const position = this.positions.get(pending.positionId);
         if (!position) {
@@ -190,8 +208,10 @@ export class EphemeralOrderbook<
           continue;
         }
 
+
         const payout = this.runtime.payout(order as Order<TOrderData>, position, price);
         triggeredSettlements.push({ position, payout });
+        settledPositionIds.add(position.id);
       }
 
       if (triggeredSettlements.length === 0) {
@@ -240,9 +260,31 @@ export class EphemeralOrderbook<
           balances,
         });
       }
+
+      if (settledPositionIds.size > 0) {
+        if (order.pendingPositions.length > 0) {
+          let writeIndex = 0;
+          for (const ref of order.pendingPositions) {
+            if (!settledPositionIds.has(ref.positionId)) {
+              order.pendingPositions[writeIndex++] = ref;
+            }
+          }
+          if (writeIndex < order.pendingPositions.length) {
+            order.pendingPositions.length = writeIndex;
+          }
+        }
+
+        for (const positionId of settledPositionIds) {
+          this.positions.delete(positionId);
+        }
+
+        if (order.sizeRemaining <= 0 && order.pendingPositions.length === 0) {
+          this.markOrderInactive(order.id);
+        }
+      }
     }
 
-    return { settlements, verificationHits };
+    return { settlements, verificationHits, expirations };
   }
 
   private assertOrderBounds(order: Order<TOrderData>, orderPrice: number, bounds: OrdersBounds): void {
@@ -332,8 +374,7 @@ export class EphemeralOrderbook<
       throw new Error(`Fill size must be positive for order ${orderId}`);
     }
 
-    const now = Math.max(this.time, Date.now()) as Timestamp;
-    this.ensureOrderFillable(order as Order<TOrderData>, now);
+    const now = new Date().getTime() as Timestamp;
     this.time = now;
 
     const effectiveSize = Math.min(size, order.sizeRemaining);
@@ -413,6 +454,7 @@ export class EphemeralOrderbook<
       sizeRemaining: order.sizeRemaining,
     };
 
+
     return {
       position,
       trade,
@@ -433,26 +475,36 @@ export class EphemeralOrderbook<
     }
   }
 
-  private ensureOrderFillable(order: Order<TOrderData>, now: Timestamp): void {
-    if (now < order.triggerWindow.start || now >= order.triggerWindow.end) {
-      throw new Error(`Order ${order.id ?? "<unassigned>"} is not fillable at ${now}`);
-    }
-  }
-
-  private advance(): void {
+  private advance(): ExpirationReport[] {
     if (!this.head) {
-      return;
+      return [];
     }
 
     const column = this.head;
+    const expirations: ExpirationReport[] = [];
 
     for (const priceBucket of column.column.priceBuckets.values()) {
       for (const order of priceBucket.orders) {
         this.orderIndex.delete(order.id!);
-        if (order.pendingPositions.length === 0 && order.sizeRemaining <= 0) {
-          this.orders.delete(order.id!);
-          this.cancelOnlyOrders.delete(order.id!);
+        if (order.pendingPositions.length > 0) {
+          for (const pending of order.pendingPositions) {
+            const position = this.positions.get(pending.positionId);
+            if (!position) {
+              continue;
+            }
+            expirations.push({
+              orderId: order.id!,
+              positionId: position.id,
+              makerId: order.makerId,
+              takerId: position.userId,
+              size: position.size,
+            });
+            this.positions.delete(position.id);
+          }
+          order.pendingPositions.length = 0;
         }
+        this.orders.delete(order.id!);
+        this.cancelOnlyOrders.delete(order.id!);
       }
       priceBucket.orders.length = 0;
     }
@@ -465,6 +517,8 @@ export class EphemeralOrderbook<
     } else {
       this.tail = null;
     }
+
+    return expirations;
   }
 
   getOrder(orderId: OrderId): Order<any> | undefined {
@@ -634,6 +688,7 @@ export class EphemeralOrderbook<
       return;
     }
 
+
     const unlocks: CollateralLockChange[] = [];
 
     for (const pending of order.pendingPositions) {
@@ -716,24 +771,34 @@ export class EphemeralOrderbook<
     const unlocks = changes.unlocks ?? [];
 
     const impacted = new Map<string, { accountId: AccountId; asset: Asset }>();
+    const deltas = new Map<string, number>();
     const register = (accountId: AccountId, asset: Asset) => {
       const key = `${accountId}:${asset}`;
       if (!impacted.has(key)) {
         impacted.set(key, { accountId, asset });
       }
+      if (!deltas.has(key)) {
+        deltas.set(key, 0);
+      }
+    };
+    const accumulate = (accountId: AccountId, asset: Asset, delta: number) => {
+      const key = `${accountId}:${asset}`;
+      register(accountId, asset);
+      const next = (deltas.get(key) ?? 0) + delta;
+      deltas.set(key, next);
     };
 
     for (const entry of credits) {
-      register(entry.accountId, entry.Asset);
+      accumulate(entry.accountId, entry.Asset, entry.amount);
     }
     for (const entry of debits) {
-      register(entry.accountId, entry.Asset);
+      accumulate(entry.accountId, entry.Asset, -entry.amount);
     }
     for (const entry of locks) {
-      register(entry.accountId, entry.Asset);
+      accumulate(entry.accountId, entry.Asset, -entry.amount);
     }
     for (const entry of unlocks) {
-      register(entry.accountId, entry.Asset);
+      accumulate(entry.accountId, entry.Asset, entry.amount);
     }
     for (const extra of additionalAccounts) {
       register(extra.accountId, extra.asset);
@@ -760,12 +825,17 @@ export class EphemeralOrderbook<
     }
 
     const snapshots: AccountBalanceSnapshot[] = [];
+    const reason = typeof metadata.reason === "string" ? metadata.reason : undefined;
     for (const { accountId, asset } of impacted.values()) {
+      const key = `${accountId}:${asset}`;
       snapshots.push({
         accountId,
         asset,
         balance: this.balanceService.getBalance(accountId, asset),
         locked: this.balanceService.getLocked(accountId, asset),
+        delta: deltas.get(key) ?? 0,
+        reason,
+        context: metadata,
       });
     }
 

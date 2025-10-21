@@ -7,7 +7,7 @@ export interface SquareRenderOptions {
   width?: number; // For rectangles
   height?: number; // For rectangles
   text?: string;
-  state: 'default' | 'hovered' | 'highlighted' | 'selected' | 'activated' | 'missed';
+  state: 'default' | 'hovered' | 'highlighted' | 'pending' | 'selected' | 'activated' | 'missed';
   animation?: {
     progress: number;
     type: 'select' | 'activate';
@@ -73,27 +73,34 @@ export class SquareRenderer {
     // Get signature color from theme (used for selections and hits)
     const signatureColor = this.theme.colors?.primary || '#3b82f6';
 
-    // Helper to convert hex to rgba
+    // Helper to convert colors to rgba
     const hexToRgba = (hex: string, alpha: number): string => {
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
       const b = parseInt(hex.slice(5, 7), 16);
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
+    const rgba = (r: number, g: number, b: number, alpha: number): string => `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+    const selectedColor = { r: 255, g: 120, b: 0 };
+    const activatedColor = { r: 255, g: 94, b: 0 };
 
     // Draw base background fill (this persists after animation completes)
     if (state === 'activated') {
-      // Hit state - MORE opaque signature color overlay (distinctly different from selected)
-      // Regular canvas uses 0.28, but we use 0.45 for clearer visual distinction
-      this.ctx.fillStyle = hexToRgba(signatureColor, 0.45);
+      // Hit state - vivid red-orange overlay
+      this.ctx.fillStyle = rgba(activatedColor.r, activatedColor.g, activatedColor.b, 0.6);
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'missed') {
       // Missed state - permanent greyed out appearance
       this.ctx.fillStyle = 'rgba(60, 60, 60, 0.3)';
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'selected') {
-      // Selected state - signature color with lower opacity
-      this.ctx.fillStyle = hexToRgba(signatureColor, 0.18);
+      // Selected state - red-orange confirmation fill
+      this.ctx.fillStyle = rgba(selectedColor.r, selectedColor.g, selectedColor.b, 0.32);
+      this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
+    } else if (state === 'pending') {
+      // Pending state (order sent, awaiting confirmation) - bright yellow
+      this.ctx.fillStyle = 'rgba(255, 204, 0, 0.24)';
       this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
     } else if (state === 'highlighted') {
       // Highlighted state (first click) - orange/yellow for pending confirmation
@@ -125,8 +132,8 @@ export class SquareRenderer {
       
       if (state === 'activated') {
         // HIT animation - simple signature color flash overlay (stays within borders)
-        const glowOpacity = 0.35 * flashOpacity;
-        this.ctx.fillStyle = hexToRgba(signatureColor, glowOpacity);
+        const glowOpacity = 0.45 * flashOpacity;
+        this.ctx.fillStyle = rgba(activatedColor.r, activatedColor.g, activatedColor.b, glowOpacity);
         this.ctx.fillRect(x + 0.5, y + 0.5, actualWidth - 1, actualHeight - 1);
       } else {
         // MISS animation - grey fade out effect (no glow, stays within borders)
@@ -164,7 +171,7 @@ export class SquareRenderer {
       const fillOpacity = 0.18 * fadeProgress;
       
       // Draw growing fill
-      this.ctx.fillStyle = hexToRgba(signatureColor, fillOpacity);
+      this.ctx.fillStyle = rgba(selectedColor.r, selectedColor.g, selectedColor.b, fillOpacity);
       this.ctx.fillRect(
         x + offsetX + 0.5,
         y + offsetY + 0.5,
@@ -173,7 +180,7 @@ export class SquareRenderer {
       );
       
       // Draw growing outline
-      this.ctx.strokeStyle = hexToRgba(signatureColor, outlineOpacity);
+      this.ctx.strokeStyle = rgba(selectedColor.r, selectedColor.g, selectedColor.b, outlineOpacity);
       this.ctx.lineWidth = 2;
       this.ctx.setLineDash([]);
       this.ctx.strokeRect(
@@ -187,7 +194,7 @@ export class SquareRenderer {
     // Draw borders for special states (always draw for selected, activated, missed, highlighted, hovered)
     // Skip only default state borders when unified grid is enabled
     const isSpecialState = state === 'selected' || state === 'activated' || state === 'missed' || 
-                          state === 'highlighted' || state === 'hovered';
+                          state === 'pending' || state === 'highlighted' || state === 'hovered';
     const shouldDrawBorder = !(animation && animation.progress < 1) && 
                            (isSpecialState || !showUnifiedGrid);
     
@@ -195,11 +202,17 @@ export class SquareRenderer {
       let borderColor = '#3f3f3f';
       let borderWidth = 0.6;
       
-      if (state === 'activated' || state === 'selected') {
-        borderColor = signatureColor;
-        borderWidth = 1;
+      if (state === 'activated') {
+        borderColor = rgba(activatedColor.r, activatedColor.g, activatedColor.b, 0.95);
+        borderWidth = 1.2;
+      } else if (state === 'selected') {
+        borderColor = rgba(selectedColor.r, selectedColor.g, selectedColor.b, 0.95);
+        borderWidth = 1.2;
       } else if (state === 'missed') {
         borderColor = 'rgba(100, 100, 100, 0.5)'; // Grey border for missed
+        borderWidth = 1;
+      } else if (state === 'pending') {
+        borderColor = 'rgba(255, 204, 0, 0.9)'; // Bright yellow border while awaiting confirmation
         borderWidth = 1;
       } else if (state === 'highlighted') {
         borderColor = 'rgba(255, 170, 0, 0.9)'; // Orange border for pending confirmation
@@ -250,10 +263,11 @@ export class SquareRenderer {
     }
 
     // Draw "HIT" or "MISS" badge for outcome states (matches regular box-hit canvas)
-    // Reset globalAlpha to full opacity for badges
+    // Keep badges aligned with the same fade opacity as the cell
     if (state === 'activated') {
       this.ctx.save();
-      this.ctx.globalAlpha = 1.0; // Full opacity for badge
+      const badgeOpacity = Math.max(0, Math.min(1, opacity));
+      this.ctx.globalAlpha = badgeOpacity; // Match fade progression
       this.ctx.fillStyle = 'rgba(229, 229, 229, 1.0)'; // Bright light grey - clearly visible
       this.ctx.font = 'bold 11px sans-serif'; // Bold for emphasis
       this.ctx.textAlign = 'right';
@@ -262,7 +276,8 @@ export class SquareRenderer {
       this.ctx.restore();
     } else if (state === 'missed') {
       this.ctx.save();
-      this.ctx.globalAlpha = 1.0; // Full opacity for badge
+      const badgeOpacity = Math.max(0, Math.min(1, opacity));
+      this.ctx.globalAlpha = badgeOpacity; // Match fade progression
       this.ctx.fillStyle = 'rgba(100, 100, 100, 0.7)'; // Darker grey for MISS (more subtle)
       this.ctx.font = 'bold 11px sans-serif'; // Bold for consistency
       this.ctx.textAlign = 'right';

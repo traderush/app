@@ -33,6 +33,11 @@ const Navbar = React.memo(function Navbar({
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
   const balance = useUserStore((state) => state.balance);
+  const lockedBalance = useUserStore((state) => state.lockedBalance);
+  const totalBalance = useUserStore((state) => state.totalBalance);
+  const balanceHistory = useUserStore((state) => state.balanceHistory);
+  const lastChangeEntry = balanceHistory.length > 0 ? balanceHistory[balanceHistory.length - 1] : undefined;
+  const lastBalanceChange = lastChangeEntry?.change ?? 0;
 
   return (
     <>
@@ -138,7 +143,19 @@ const Navbar = React.memo(function Navbar({
             <Link href="/portfolio" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
               <div className="text-xs text-zinc-400" style={{fontWeight: 500}}>Portfolio</div>
               <div className="text-zinc-100 text-sm" style={{fontWeight: 600}}>
-                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-xs text-zinc-400" style={{fontWeight: 500}}>
+                Active ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Locked ${lockedBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div
+                className="text-xs"
+                style={{
+                  fontWeight: 500,
+                  color: lastBalanceChange >= 0 ? '#2fe3ac' : '#ec397a',
+                }}
+              >
+                Δ {`${lastBalanceChange >= 0 ? '+' : '-'}$${Math.abs(lastBalanceChange).toFixed(2)}`}
               </div>
             </Link>
             

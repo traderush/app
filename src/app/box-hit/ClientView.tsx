@@ -151,46 +151,43 @@ export default function ClientView() {
     (
       positions: BoxHitPositionMap,
       contracts: CanvasContract[],
-      hitBoxes: string[],
-      missedBoxes: string[],
+      _hitBoxes: string[],
+      _missedBoxes: string[],
     ) => {
       const previousPositions = previousPositionsRef.current;
 
-      positions.forEach((position, positionId) => {
-        if (!previousPositions.has(positionId)) {
-          const tradeId = position.tradeId ?? positionId;
+      positions.forEach((position, positionKey) => {
+        const tradeId = position.tradeId ?? positionKey;
+        if (!previousPositions.has(tradeId)) {
           addTrade({
             id: tradeId,
             contractId: position.contractId,
             amount: position.amount ?? betAmount,
-            placedAt: new Date(),
+            placedAt: new Date(position.timestamp ?? Date.now()),
           });
+        }
+
+        const previous = previousPositions.get(tradeId);
+        if (position.result && position.result !== previous?.result) {
+          const contract = contracts.find((c) => c.contractId === position.contractId);
+          const wager = position.amount ?? previous?.amount ?? betAmount;
+          const resolvedPayout = position.result === 'win'
+            ? (typeof position.payout === 'number'
+              ? position.payout
+              : contract
+                ? wager * (contract.returnMultiplier || 1)
+                : wager)
+            : 0;
+          settleTrade(tradeId, position.result, resolvedPayout);
         }
       });
 
-      hitBoxes.forEach((contractId) => {
-        const position = Array.from(positions.values()).find(
-          (entry) => entry.contractId === contractId,
-        );
-        if (!position) return;
-
-        const contract = contracts.find((c) => c.contractId === contractId);
-        if (!contract) return;
-
-        const payout = (position.amount ?? betAmount) * (contract.returnMultiplier || 1);
-        const tradeId = position.tradeId ?? `trade_${contractId}`;
-        settleTrade(tradeId, 'win', payout);
-      });
-
-      missedBoxes.forEach((contractId) => {
-        const position = Array.from(positions.values()).find(
-          (entry) => entry.contractId === contractId,
-        );
-        const tradeId = position?.tradeId ?? `trade_${contractId}`;
-        settleTrade(tradeId, 'loss', 0);
-      });
-
-      previousPositionsRef.current = new Map(positions);
+      previousPositionsRef.current = new Map(
+        Array.from(positions.entries()).map(([key, value]) => {
+          const tradeKey = value.tradeId ?? key;
+          return [tradeKey, value];
+        }),
+      );
     },
     [addTrade, betAmount, settleTrade],
   );

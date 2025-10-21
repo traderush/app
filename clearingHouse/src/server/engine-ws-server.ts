@@ -41,7 +41,7 @@ type EnginePricePoint = { price: number; timestamp: number };
 
 type EngineWelcome = {
   type: "welcome";
-  payload: { userId: string; username: string; balance: number; timeframes: TimeFrameMs[] };
+  payload: { userId: string; username: string; balance: number; locked: number; timeframes: TimeFrameMs[] };
 };
 
 type EngineSnapshot = {
@@ -53,7 +53,27 @@ type EnginePriceTick = { type: "price_tick"; payload: EnginePricePoint };
 type EngineContractUpdate = { type: "contract_update"; payload: { timeframe: TimeFrameMs; contracts: EngineContractSnapshot[] } };
 type EngineTradeConfirmed = { type: "trade_confirmed"; payload: { contractId: string; amount: number; tradeId: string; balance: number; priceAtFill: number; timestamp: number } };
 type EngineTradeResult = { type: "trade_result"; payload: { contractId: string; tradeId: string; won: boolean; payout: number; profit: number; balance: number; timestamp: number } };
-type EngineBalanceUpdate = { type: "balance_update"; payload: { balance: number; reason: string } };
+type EngineVerificationHit = { type: "verification_hit"; payload: { contractId: string; tradeId: string; price: number; triggerTs: number } };
+type EngineBalanceUpdate = { type: "balance_update"; payload: { balance: number; delta: number; asset: Asset; locked: number; reason: string; metadata?: Record<string, unknown> } };
+type EngineTrackedPositionPayload = {
+  tradeId: string;
+  contractId: string;
+  amount: number;
+  timestamp: number;
+  result?: "win" | "loss";
+  payout?: number;
+  profit?: number;
+  settledAt?: number;
+};
+type EnginePositionsSnapshot = {
+  type: "positions_snapshot";
+  payload: {
+    balance: number;
+    locked: number;
+    openPositions: EngineTrackedPositionPayload[];
+    history: EngineTrackedPositionPayload[];
+  };
+};
 type EngineStatus = { type: "engine_status"; payload: { status: "online" | "degraded" | "error"; message?: string } };
 type EngineHeartbeat = { type: "heartbeat"; payload: { serverTime: number } };
 type EngineAck = { type: "ack"; payload: { command: string; ok: boolean; error?: string } };
@@ -66,7 +86,9 @@ type OutgoingMessage =
   | EngineContractUpdate
   | EngineTradeConfirmed
   | EngineTradeResult
+  | EngineVerificationHit
   | EngineBalanceUpdate
+  | EnginePositionsSnapshot
   | EngineStatus
   | EngineHeartbeat
   | EngineAck
@@ -78,12 +100,141 @@ type ClientUnsubscribe = { type: "unsubscribe"; payload: { timeframe: TimeFrameM
 type ClientPlaceTrade = { type: "place_trade"; payload: { contractId: string; amount: number } };
 type ClientPong = { type: "pong"; payload?: { timestamp?: number } };
 type ClientDisconnect = { type: "disconnect"; payload?: {} };
-type IncomingMessage = ClientHello | ClientSubscribe | ClientUnsubscribe | ClientPlaceTrade | ClientPong | ClientDisconnect;
+type ClientGetPositions = { type: "get_positions"; payload?: {} };
+type IncomingMessage =
+  | ClientHello
+  | ClientSubscribe
+  | ClientUnsubscribe
+  | ClientPlaceTrade
+  | ClientPong
+  | ClientDisconnect
+  | ClientGetPositions;
 
 const MAX_HISTORY = 600;
 const ENGINE_TIMEFRAMES: TimeFrameMs[] = [500, 1000, 2000, 4000, 10000];
 
 type PriceHistoryStore = Map<TimeFrameMs, EnginePricePoint[]>;
+type TrackedPosition = {
+  tradeId: string;
+  contractId: string;
+  amount: number;
+  timestamp: number;
+  result?: "win" | "loss";
+  payout?: number;
+  profit?: number;
+  settledAt?: number;
+};
+
+type AccountState = {
+  open: Map<string, TrackedPosition>;
+  history: TrackedPosition[];
+  balance: number;
+  locked: number;
+  balanceHistory: Array<{ timestamp: number; balance: number; delta: number; reason?: string }>;
+};
+
+const accountStates = new Map<AccountId, AccountState>();
+
+function getOrCreateAccountState(accountId: AccountId): AccountState {
+  let state = accountStates.get(accountId);
+  if (!state) {
+    state = {
+      open: new Map(),
+      history: [],
+      balance: 0,
+      locked: 0,
+      balanceHistory: [],
+    };
+    accountStates.set(accountId, state);
+  }
+  return state;
+}
+
+function serializePositions(state: AccountState): EnginePositionsSnapshot["payload"] {
+  const toPayload = (position: TrackedPosition): EngineTrackedPositionPayload => ({
+    tradeId: position.tradeId,
+    contractId: position.contractId,
+    amount: position.amount,
+    timestamp: position.timestamp,
+    result: position.result,
+    payout: position.payout,
+    profit: position.profit,
+    settledAt: position.settledAt,
+  });
+
+  return {
+    balance: state.balance,
+    locked: state.locked,
+    openPositions: Array.from(state.open.values()).map(toPayload),
+    history: state.history.map(toPayload),
+  };
+}
+
+function trackOpenPosition(accountId: AccountId, position: TrackedPosition): void {
+  const state = getOrCreateAccountState(accountId);
+  state.open.set(position.tradeId, position);
+}
+
+function resolvePosition(
+  accountId: AccountId,
+  tradeId: string,
+  updates: Partial<Omit<TrackedPosition, "tradeId" | "contractId">> & { contractId?: string },
+): TrackedPosition | undefined {
+  const state = getOrCreateAccountState(accountId);
+  const existing = state.open.get(tradeId);
+  if (!existing) {
+    // Create a minimal placeholder if we never tracked the open position
+    const fallback: TrackedPosition = {
+      tradeId,
+      contractId: updates.contractId ?? tradeId,
+      amount: typeof updates.amount === "number" ? updates.amount : 0,
+      timestamp: typeof updates.timestamp === "number" ? updates.timestamp : Date.now(),
+    };
+    const resolved: TrackedPosition = {
+      ...fallback,
+      result: updates.result ?? fallback.result,
+      payout: updates.payout ?? fallback.payout,
+      profit: updates.profit ?? fallback.profit,
+      settledAt: updates.settledAt ?? fallback.settledAt,
+    };
+    state.history.unshift(resolved);
+    state.history = state.history.slice(0, 200);
+    return resolved;
+  }
+
+  const resolved: TrackedPosition = {
+    ...existing,
+    ...updates,
+  };
+  state.open.delete(tradeId);
+  state.history.unshift(resolved);
+  state.history = state.history.slice(0, 200);
+  return resolved;
+}
+
+function hydrateAccountStateFromOrderbooks(app: ClearingHouseApp, accountId: AccountId, state: AccountState): void {
+  state.open.clear();
+
+  for (const productMap of app.orderbookStore.values()) {
+    for (const orderbook of productMap.values()) {
+      for (const position of orderbook.positions.values()) {
+        if (position.userId !== accountId) {
+          continue;
+        }
+        const tradeId = position.id;
+        state.open.set(tradeId, {
+          tradeId,
+          contractId: position.orderId,
+          amount: position.size,
+          timestamp: position.timeCreated,
+        });
+      }
+    }
+  }
+
+  state.locked = app.balanceService.getLocked(accountId, Asset.USD);
+  state.balance = app.balanceService.getBalance(accountId, Asset.USD);
+}
 
 type Session = {
   id: string;
@@ -91,6 +242,7 @@ type Session = {
   accountId: AccountId;
   username: string;
   timeframe?: TimeFrameMs;
+  accountState: AccountState;
 };
 
 function isTimeframe(value: unknown): value is TimeFrameMs {
@@ -298,11 +450,30 @@ async function main() {
 
   function handleClearingHouseEvent(event: ClearingHouseEvent): void {
     switch (event.name) {
+      case "verification_hit": {
+        const { userId, orderId, price, triggerTs } = event.payload as any;
+        for (const session of sessions.values()) {
+          if (session.accountId !== userId) continue;
+          const message: EngineVerificationHit = {
+            type: "verification_hit",
+            payload: {
+              contractId: orderId,
+              tradeId: `pos_${userId}_${orderId}`,
+              price,
+              triggerTs: triggerTs ?? event.ts,
+            },
+          };
+          send(session, message);
+        }
+        break;
+      }
       case "payout_settled": {
         const { takerId, orderId, totalCredit } = event.payload as any;
         for (const session of sessions.values()) {
           if (session.accountId !== takerId) continue;
           const balance = app.balanceService.getBalance(session.accountId, Asset.USD);
+          const openPosition = session.accountState.open.get(`pos_${takerId}_${orderId}`);
+          const amount = openPosition?.amount ?? 0;
           const message: EngineTradeResult = {
             type: "trade_result",
             payload: {
@@ -310,11 +481,97 @@ async function main() {
               tradeId: `pos_${takerId}_${orderId}`,
               won: true,
               payout: totalCredit,
-              profit: totalCredit,
+              profit: totalCredit - amount,
               balance,
               timestamp: event.ts,
             },
           };
+          send(session, message);
+          session.accountState.balance = balance;
+          resolvePosition(
+            session.accountId,
+            message.payload.tradeId,
+            {
+              result: "win",
+              payout: totalCredit,
+              profit: totalCredit - amount,
+              settledAt: event.ts,
+              contractId: orderId,
+              amount,
+              timestamp: openPosition?.timestamp ?? event.ts,
+            },
+          );
+        }
+        break;
+      }
+      case "payout_expired": {
+        const { userId, orderId, size } = event.payload as any;
+        for (const session of sessions.values()) {
+          if (session.accountId !== userId) continue;
+          const balance = app.balanceService.getBalance(session.accountId, Asset.USD);
+          const openPosition = session.accountState.open.get(`pos_${userId}_${orderId}`);
+          const amount = openPosition?.amount ?? Number(size ?? 0);
+          const message: EngineTradeResult = {
+            type: "trade_result",
+            payload: {
+              contractId: orderId,
+              tradeId: `pos_${userId}_${orderId}`,
+              won: false,
+              payout: 0,
+              profit: -amount,
+              balance,
+              timestamp: event.ts,
+            },
+          };
+          send(session, message);
+          session.accountState.balance = balance;
+          resolvePosition(
+            session.accountId,
+            message.payload.tradeId,
+            {
+              result: "loss",
+              payout: 0,
+              profit: -amount,
+              settledAt: event.ts,
+              contractId: orderId,
+              amount,
+              timestamp: openPosition?.timestamp ?? event.ts,
+            },
+          );
+        }
+        break;
+      }
+      case "balance_updated": {
+        const payload = event.payload as any;
+        const accountId = payload.accountId as AccountId;
+        const state = getOrCreateAccountState(accountId);
+        state.balance = payload.balance;
+        state.locked = payload.locked ?? state.locked;
+        const delta = typeof payload.delta === "number" ? payload.delta : 0;
+        state.balanceHistory.push({
+          timestamp: event.ts,
+          balance: payload.balance,
+          delta,
+          reason: payload.reason ?? "balance_updated",
+        });
+        state.balanceHistory = state.balanceHistory.slice(-200);
+
+        const message: EngineBalanceUpdate = {
+          type: "balance_update",
+          payload: {
+            balance: payload.balance,
+            delta,
+            asset: payload.asset,
+            locked: payload.locked ?? 0,
+            reason: payload.reason ?? "balance_updated",
+            metadata: payload.metadata,
+          },
+        };
+
+        for (const session of sessions.values()) {
+          if (session.accountId !== accountId) continue;
+          session.accountState.balance = payload.balance;
+          session.accountState.locked = payload.locked ?? session.accountState.locked;
           send(session, message);
         }
         break;
@@ -388,18 +645,30 @@ async function main() {
         const id = randomUUID();
         const accountId = (`user_${id}`) as AccountId;
         const username = accountId;
-        const session: Session = { id, ws, accountId, username };
+        const accountState = getOrCreateAccountState(accountId);
+        hydrateAccountStateFromOrderbooks(app, accountId, accountState);
+        const session: Session = { id, ws, accountId, username, accountState };
         sessions.set(id, session);
 
         // Seed a nominal balance so users can win payouts later (maker already funded)
         // Not debiting on fills for iron condor currently; balances change on payouts.
         // Send welcome with supported timeframes
         const balance = app.balanceService.getBalance(accountId, Asset.USD);
+        const locked = app.balanceService.getLocked(accountId, Asset.USD);
+        accountState.balance = balance;
+        accountState.locked = locked;
+        accountState.balanceHistory.push({ timestamp: Date.now(), balance, delta: 0, reason: "session_start" });
+        accountState.balanceHistory = accountState.balanceHistory.slice(-200);
         const welcome: EngineWelcome = {
           type: "welcome",
-          payload: { userId: accountId, username, balance, timeframes: ENGINE_TIMEFRAMES },
+          payload: { userId: accountId, username, balance, locked, timeframes: ENGINE_TIMEFRAMES },
         };
         ws.send(JSON.stringify(welcome));
+        const positionsSnapshot: EnginePositionsSnapshot = {
+          type: "positions_snapshot",
+          payload: serializePositions(accountState),
+        };
+        ws.send(JSON.stringify(positionsSnapshot));
       },
       async message(ws, raw) {
         const session = [...sessions.values()].find(s => s.ws === ws);
@@ -416,10 +685,22 @@ async function main() {
         switch (msg.type) {
           case "hello": {
             if (msg.payload?.username) {
+              const desiredAccountId = msg.payload.username as AccountId;
+              if (session.accountId !== desiredAccountId) {
+                session.accountId = desiredAccountId;
+                session.accountState = getOrCreateAccountState(desiredAccountId);
+                hydrateAccountStateFromOrderbooks(app, desiredAccountId, session.accountState);
+              }
               session.username = msg.payload.username;
             }
             const balance = app.balanceService.getBalance(session.accountId, Asset.USD);
-            send(session, { type: "welcome", payload: { userId: session.accountId, username: session.username, balance, timeframes: ENGINE_TIMEFRAMES } });
+            const locked = app.balanceService.getLocked(session.accountId, Asset.USD);
+            session.accountState.balance = balance;
+            session.accountState.locked = locked;
+            session.accountState.balanceHistory.push({ timestamp: Date.now(), balance, delta: 0, reason: "hello_ack" });
+            session.accountState.balanceHistory = session.accountState.balanceHistory.slice(-200);
+            send(session, { type: "welcome", payload: { userId: session.accountId, username: session.username, balance, locked, timeframes: ENGINE_TIMEFRAMES } });
+            send(session, { type: "positions_snapshot", payload: serializePositions(session.accountState) });
             break;
           }
           case "subscribe": {
@@ -460,13 +741,32 @@ async function main() {
                 payload: { contractId, amount, tradeId: `pos_${session.accountId}_${contractId}`, balance, priceAtFill, timestamp: ts },
               };
               send(session, confirmed);
+              trackOpenPosition(session.accountId, {
+                tradeId: confirmed.payload.tradeId,
+                contractId,
+                amount,
+                timestamp: ts,
+              });
+              session.accountState.balance = balance;
             } catch (err: any) {
-              send(session, { type: "ack", payload: { command: "place_trade", ok: false, error: err?.message ?? "Trade failed" } });
+              send(session, {
+                type: "ack",
+                payload: {
+                  command: "place_trade",
+                  ok: false,
+                  error: err?.message ?? "Trade failed",
+                  context: { contractId },
+                },
+              });
             }
             break;
           }
           case "pong": {
             // no-op
+            break;
+          }
+          case "get_positions": {
+            send(session, { type: "positions_snapshot", payload: serializePositions(session.accountState) });
             break;
           }
           case "disconnect": {
