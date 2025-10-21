@@ -319,19 +319,22 @@ export function useGameSession({
       }
 
       if (typeof balance === 'number') {
+        const locked = (payload as { locked?: number }).locked;
         setUserBalance(balance);
-        updateBalance(balance);
+        updateBalance(balance, typeof locked === 'number' ? locked : undefined);
       }
     };
 
     const handleBalanceUpdate = (message: unknown) => {
       if (!mounted) return;
       debug('Balance update:', message);
-      const data = message as { payload?: { balance?: number } };
+      const data = message as { payload?: { balance?: number; locked?: number } };
       const balance = data.payload?.balance;
+      const locked = data.payload?.locked;
       if (typeof balance === 'number') {
         debug('Setting balance to:', balance);
         setUserBalance(balance);
+        updateBalance(balance, typeof locked === 'number' ? locked : undefined);
       }
     };
 

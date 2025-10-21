@@ -58,6 +58,7 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice }: P
         id: trade.id,
         time: formatTime(trade.settledAt),
         size: trade.amount,
+        payout: trade.payout ?? 0,
         equity: trade.result === 'win' ? `$${(trade.payout || 0).toFixed(2)}` : `$0.00`,
         hit: trade.result === 'win' ? 'Won' : 'Lost',
         prog: '100%',
@@ -66,7 +67,10 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice }: P
         betAmount: trade.amount,
         selectedMultipliers: [1.0],
         multiplier: trade.result === 'win' ? (trade.payout || 0) / trade.amount : 0,
-        contractId: trade.contractId
+        contractId: trade.contractId,
+        pnl: trade.result === 'win'
+          ? (trade.payout ?? 0) - trade.amount
+          : -trade.amount,
       }));
   }, [tradeHistory, currentBTCPrice]);
 
@@ -177,7 +181,8 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice }: P
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Time</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Bet Size</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Multiplier</th>
-                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Equity</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Payout</th>
+                    <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>PnL</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Probability of Hit</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Trade Progression</th>
                     <th className="text-xs font-normal" style={{ fontSize: '12px', fontWeight: '400' }}>Entry Price</th>
@@ -187,7 +192,7 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice }: P
                         <tbody className="text-zinc-200" style={{ fontSize: '12px', fontWeight: '400' }}>
               {historyPositions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-zinc-500">
+                  <td colSpan={9} className="text-center py-8 text-zinc-500">
                     No completed trades yet.
                   </td>
                 </tr>
@@ -197,7 +202,12 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice }: P
                       <td>{position.time}</td>
                       <td>${position.size.toFixed(2)}</td>
                       <td className="font-medium" style={{ color: signatureColor }}>{position.multiplier.toFixed(1)}x</td>
-                      <td style={{ color: position.equity === '$0.00' ? TRADING_COLORS.negative : TRADING_COLORS.positive }}>{position.equity}</td>
+                      <td style={{ color: position.payout > 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                        ${position.payout.toFixed(2)}
+                      </td>
+                      <td style={{ color: position.pnl >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                        {`${position.pnl >= 0 ? '+' : '-'}$${Math.abs(position.pnl).toFixed(2)}`}
+                      </td>
                       <td style={{ color: parseFloat(position.hit) >= 50 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>{position.hit}</td>
                     <td>
                       <div className="h-4 w-24 relative">

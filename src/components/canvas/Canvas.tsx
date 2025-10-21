@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { MutableRefObject } from 'react';
 
 import { GridGame } from '@/lib/canvasLogic/games/GridGame';
 import { defaultTheme } from '@/lib/canvasLogic/config/theme';
@@ -14,6 +15,7 @@ import type { BoxHitContract, BoxHitPosition, BoxHitPositionMap } from '@/types/
 import type { EngineContractSnapshot, EnginePricePoint } from '@/types/boxHitEngine';
 
 const PIXELS_PER_POINT = 5;
+const MISS_RESOLUTION_GRACE_MS = 1_000;
 
 function estimateMsPerPoint(series: EnginePricePoint[]): number {
   // Estimate average delta from last up to 20 points; fallback to 500ms
@@ -69,6 +71,11 @@ interface CanvasMultiplier {
   isClickable: boolean;
 }
 
+type GridAnchorState = {
+  anchor: number | null;
+  timeframe: TimeFrame | null;
+};
+
 interface CanvasProps {
   externalControl?: boolean;
   externalIsStarted?: boolean;
@@ -95,6 +102,7 @@ function buildMultipliers(
   lastPrice: EnginePricePoint | undefined,
   positionsByContract: Map<string, BoxHitPosition>,
   msPerPoint: number,
+  anchorState?: MutableRefObject<GridAnchorState>,
 ): Record<string, CanvasMultiplier> {
   if (!contracts.length) {
     return {};
@@ -118,7 +126,31 @@ function buildMultipliers(
   const currentColumnIdx = Math.floor(nowTs / timeStep);
   const currentColumnStartTs = currentColumnIdx * timeStep;
   const columnProgress = (nowTs - currentColumnStartTs) / timeStep;
-  const columnAnchorX = currentWorldX - columnProgress * columnWidthPx;
+  let columnAnchorX = currentWorldX - columnProgress * columnWidthPx;
+  if (anchorState) {
+    const state = anchorState.current;
+    const threshold = Math.max(columnWidthPx * 0.6, PIXELS_PER_POINT);
+    const candidate = columnAnchorX;
+    const candidateIsFinite = Number.isFinite(candidate);
+    if (state.timeframe !== timeframe) {
+      state.timeframe = timeframe;
+      state.anchor = candidateIsFinite ? candidate : state.anchor;
+    } else if (state.anchor === null || !Number.isFinite(state.anchor)) {
+      state.anchor = candidateIsFinite ? candidate : state.anchor;
+    } else if (candidateIsFinite) {
+      const delta = candidate - state.anchor;
+      if (delta < 0 && Math.abs(delta) < threshold) {
+        columnAnchorX = state.anchor;
+      } else {
+        state.anchor = candidate;
+      }
+    }
+    if (state.anchor !== null && Number.isFinite(state.anchor)) {
+      columnAnchorX = state.anchor;
+    } else if (!candidateIsFinite) {
+      columnAnchorX = 0;
+    }
+  }
   const rowAnchorPrice = Math.floor(basePrice / priceStep) * priceStep;
   game?.setGridScale?.(columnWidthPx, priceStep);
   game?.setGridOrigin?.(columnAnchorX, rowAnchorPrice);
@@ -198,15 +230,18 @@ function Canvas({
   showOtherPlayers = false,
   minMultiplier = 1.0,
 }: CanvasProps = {}) {
-  const { state, priceSeries, contracts, positions, lastPrice, connect, disconnect, subscribe, placeTrade } = useBoxHitEngine();
+  const { state, priceSeries, contracts, positions, lastPrice, lastPlaceTradeError, connect, disconnect, subscribe, placeTrade } = useBoxHitEngine();
   const signatureColor = useUIStore((store) => store.signatureColor);
   const updateBalance = useUserStore((store) => store.updateBalance);
   const setBackendConnected = useConnectionStore((store) => store.setBackendConnected);
+  const addNotification = useUIStore((store) => store.addNotification);
   const betAmountRef = useRef(betAmount);
 
   const [internalIsStarted, setInternalIsStarted] = useState(false);
   const [internalTimeframe, setInternalTimeframe] = useState<TimeFrame>(TimeFrame.TWO_SECONDS);
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [tradeErrorMessage, setTradeErrorMessage] = useState<string | null>(null);
+  const [isCameraFollowing, setIsCameraFollowing] = useState(true);
 
   const isStarted = externalControl ? externalIsStarted : internalIsStarted;
   const effectiveTimeframe = externalControl && externalTimeframe
@@ -218,21 +253,11 @@ function Canvas({
   const processedTicksRef = useRef(0);
   const lastSnapshotVersionRef = useRef(0);
   const lastProcessedTimestampRef = useRef<number | undefined>(undefined);
-  const resolvedContractsRef = useRef<Set<string>>(new Set());
-
-  const contractMap = useMemo(() => {
-    const map = new Map<string, EngineContractSnapshot>();
-    contracts.forEach((contract) => {
-      map.set(contract.contractId, contract);
-    });
-    return map;
-  }, [contracts]);
-
-  // Keep a ref for event handlers that should read the latest contracts
-  const contractMapRef = useRef(contractMap);
-  useEffect(() => {
-    contractMapRef.current = contractMap;
-  }, [contractMap]);
+  const confirmedContractsRef = useRef<Map<string, string | undefined>>(new Map());
+  const resolvedContractsRef = useRef<Map<string, string | undefined>>(new Map());
+  const lastTradeErrorHandledRef = useRef<number>(0);
+  const gridAnchorStateRef = useRef<GridAnchorState>({ anchor: null, timeframe: null });
+  const contractHistoryRef = useRef<Map<string, EngineContractSnapshot>>(new Map());
 
   const positionsByContract = useMemo(() => {
     const map = new Map<string, BoxHitPosition>();
@@ -244,6 +269,46 @@ function Canvas({
     });
     return map;
   }, [positions]);
+
+  const renderedContracts = useMemo(() => {
+    const combined: EngineContractSnapshot[] = [];
+    const seen = new Set<string>();
+
+    contracts.forEach((contract) => {
+      combined.push(contract);
+      seen.add(contract.contractId);
+    });
+
+    positionsByContract.forEach((_, contractId) => {
+      if (seen.has(contractId)) {
+        return;
+      }
+      const snapshot = contractHistoryRef.current.get(contractId);
+      if (snapshot) {
+        combined.push(snapshot);
+        seen.add(contractId);
+      }
+    });
+
+    return combined;
+  }, [contracts, positionsByContract]);
+
+  const contractMap = useMemo(() => {
+    const map = new Map<string, EngineContractSnapshot>();
+    renderedContracts.forEach((contract) => {
+      map.set(contract.contractId, contract);
+    });
+    return map;
+  }, [renderedContracts]);
+
+  // Keep a ref for event handlers that should read the latest contracts
+  const contractMapRef = useRef(contractMap);
+  useEffect(() => {
+    contractMapRef.current = contractMap;
+    contracts.forEach((contract) => {
+      contractHistoryRef.current.set(contract.contractId, contract);
+    });
+  }, [contractMap, contracts]);
 
   const hitBoxes = useMemo(
     () => Array.from(positionsByContract.values())
@@ -260,7 +325,7 @@ function Canvas({
   );
 
   const contractsForCallback = useMemo< BoxHitContract[] >(
-    () => contracts.map((contract) => ({
+    () => renderedContracts.map((contract) => ({
       contractId: contract.contractId,
       startTime: contract.startTime,
       endTime: contract.endTime,
@@ -271,7 +336,7 @@ function Canvas({
       isActive: contract.status === 'active',
       type: contract.type,
     })),
-    [contracts],
+    [renderedContracts],
   );
 
   useEffect(() => {
@@ -284,8 +349,8 @@ function Canvas({
   }, []);
 
   useEffect(() => {
-    updateBalance(state.balance);
-  }, [state.balance, updateBalance]);
+    updateBalance(state.balance, state.locked);
+  }, [state.balance, state.locked, updateBalance]);
 
   useEffect(() => {
     setBackendConnected(state.status === 'live');
@@ -305,9 +370,9 @@ function Canvas({
     if (!onPositionsChange) {
       return;
     }
-    const map: BoxHitPositionMap = new Map(positionsByContract);
+    const map: BoxHitPositionMap = new Map(positions);
     onPositionsChange(map, contractsForCallback, hitBoxes, missedBoxes);
-  }, [onPositionsChange, positionsByContract, contractsForCallback, hitBoxes, missedBoxes]);
+  }, [onPositionsChange, positions, contractsForCallback, hitBoxes, missedBoxes]);
 
   useEffect(() => {
     if (!externalControl || externalTimeframe === undefined) {
@@ -372,6 +437,8 @@ function Canvas({
     });
 
     gameRef.current = game;
+    gridAnchorStateRef.current = { anchor: null, timeframe: effectiveTimeframe };
+    confirmedContractsRef.current.clear();
     resolvedContractsRef.current.clear();
 
     priceSeries.forEach((point) => {
@@ -388,12 +455,13 @@ function Canvas({
     }
 
     const multipliers = buildMultipliers(
-      contracts,
+      renderedContracts,
       effectiveTimeframe,
       game,
       lastPrice,
       positionsByContract,
       estimateMsPerPoint(priceSeries),
+      gridAnchorStateRef,
     );
     game.updateMultipliers(multipliers);
 
@@ -425,7 +493,8 @@ function Canvas({
 
     const handleSquareSelected = ({ squareId }: { squareId: string }) => {
       updateSelectionStats();
-      placeTrade(squareId, betAmountRef.current);
+      const wager = betAmountRef.current;
+      placeTrade(squareId, wager);
     };
 
     const attach = (event: string, handler: (...args: any[]) => void) => {
@@ -444,6 +513,11 @@ function Canvas({
 
     attach('squareSelected', handleSquareSelected);
     attach('selectionChanged', updateSelectionStats);
+    const handleCameraFollowingChanged = ({ isFollowing }: { isFollowing: boolean }) => {
+      setIsCameraFollowing(isFollowing);
+    };
+    setIsCameraFollowing(typeof game.isCameraFollowingPrice === 'function' ? game.isCameraFollowingPrice() : true);
+    attach('cameraFollowingChanged', handleCameraFollowingChanged);
 
     game.startWithExternalData();
 
@@ -452,6 +526,7 @@ function Canvas({
     return () => {
       detach('squareSelected', handleSquareSelected);
       detach('selectionChanged', updateSelectionStats);
+      detach('cameraFollowingChanged', handleCameraFollowingChanged);
       game.destroy();
       if (gameRef.current === game) {
         gameRef.current = null;
@@ -464,15 +539,16 @@ function Canvas({
       return;
     }
     const multipliers = buildMultipliers(
-      contracts,
+      renderedContracts,
       effectiveTimeframe,
       gameRef.current,
       lastPrice,
       positionsByContract,
       estimateMsPerPoint(priceSeries),
+      gridAnchorStateRef,
     );
     gameRef.current.updateMultipliers(multipliers);
-  }, [contracts, effectiveTimeframe, lastPrice, positionsByContract, priceSeries]);
+  }, [renderedContracts, effectiveTimeframe, lastPrice, positionsByContract, priceSeries]);
 
   useEffect(() => {
     if (!gameRef.current) {
@@ -520,25 +596,101 @@ function Canvas({
     lastProcessedTimestampRef.current = priceSeries[priceSeries.length - 1]?.timestamp
       ?? lastProcessedTimestampRef.current;
   }, [priceSeries, state.snapshotVersion, state.status]);
-
+  
   useEffect(() => {
-    if (!gameRef.current) {
+    const game = gameRef.current;
+    if (!game) {
       return;
     }
+
+    const confirmed = confirmedContractsRef.current;
     const resolved = resolvedContractsRef.current;
+
     positionsByContract.forEach((position, contractId) => {
-      const result = position.result;
-      if (!result || resolved.has(contractId)) {
+      const tradeKey = position.tradeId ?? '__no_trade_id__';
+      const hasConfirmedEntry = confirmed.has(contractId);
+      const lastConfirmed = confirmed.get(contractId);
+      const hasResolvedEntry = resolved.has(contractId);
+      const lastResolved = resolved.get(contractId);
+      const contract = contractMapRef.current.get(contractId);
+
+      if (!position.result) {
+        if (!hasConfirmedEntry || lastConfirmed !== tradeKey) {
+          game.confirmSelectedContract(contractId);
+          confirmed.set(contractId, tradeKey);
+        }
+        if (hasResolvedEntry && lastResolved !== tradeKey) {
+          resolved.delete(contractId);
+        }
+        const now = Date.now();
+        const contractExpired = contract
+          ? contract.status === 'expired' && contract.endTime <= now - MISS_RESOLUTION_GRACE_MS
+          : false;
+        const shouldMarkMiss = contractExpired && (!hasResolvedEntry || lastResolved !== tradeKey);
+        if (shouldMarkMiss) {
+          game.markContractAsMissed(contractId);
+          resolved.set(contractId, tradeKey);
+          confirmed.set(contractId, tradeKey);
+        }
         return;
       }
-      if (result === 'win') {
-        gameRef.current.markContractAsHit(contractId);
-      } else if (result === 'loss') {
-        gameRef.current.markContractAsMissed(contractId);
+
+      if (hasResolvedEntry && lastResolved === tradeKey) {
+        return;
       }
-      resolved.add(contractId);
+
+      if (position.result === 'win') {
+        game.markContractAsHit(contractId);
+      } else if (position.result === 'loss') {
+        game.markContractAsMissed(contractId);
+      }
+
+      resolved.set(contractId, tradeKey);
+      confirmed.set(contractId, tradeKey);
     });
   }, [positionsByContract]);
+
+  useEffect(() => {
+    if (!lastPlaceTradeError) {
+      return;
+    }
+    if (lastPlaceTradeError.at === lastTradeErrorHandledRef.current) {
+      return;
+    }
+    lastTradeErrorHandledRef.current = lastPlaceTradeError.at ?? 0;
+
+    const game = gameRef.current;
+    if (game) {
+      if (lastPlaceTradeError.contractId) {
+        game.cancelPendingContract(lastPlaceTradeError.contractId, { keepHighlight: true });
+        confirmedContractsRef.current.delete(lastPlaceTradeError.contractId);
+        resolvedContractsRef.current.delete(lastPlaceTradeError.contractId);
+      } else {
+        game.cancelAllPendingContracts({ keepHighlight: true });
+        confirmedContractsRef.current.clear();
+        resolvedContractsRef.current.clear();
+      }
+    }
+
+    addNotification({
+      type: 'error',
+      title: 'Trade Failed',
+      message: lastPlaceTradeError.error,
+    });
+    setTradeErrorMessage(lastPlaceTradeError.error);
+  }, [addNotification, lastPlaceTradeError]);
+
+  useEffect(() => {
+    if (!tradeErrorMessage) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setTradeErrorMessage(null);
+    }, 3_000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [tradeErrorMessage]);
 
   const handleStart = useCallback(() => {
     const next = true;
@@ -567,27 +719,52 @@ function Canvas({
     subscribe(timeframe);
   }, [externalControl, subscribe]);
 
+  const handleRecenter = useCallback(() => {
+    const game = gameRef.current;
+    if (!game) {
+      return;
+    }
+    game.resetCameraToFollowPrice();
+    setIsCameraFollowing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isStarted) {
+      setIsCameraFollowing(true);
+    }
+  }, [isStarted]);
+
   const statusLabel = useMemo(() => {
+    let label: string | null;
     switch (state.status) {
       case 'connecting':
-        return 'Connecting to engine…';
+        label = 'Connecting to engine…';
+        break;
       case 'handshake':
-        return 'Authenticating…';
+        label = 'Authenticating…';
+        break;
       case 'awaiting_snapshot':
-        return 'Loading game snapshot…';
+        label = 'Loading game snapshot…';
+        break;
       case 'disconnected':
-        return 'Reconnecting…';
+        label = 'Reconnecting…';
+        break;
       case 'error':
-        return state.error ?? 'Engine error';
+        label = state.error ?? 'Engine error';
+        break;
       default:
-        return null;
+        label = null;
     }
+    if (!label && state.error) {
+      return state.error;
+    }
+    return label;
   }, [state.error, state.status]);
 
   return (
     <div
       className="flex h-full w-full flex-col"
-      style={{ backgroundColor: '#0E0E0E', position: 'relative' }}
+      style={{ backgroundColor: '#0E0E0E', position: 'relative', touchAction: 'none' }}
       onMouseDown={(event) => event.stopPropagation()}
       onMouseUp={(event) => event.stopPropagation()}
       onMouseMove={(event) => event.stopPropagation()}
@@ -647,7 +824,21 @@ function Canvas({
           </div>
         </div>
       )}
+      {tradeErrorMessage && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded bg-red-500/90 px-3 py-2 text-xs font-medium text-white shadow-lg">
+          {tradeErrorMessage}
+        </div>
+      )}
       <div className="relative flex-1">
+        {isStarted && !isCameraFollowing && state.status === 'live' && (
+          <button
+            type="button"
+            onClick={handleRecenter}
+            className="absolute right-4 top-4 z-30 rounded-md bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-md backdrop-blur transition hover:bg-black/70"
+          >
+            Recenter
+          </button>
+        )}
         {!isStarted ? (
           <div className="flex h-full items-center justify-center text-center text-gray-400">
             <div>

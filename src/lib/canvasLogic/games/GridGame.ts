@@ -84,7 +84,8 @@ export class GridGame extends BaseGame {
   private dragStartCameraX: number = 0;
   private dragStartCameraY: number = 0;
   private isFollowingPrice: boolean = true; // Track if camera should follow price
-  
+  private static readonly DRAG_ACTIVATION_THRESHOLD = 6;
+
   // Bound event handlers for cleanup
   private boundHandleMouseDown: (e: MouseEvent) => void;
   private boundHandleMouseUp: (e: MouseEvent) => void;
@@ -103,6 +104,7 @@ export class GridGame extends BaseGame {
   protected dataOffset: number = 0;
 
   protected selectedSquareIds: Set<string> = new Set();
+  protected pendingSquareIds: Set<string> = new Set();
   protected highlightedSquareIds: Set<string> = new Set();
   protected squareAnimations: Map<string, SquareAnimation> = new Map();
   protected hitBoxes: Set<string> = new Set(); // Boxes that have been hit based on WebSocket events
@@ -259,15 +261,9 @@ export class GridGame extends BaseGame {
   }
 
   protected handleMouseUp(e: MouseEvent): void {
-    const wasDragging = this.isDragging;
     this.isPointerDown = false;
     this.isDragging = false;
-    this.canvas.style.cursor = 'default';
-
-    if (!wasDragging && !this.isFollowingPrice) {
-      this.isFollowingPrice = true;
-      this.emit('cameraFollowingChanged', { isFollowing: true });
-    }
+    this.canvas.style.cursor = 'grab';
 
     super.handleMouseUp(e);
   }
@@ -336,13 +332,11 @@ export class GridGame extends BaseGame {
 
         if (clickedSquareId) {
           if (this.highlightedSquareIds.has(clickedSquareId)) {
-            // Second click - select the square and clear highlight
+            // Second click - send order and move to pending state (yellow) until confirmation arrives
             this.highlightedSquareIds.delete(clickedSquareId);
             this.selectedSquareIds.add(clickedSquareId);
-            this.squareAnimations.set(clickedSquareId, {
-              startTime: performance.now(),
-              progress: 0,
-            });
+            this.pendingSquareIds.add(clickedSquareId);
+            this.squareAnimations.delete(clickedSquareId); // defer select animation until confirmation
             // Play selection sound
             this.debug('🔊 About to play selection sound for box:', clickedSquareId);
             playSelectionSound();
@@ -374,7 +368,7 @@ export class GridGame extends BaseGame {
       const deltaY = this.mouseY - this.dragStartY;
       const dragDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-      if (!this.isDragging && dragDistance > 18) {
+      if (!this.isDragging && dragDistance > GridGame.DRAG_ACTIVATION_THRESHOLD) {
         this.isDragging = true;
         this.isFollowingPrice = false;
         this.emit('cameraFollowingChanged', { isFollowing: false });
@@ -441,12 +435,16 @@ export class GridGame extends BaseGame {
   protected handleMouseLeave(e: MouseEvent): void {
     this.mouseX = -1;
     this.mouseY = -1;
-    this.canvas.style.cursor = 'default';
-    this.isPointerDown = false;
-    this.isDragging = false;
+    this.canvas.style.cursor = 'grab';
+    const shouldHandleMouseUp = this.isPointerDown || this.isDragging;
     
-    // Also handle as mouse up to stop dragging when leaving canvas
-    this.handleMouseUp(e);
+    if (shouldHandleMouseUp) {
+      // Delegate to mouse up handler while drag state is intact so it doesn't auto-follow again
+      this.handleMouseUp(e);
+    } else {
+      this.isPointerDown = false;
+      this.isDragging = false;
+    }
     
     super.handleMouseLeave(e);
   }
@@ -891,7 +889,7 @@ export class GridGame extends BaseGame {
       }
 
       // Skip if box is selected (heatmap only shows on unselected boxes)
-      if (this.selectedSquareIds.has(squareId)) {
+      if (this.selectedSquareIds.has(squareId) || this.pendingSquareIds.has(squareId)) {
         skippedSelected++;
         return;
       }
@@ -1074,6 +1072,7 @@ export class GridGame extends BaseGame {
         this.mouseY >= topLeft.y &&
         this.mouseY < bottomRight.y;
 
+      const isPending = this.pendingSquareIds.has(squareId);
       const isSelected = this.selectedSquareIds.has(squareId);
       const isHighlighted = this.highlightedSquareIds.has(squareId);
 
@@ -1110,6 +1109,8 @@ export class GridGame extends BaseGame {
             type: 'activate',
           };
         }
+      } else if (isPending) {
+        state = 'pending';
       } else if (isSelected) {
         state = 'selected';
         const animationData = this.squareAnimations.get(squareId);
@@ -1125,21 +1126,61 @@ export class GridGame extends BaseGame {
         state = 'hovered';
       }
 
-      // Calculate fade effect for boxes that have been passed by the NOW line
+      // Calculate fade effect for boxes with dynamic thresholds
+      const boxRightEdgeWorld = box.worldX + box.width;
+      const boxRightEdgeScreenX = this.world.worldToScreen(boxRightEdgeWorld, 0).x;
+      const pixelsPerPoint = this.config.pixelsPerPoint;
+      const currentWorldX = (this.totalDataPoints - 1) * pixelsPerPoint;
+      const bufferColumns =
+        this.config.gameType === GameType.SKETCH ||
+        this.config.gameType === GameType.COBRA
+          ? 1
+          : 2;
+      const bufferPixels = box.width * bufferColumns;
+      const clickableThreshold = currentWorldX + bufferPixels;
+      const thresholdScreenX = this.world.worldToScreen(clickableThreshold, 0).x;
+      const hasNowLine = Number.isFinite(this.smoothLineEndX) && this.smoothLineEndX > 0;
+      const baseFadeDistance = Math.max(160, Math.abs(screenWidth) * 2.5);
+      const shouldDelayFade = isSelected || state === 'activated' || state === 'missed';
+
       let opacity = 1.0;
-      if (this.smoothLineEndX > 0) {
-        // Box center X position
-        const boxCenterX = topLeft.x + Math.abs(screenWidth) / 2;
-        
-        // If box is to the left of the NOW line, fade it out
-        if (boxCenterX < this.smoothLineEndX) {
-          // Calculate distance from NOW line (in pixels)
-          const distanceFromNow = this.smoothLineEndX - boxCenterX;
-          const fadeDistance = Math.max(200, Math.abs(screenWidth) * 3.5);
-          const fadeAmount = Math.min(distanceFromNow / fadeDistance, 1.0);
-          const eased = 1 - Math.pow(1 - fadeAmount, 2);
-          opacity = 1.0 - (eased * 0.75);
+      let fadeProgress = 0;
+
+      if (
+        !shouldDelayFade &&
+        !isClickable &&
+        Number.isFinite(thresholdScreenX) &&
+        Number.isFinite(boxRightEdgeScreenX)
+      ) {
+        const distancePastThreshold = thresholdScreenX - boxRightEdgeScreenX;
+        if (distancePastThreshold > 0) {
+          fadeProgress = Math.min(distancePastThreshold / baseFadeDistance, 1);
         }
+      }
+
+      if (hasNowLine && Number.isFinite(boxRightEdgeScreenX)) {
+        const delayPx = shouldDelayFade ? Math.max(30, Math.abs(screenWidth) * 0.2) : 0;
+        const distancePastNow = this.smoothLineEndX - boxRightEdgeScreenX - delayPx;
+        if (distancePastNow > 0 && Number.isFinite(distancePastNow)) {
+          const progress = Math.min(distancePastNow / baseFadeDistance, 1);
+          fadeProgress = Math.max(fadeProgress, progress);
+        }
+      } else if (
+        shouldDelayFade &&
+        !isClickable &&
+        Number.isFinite(thresholdScreenX) &&
+        Number.isFinite(boxRightEdgeScreenX)
+      ) {
+        const fallbackDistance = thresholdScreenX - boxRightEdgeScreenX;
+        if (fallbackDistance > 0) {
+          const progress = Math.min(fallbackDistance / baseFadeDistance, 1);
+          fadeProgress = Math.max(fadeProgress, progress);
+        }
+      }
+
+      if (fadeProgress > 0) {
+        const eased = 1 - Math.pow(1 - fadeProgress, 2);
+        opacity = Math.max(0, 1 - eased);
       }
 
       // Use actual screen size from backend coordinates
@@ -1386,32 +1427,6 @@ export class GridGame extends BaseGame {
       }
     }
 
-    // Draw current price position if we have data
-    if (this.priceData.length > 0) {
-      const currentWorldX =
-        (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
-      const screenX = this.world.worldToScreen(currentWorldX, 0).x;
-
-      // Highlight current position using signature color (theme.colors.primary)
-      const signatureColor = this.theme.colors?.primary || '#3b82f6';
-      const r = parseInt(signatureColor.slice(1, 3), 16);
-      const g = parseInt(signatureColor.slice(3, 5), 16);
-      const b = parseInt(signatureColor.slice(5, 7), 16);
-      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(screenX, axisY - 5);
-      ctx.lineTo(screenX, axisY + 5);
-      ctx.stroke();
-
-      // Label current position
-      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
-      const lastTimestamp = this.priceData[this.priceData.length - 1]?.timestamp;
-      const nowLabel = lastTimestamp
-        ? this.formatTimestampLabel(lastTimestamp, false)
-        : `${(currentWorldX / 50).toFixed(1)}s`;
-      ctx.fillText(`Now (${nowLabel})`, screenX, axisY + 15);
-    }
 
     ctx.restore();
   }
@@ -1658,8 +1673,11 @@ export class GridGame extends BaseGame {
     // This replaces individual box borders with a single grid system
     
     this.ctx.save();
-    this.ctx.strokeStyle = '#2b2b2b'; // Default border color
-    this.ctx.lineWidth = 0.6;
+    const borderOpacity = this.config.showProbabilities ? 0.55 : 0.35;
+    this.ctx.strokeStyle = `rgba(43, 43, 43, ${borderOpacity})`; // Softer border to avoid glare
+    const borderLineWidth = Math.max(1, Math.min(1.4, this.dpr * 0.6));
+    const pixelAlignOffset = borderLineWidth % 2 === 0 ? 0 : 0.5;
+    this.ctx.lineWidth = borderLineWidth;
     this.ctx.setLineDash([]);
 
     const columnWidth = Math.max(this.config.pixelsPerPoint, this.gridColumnWidth);
@@ -1671,7 +1689,7 @@ export class GridGame extends BaseGame {
     for (let worldX = startWorldX; worldX <= endWorldX; worldX += columnWidth) {
       const screenX = this.world.worldToScreen(worldX, 0).x;
       if (screenX < -columnWidth || screenX > this.width + columnWidth) continue;
-      const alignedX = Math.round(screenX) + 0.5;
+      const alignedX = Math.round(screenX) + pixelAlignOffset;
       this.ctx.beginPath();
       this.ctx.moveTo(alignedX, 0);
       this.ctx.lineTo(alignedX, this.height);
@@ -1696,7 +1714,7 @@ export class GridGame extends BaseGame {
     ) {
       const screenY = this.world.worldToScreen(0, price).y;
       if (screenY < -columnWidth || screenY > this.height + columnWidth) continue;
-      const alignedY = Math.round(screenY) + 0.5;
+      const alignedY = Math.round(screenY) + pixelAlignOffset;
       this.ctx.beginPath();
       this.ctx.moveTo(0, alignedY);
       this.ctx.lineTo(this.width, alignedY);
@@ -1862,6 +1880,7 @@ export class GridGame extends BaseGame {
       if (!newBoxIds.has(oldId)) {
         delete this.backendMultipliers[oldId];
         this.boxClickabilityCache.delete(oldId);
+        this.pendingSquareIds.delete(oldId);
       }
     }
 
@@ -1987,6 +2006,7 @@ export class GridGame extends BaseGame {
 
   public markContractAsHit(contractId: string): void {
     this.hitBoxes.add(contractId);
+    this.pendingSquareIds.delete(contractId);
     
     // Update backend data status if contract exists
     if (this.backendMultipliers[contractId]) {
@@ -2010,6 +2030,7 @@ export class GridGame extends BaseGame {
 
   public markContractAsMissed(contractId: string): void {
     this.missedBoxes.add(contractId);
+    this.pendingSquareIds.delete(contractId);
     
     // Update backend data status if contract exists (for consistency)
     if (this.backendMultipliers[contractId]) {
@@ -2029,6 +2050,50 @@ export class GridGame extends BaseGame {
     
     // Emit selection change event to update right panel
     this.emit('selectionChanged', {});
+  }
+
+  public confirmSelectedContract(contractId: string): void {
+    const wasPending = this.pendingSquareIds.delete(contractId);
+    if (!wasPending) {
+      return;
+    }
+
+    // Ensure the contract stays tracked as selected
+    if (!this.selectedSquareIds.has(contractId)) {
+      this.selectedSquareIds.add(contractId);
+    }
+
+    // Kick off the standard selection animation now that we have confirmation
+    this.squareAnimations.set(contractId, {
+      startTime: performance.now(),
+      progress: 0,
+      type: 'select',
+    });
+
+    this.emit('selectionChanged', {});
+  }
+
+  public cancelPendingContract(contractId: string, options?: { keepHighlight?: boolean }): void {
+    const keepHighlight = options?.keepHighlight ?? false;
+    const wasPending = this.pendingSquareIds.delete(contractId);
+    const wasSelected = this.selectedSquareIds.delete(contractId);
+    const wasHighlighted = this.highlightedSquareIds.has(contractId);
+
+    if (keepHighlight) {
+      this.highlightedSquareIds.add(contractId);
+    } else {
+      this.highlightedSquareIds.delete(contractId);
+    }
+
+    if (wasPending || wasSelected || keepHighlight || wasHighlighted) {
+      this.squareAnimations.delete(contractId);
+      this.emit('selectionChanged', {});
+    }
+  }
+
+  public cancelAllPendingContracts(options?: { keepHighlight?: boolean }): void {
+    const ids = Array.from(this.pendingSquareIds);
+    ids.forEach((id) => this.cancelPendingContract(id, options));
   }
 
   /**
@@ -2068,54 +2133,7 @@ export class GridGame extends BaseGame {
    * This runs every frame to detect hits as soon as price touches a box
    */
   protected checkPriceCollisions(): void {
-    if (this.smoothLineEndX <= 0 || this.priceData.length < 2) return;
-
-    // Get last two price points to form a line segment
-    const lastPoint = this.priceData[this.priceData.length - 1];
-    const prevPoint = this.priceData[this.priceData.length - 2];
-    
-    // Reduced logging for performance
-
-    // Convert to screen coordinates
-    const lastWorldPos = this.world.getLinePosition(
-      this.priceData.length - 1,
-      this.dataOffset,
-      lastPoint.price
-    );
-    const prevWorldPos = this.world.getLinePosition(
-      this.priceData.length - 2,
-      this.dataOffset,
-      prevPoint.price
-    );
-
-    const p2 = this.world.worldToScreen(lastWorldPos.x, lastWorldPos.y);
-    const p1 = this.world.worldToScreen(prevWorldPos.x, prevWorldPos.y);
-
-    // Check collision with all SELECTED boxes
-    this.selectedSquareIds.forEach(contractId => {
-      // Skip if already marked as hit
-      if (this.hitBoxes.has(contractId)) return;
-
-      const box = this.backendMultipliers[contractId];
-      if (!box) return;
-
-      // Convert box to screen coordinates
-      const topLeft = this.world.worldToScreen(box.worldX, box.worldY + box.height);
-      const bottomRight = this.world.worldToScreen(box.worldX + box.width, box.worldY);
-
-      const rect = {
-        x: topLeft.x,
-        y: topLeft.y,
-        w: Math.abs(bottomRight.x - topLeft.x),
-        h: Math.abs(bottomRight.y - topLeft.y)
-      };
-
-      // Check if price line segment intersects the box
-      if (this.segmentIntersectsRect(p1, p2, rect)) {
-        // Mark as hit immediately and trigger animation
-        this.markContractAsHit(contractId);
-      }
-    });
+    // Local collision-based hit detection disabled; rely on clearing house events.
   }
 
   /**
@@ -2124,41 +2142,7 @@ export class GridGame extends BaseGame {
    * IMPORTANT: Only marks as MISS if selected but not yet hit
    */
   protected checkBoxesPastNowLine(): void {
-    if (this.smoothLineEndX <= 0) return;
-
-    // Reduced logging for performance
-
-    // Only check SELECTED boxes that haven't been hit or missed yet
-    this.selectedSquareIds.forEach(contractId => {
-      // Skip if already processed
-      if (this.processedBoxes.has(contractId)) return;
-      
-      // Skip if already marked as hit or missed
-      if (this.hitBoxes.has(contractId) || this.missedBoxes.has(contractId)) {
-        this.processedBoxes.add(contractId);
-        return;
-      }
-
-      // Get the box data
-      const box = this.backendMultipliers[contractId];
-      if (!box) {
-        console.warn('⚠️ Selected box not found in backend:', contractId);
-        return;
-      }
-
-      // Convert box world coordinates to screen coordinates
-      const topLeft = this.world.worldToScreen(box.worldX, box.worldY + box.height);
-      const bottomRight = this.world.worldToScreen(box.worldX + box.width, box.worldY);
-      const boxRightEdge = bottomRight.x;
-
-      // Check if box's right edge has completely passed the NOW line
-      if (boxRightEdge < this.smoothLineEndX) {
-        // Box passed NOW line and wasn't hit - mark as MISSED
-        // Mark as processed and missed
-        this.processedBoxes.add(contractId);
-        this.markContractAsMissed(contractId);
-      }
-    });
+    // Local miss detection disabled; rely on clearing house events.
   }
 
   public clearHitContract(contractId: string): void {
@@ -2258,6 +2242,36 @@ export class GridGame extends BaseGame {
   // Method to reset camera to follow price
   public resetCameraToFollowPrice(): void {
     this.isFollowingPrice = true;
+
+    if (this.priceData.length > 0) {
+      const latest = this.priceData[this.priceData.length - 1];
+      const latestPrice = typeof latest.price === 'number'
+        ? Math.max(0, latest.price)
+        : 0;
+
+      // Align horizontal camera target with the latest data point
+      const dataPoints = Math.max(1, this.totalDataPoints);
+      const pixelsPerPoint = this.config.pixelsPerPoint;
+      const cameraOffsetRatio = this.config.cameraOffsetRatio ?? 0;
+      const targetOffsetX = this.width * cameraOffsetRatio;
+      const lineEndWorldX = (dataPoints - 1) * pixelsPerPoint;
+      const targetX = Math.max(0, lineEndWorldX - targetOffsetX);
+
+      this.camera.targetX = targetX;
+      this.camera.x = targetX;
+      this.camera.smoothX = targetX;
+
+      // Snap vertical position to the latest price while respecting current visible range
+      const minVisibleY = this.visiblePriceRange > 0
+        ? this.visiblePriceRange / 2
+        : latestPrice;
+      const targetY = Math.max(minVisibleY, latestPrice);
+
+      this.camera.targetY = targetY;
+      this.camera.y = targetY;
+      this.camera.smoothY = targetY;
+    }
+
     this.emit('cameraFollowingChanged', { isFollowing: true });
   }
 
