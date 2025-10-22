@@ -17,7 +17,40 @@ export interface GameState {
   time: number;
 }
 
-export abstract class BaseGame extends EventEmitter {
+type PointerPayload = {
+  x: number;
+  y: number;
+  event: MouseEvent;
+};
+
+type TouchPayload = {
+  touches: Array<{ x: number; y: number; id: number }>;
+  event: TouchEvent;
+};
+
+interface BaseGameEvents {
+  [event: string]: unknown;
+  resize: { width: number; height: number };
+  start: void;
+  pause: void;
+  resume: void;
+  stop: void;
+  destroy: void;
+  themeChange: Theme;
+  click: PointerPayload;
+  mouseMove: PointerPayload;
+  mouseLeave: { event: MouseEvent };
+  mouseDown: PointerPayload;
+  mouseUp: PointerPayload;
+  touchStart: TouchPayload;
+  touchMove: TouchPayload;
+  touchEnd: { event: TouchEvent };
+  squareSelected: { squareId: string };
+  cameraFollowingChanged: { isFollowing: boolean };
+  selectionChanged: Record<string, never>;
+}
+
+export abstract class BaseGame extends EventEmitter<BaseGameEvents> {
   protected container: HTMLElement;
   public canvas: HTMLCanvasElement; // Make canvas public for debugging
   protected ctx: CanvasRenderingContext2D;

@@ -4,6 +4,7 @@ export interface WebSocketMessage {
   type: string;
   payload?: unknown;
   timestamp?: number;
+  sessionId?: string;
 }
 
 export type MessageHandler = (message: WebSocketMessage) => void;
@@ -77,7 +78,7 @@ class WebSocketService {
           // Wait for auth confirmation
           const authHandler = (msg: WebSocketMessage & { userId?: string }) => {
             if (msg.type === 'connected') {
-              this.userId = msg.userId;
+              this.userId = msg.userId ?? null;
               this.isAuthenticated = true;
               this.off('connected', authHandler);
               
@@ -256,7 +257,7 @@ class WebSocketService {
   private handleMessage(message: WebSocketMessage): void {
     // Store session ID when game is joined
     if (message.type === 'game_joined') {
-      this.sessionId = message.sessionId;
+      this.sessionId = message.sessionId ?? null;
     }
 
     // Call all registered handlers for this message type

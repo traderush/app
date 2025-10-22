@@ -1083,6 +1083,7 @@ export class GridGame extends BaseGame {
         | 'default'
         | 'hovered'
         | 'highlighted'
+        | 'pending'
         | 'selected'
         | 'activated'
         | 'missed' = 'default';

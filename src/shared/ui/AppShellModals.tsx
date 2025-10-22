@@ -206,11 +206,11 @@ type ModalContext = {
   onUpdateWatchedPlayers: AppShellModalsProps['onUpdateWatchedPlayers'];
 };
 
-type BaseModalProps = { isOpen: boolean; onClose: () => void };
 
 type ModalDefinition = {
   key: ModalKey;
-  Component: React.LazyExoticComponent<React.ComponentType<BaseModalProps & Record<string, unknown>>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Component: React.LazyExoticComponent<React.ComponentType<any>>;
   getProps?: (ctx: ModalContext) => Record<string, unknown>;
 };
 

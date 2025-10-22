@@ -1,46 +1,51 @@
-export type EventListener<T> = (data: T) => void;
-
 type EventMap = Record<string, unknown>;
+type EventArgs<T> = [T] extends [void] ? [] : [T];
+
+export type EventListener<T> = (...args: EventArgs<T>) => void;
 
 export class EventEmitter<Events extends EventMap = EventMap> {
-  private readonly events = new Map<keyof Events, EventListener<Events[keyof Events]>[]>();
+  private readonly events: { [K in keyof Events]?: Set<EventListener<Events[K]>> } = {};
 
   on<K extends keyof Events>(event: K, listener: EventListener<Events[K]>): void {
-    const listeners = this.events.get(event) ?? [];
-    listeners.push(listener);
-    this.events.set(event, listeners);
+    const listeners = this.events[event] ?? new Set<EventListener<Events[K]>>();
+    listeners.add(listener);
+    this.events[event] = listeners;
   }
 
   off<K extends keyof Events>(event: K, listener: EventListener<Events[K]>): void {
-    const listeners = this.events.get(event);
+    const listeners = this.events[event];
     if (!listeners) {
       return;
     }
 
-    const index = listeners.indexOf(listener);
-    if (index > -1) {
-      listeners.splice(index, 1);
+    listeners.delete(listener);
+
+    if (listeners.size === 0) {
+      delete this.events[event];
     }
   }
 
-  emit<K extends keyof Events>(
-    event: K,
-    ...[data]: Events[K] extends void ? [] : [Events[K]]
-  ): void {
-    const listeners = this.events.get(event);
+  emit<K extends keyof Events>(event: K, ...args: EventArgs<Events[K]>): void {
+    const listeners = this.events[event];
     if (!listeners) {
       return;
     }
 
-    listeners.forEach((listener) => listener(data as Events[K]));
+    listeners.forEach((listener) => {
+      listener(...args);
+    });
   }
 
   removeAllListeners(event?: keyof Events): void {
     if (event) {
-      this.events.delete(event);
+      this.events[event]?.clear();
+      delete this.events[event];
       return;
     }
 
-    this.events.clear();
+    (Object.keys(this.events) as Array<keyof Events>).forEach((key) => {
+      this.events[key]?.clear();
+      delete this.events[key];
+    });
   }
 }
