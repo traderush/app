@@ -9,7 +9,7 @@ import { COLORS } from '@/shared/constants/theme';
 import { logger } from '@/shared/utils/logger';
 import { handleCanvasError } from '@/shared/lib/errorHandler';
 import { useGameStore, useUIStore, usePriceStore, useUserStore } from '@/shared/state';
-import type { Contract, Position } from '@/shared/types/game';
+import type { BoxHitContract, BoxHitPosition, BoxHitPositionMap } from '@/shared/types/boxHit';
 
 import { ASSET_DATA, DEFAULT_BET_AMOUNT, TIMEFRAME_OPTIONS } from '@/modules/box-hit/constants';
 import Canvas from '@/shared/ui/canvas/Canvas';
@@ -42,8 +42,10 @@ export default function ClientView() {
   const [isCanvasStarted, setIsCanvasStarted] = useState(false);
   
   // Mock backend state
-  const [_mockBackendPositions, setMockBackendPositions] = useState<Map<string, Position>>(new Map());
-  const [_mockBackendContracts, setMockBackendContracts] = useState<Contract[]>([]);
+  const [_mockBackendPositions, setMockBackendPositions] = useState<BoxHitPositionMap>(
+    new Map<string, BoxHitPosition>(),
+  );
+  const [_mockBackendContracts, setMockBackendContracts] = useState<BoxHitContract[]>([]);
   const [_mockBackendHitBoxes, setMockBackendHitBoxes] = useState<string[]>([]);
   const [_mockBackendMissedBoxes, setMockBackendMissedBoxes] = useState<string[]>([]);
   const [mockBackendSelectedCount, setMockBackendSelectedCount] = useState(0);
@@ -51,7 +53,7 @@ export default function ClientView() {
   const [mockBackendSelectedAveragePrice, setMockBackendSelectedAveragePrice] = useState<number | null>(null);
   
   // Keep track of previous positions using a ref to avoid infinite loops
-  const previousPositionsRef = useRef<Map<string, Position>>(new Map());
+  const previousPositionsRef = useRef<BoxHitPositionMap>(new Map<string, BoxHitPosition>());
   const previousCountRef = useRef(0);
 
   // Consolidated store subscriptions to prevent object recreation on every render
@@ -98,7 +100,7 @@ export default function ClientView() {
   }, []);
   
   // Handle mock backend positions and contracts update
-  const handleMockBackendPositionsChange = useCallback((positions: Map<string, Position>, contracts: Contract[], hitBoxes: string[], missedBoxes: string[]) => {
+  const handleMockBackendPositionsChange = useCallback((positions: BoxHitPositionMap, contracts: BoxHitContract[], hitBoxes: string[], missedBoxes: string[]) => {
     try {
     // Track new positions in userStore
     const previousPositions = previousPositionsRef.current;
@@ -467,9 +469,10 @@ export default function ClientView() {
               }
               onError={(error, errorInfo) => {
                 logger.error('Canvas Error', { error, errorInfo }, 'CANVAS');
-                handleCanvasError(error, { 
+                handleCanvasError(error, {
+                  component: 'ClientView',
                   action: 'Canvas rendering',
-                  metadata: { errorInfo }
+                  metadata: { errorInfo },
                 });
               }}
             >
