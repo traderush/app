@@ -7,9 +7,6 @@ export default function Home() {
         <h1 className="text-3xl font-semibold">TradeRush</h1>
         <div className="flex gap-3">
           <a href="/box-hit" className="px-4 py-2 rounded-xl bg-zinc-800">Box Hit</a>
-          <a href="/sketch"   className="px-4 py-2 rounded-xl bg-zinc-800">Sketch</a>
-          <a href="/towers"   className="px-4 py-2 rounded-xl bg-zinc-800">Towers</a>
-          <a href="/ahead"    className="px-4 py-2 rounded-xl bg-zinc-800">Ahead</a>
         </div>
       </div>
     </main>

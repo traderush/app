@@ -25,16 +25,8 @@ export default function Page() {
                     <span>Box Hit → Active game with grid-based betting</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                    <span>Towers → Active game with tower-based betting</span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-zinc-600 rounded-full"></span>
-                    <span>Sketch → Coming soon (locked)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-zinc-600 rounded-full"></span>
-                    <span>Ahead → Coming soon (locked)</span>
+                    <span>Soon → Additional modes coming soon</span>
                   </div>
                 </div>
               </div>
@@ -138,44 +130,6 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Towers Game Flow */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded p-6">
-            <h3 className="text-lg font-semibold text-zinc-100 mb-4">Towers Game Flow</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-zinc-800 rounded p-4">
-                  <h4 className="text-md font-medium text-zinc-300 mb-2">1. Game Entry</h4>
-                  <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• Navigate to /towers</div>
-                    <div>• Canvas loads with tower grid</div>
-                    <div>• Towers extend from top/bottom</div>
-                    <div>• Central corridor for ticker</div>
-                    <div>• Variable width towers (1-4 columns)</div>
-                  </div>
-                </div>
-                <div className="bg-zinc-800 rounded p-4">
-                  <h4 className="text-md font-medium text-zinc-300 mb-2">2. Betting Flow</h4>
-                  <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• Click &quot;Place Trade&quot; mode</div>
-                    <div>• Set bet amount</div>
-                    <div>• Click towers to select</div>
-                    <div>• Selected towers show orange border</div>
-                    <div>• Multiplier displayed in tower center</div>
-                  </div>
-                </div>
-                <div className="bg-zinc-800 rounded p-4">
-                  <h4 className="text-md font-medium text-zinc-300 mb-2">3. Payout Flow</h4>
-                  <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• Ticker weaves through corridor</div>
-                    <div>• Collision detection on selected towers</div>
-                    <div>• Instant payout on hit</div>
-                    <div>• Hit towers show green, miss show red</div>
-                    <div>• PnL updates in real-time</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* UI Element Flows */}
@@ -287,7 +241,7 @@ export default function Page() {
                 <div className="bg-zinc-800 rounded p-4">
                   <h4 className="text-md font-medium text-zinc-300 mb-2">2. Selection</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
-                    <div>• Click grid cells/towers</div>
+                    <div>• Click grid cells to select</div>
                     <div>• Orange border indicates selection</div>
                     <div>• Multiple selections allowed</div>
                     <div>• Payout updates in real-time</div>
@@ -403,7 +357,7 @@ export default function Page() {
                   <div>• Modal open/close states</div>
                   <div>• Sound on/off toggle</div>
                   <div>• Zoom level persistence</div>
-                  <div>• Selected cells/towers</div>
+                  <div>• Selected cells list</div>
                   <div>• Trade mode state</div>
                 </div>
               </div>

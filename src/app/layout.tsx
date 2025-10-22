@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import AppShell from '@/components/AppShell';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import AppShell from '@/shared/ui/AppShell';
+import ErrorBoundary from '@/shared/ui/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'TradeRush',

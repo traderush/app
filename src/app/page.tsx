@@ -1,4 +1,4 @@
-// import { topNav } from '@/config/nav'; // Unused
+// import { topNav } from '@/shared/config/nav'; // Unused
 
 export default function Home() {
   return (
