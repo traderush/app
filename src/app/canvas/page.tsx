@@ -1,4 +1,4 @@
-import Canvas from "@/components/canvas/Canvas";
+import Canvas from "@/shared/ui/canvas/Canvas";
 
 export default function Page() {
     return (

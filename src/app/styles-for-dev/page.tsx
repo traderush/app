@@ -169,10 +169,10 @@ export default function Page() {
           <div className="bg-zinc-900 border border-zinc-800 rounded p-4">
             <span className="text-sm text-zinc-500 mb-3 block">Navbar Style</span>
             <div className="flex items-center gap-6">
-              <div className="text-[15px] font-medium text-zinc-300">Box Hit</div>
-              <div className="text-[15px] font-medium text-white">Towers</div>
-              <div className="text-[15px] font-medium text-zinc-300">Sketch</div>
-              <div className="text-[15px] font-medium text-zinc-300">Ahead</div>
+              <div className="text-[15px] font-medium text-white">Box Hit</div>
+              <div className="text-[15px] font-medium text-zinc-300">Soon</div>
+              <div className="text-[15px] font-medium text-zinc-300">Soon</div>
+              <div className="text-[15px] font-medium text-zinc-300">Soon</div>
             </div>
           </div>
 

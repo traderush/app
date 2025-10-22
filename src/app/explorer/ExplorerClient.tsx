@@ -100,8 +100,10 @@ export function ExplorerClient() {
       }
     };
 
-    load();
-    const interval = setInterval(load, REFRESH_INTERVAL_MS);
+    void load();
+    const interval = setInterval(() => {
+      void load();
+    }, REFRESH_INTERVAL_MS);
 
     return () => {
       cancelled = true;

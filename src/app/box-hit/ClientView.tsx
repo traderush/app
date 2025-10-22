@@ -2,18 +2,19 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import RightPanel from '@/games/box-hit/RightPanel';
-import PositionsTable from '@/games/box-hit/PositionsTable';
-import CustomSlider from '@/components/CustomSlider';
-import { cleanupSoundManager } from '@/lib/sound/SoundManager';
-import { useGameStore, useUIStore } from '@/stores';
-import { useUserStore } from '@/stores/userStore';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import { logger } from '@/utils/logger';
-import Canvas from '@/components/canvas/Canvas';
-import { ASSETS, AssetInfo, AssetKey, DEFAULT_BET_AMOUNT, TRADING_COLORS } from './constants';
+import RightPanel from '@/modules/box-hit/components/RightPanel';
+import PositionsTable from '@/modules/box-hit/components/PositionsTable';
+import CustomSlider from '@/shared/ui/CustomSlider';
+import { cleanupSoundManager } from '@/shared/lib/sound/SoundManager';
+import { useGameStore, useUIStore } from '@/shared/state';
+import { useUserStore } from '@/shared/state/userStore';
+import ErrorBoundary from '@/shared/ui/ErrorBoundary';
+import { logger } from '@/shared/utils/logger';
+import Canvas from '@/shared/ui/canvas/Canvas';
+import { ASSETS, DEFAULT_BET_AMOUNT, TRADING_COLORS } from './constants';
+import type { AssetInfo, AssetKey } from './constants';
 import { useToasts } from './hooks/useToasts';
-import { BoxHitContract, BoxHitPositionMap } from '@/types/boxHit';
+import type { BoxHitContract, BoxHitPositionMap } from '@/shared/types/boxHit';
 
 /**
  * Main ClientView component for the BoxHit trading game
