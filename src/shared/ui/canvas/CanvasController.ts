@@ -67,6 +67,8 @@ interface CanvasMultiplier {
 type GridAnchorState = {
   anchor: number | null;
   timeframe: TimeFrame | null;
+  columnIdx: number | null;
+  columnWidth: number | null;
 };
 
 export interface CanvasProps {
@@ -115,36 +117,82 @@ function buildMultipliers(
   const maxPrice = basePrice + (numRows * priceStep) / 2;
   const timeStep = timeframe;
   const idealPointsPerStep = timeStep / safeMsPerPoint;
-  const pointsPerStep = Math.max(1, idealPointsPerStep);
-  const columnWidthPx = pointsPerStep * PIXELS_PER_POINT;
+  const rawColumnWidthPx = Math.max(PIXELS_PER_POINT, idealPointsPerStep * PIXELS_PER_POINT);
   const currentColumnIdx = Math.floor(nowTs / timeStep);
   const currentColumnStartTs = currentColumnIdx * timeStep;
   const columnProgress = (nowTs - currentColumnStartTs) / timeStep;
-  let columnAnchorX = currentWorldX - columnProgress * columnWidthPx;
+  const currentColumnStartWorldX = game?.getWorldPositionForTimestamp?.(currentColumnStartTs)?.worldX ?? null;
+  const nextColumnStartWorldX = game?.getWorldPositionForTimestamp?.(currentColumnStartTs + timeStep)?.worldX ?? null;
+  const measuredColumnSpan = (currentColumnStartWorldX !== null && nextColumnStartWorldX !== null)
+    ? nextColumnStartWorldX - currentColumnStartWorldX
+    : null;
+
+  let columnWidthPx = Number.isFinite(measuredColumnSpan ?? NaN) && (measuredColumnSpan ?? 0) > 0
+    ? Math.max(PIXELS_PER_POINT, measuredColumnSpan as number)
+    : rawColumnWidthPx;
+  let columnAnchorX = currentColumnStartWorldX ?? currentWorldX - columnProgress * columnWidthPx;
+
   if (anchorState) {
-    const threshold = Math.max(columnWidthPx * 0.6, PIXELS_PER_POINT);
-    const candidate = columnAnchorX;
-    const candidateIsFinite = Number.isFinite(candidate);
     if (anchorState.timeframe !== timeframe) {
       anchorState.timeframe = timeframe;
-      anchorState.anchor = candidateIsFinite ? candidate : anchorState.anchor;
-    } else if (anchorState.anchor === null || !Number.isFinite(anchorState.anchor)) {
-      anchorState.anchor = candidateIsFinite ? candidate : anchorState.anchor;
-    } else if (candidateIsFinite) {
-      const delta = candidate - anchorState.anchor;
-      if (delta < 0 && Math.abs(delta) < threshold) {
-        columnAnchorX = anchorState.anchor;
+      anchorState.anchor = null;
+      anchorState.columnIdx = null;
+      anchorState.columnWidth = null;
+    }
+
+    if (
+      typeof measuredColumnSpan === 'number'
+      && Number.isFinite(measuredColumnSpan)
+      && measuredColumnSpan > 0
+    ) {
+      if (typeof anchorState.columnWidth !== 'number' || !Number.isFinite(anchorState.columnWidth)) {
+        anchorState.columnWidth = Math.max(PIXELS_PER_POINT, measuredColumnSpan);
       } else {
-        anchorState.anchor = candidate;
+        const smoothing = 0.2;
+        anchorState.columnWidth =
+          anchorState.columnWidth * (1 - smoothing)
+          + Math.max(PIXELS_PER_POINT, measuredColumnSpan) * smoothing;
       }
     }
-    if (anchorState.anchor !== null && Number.isFinite(anchorState.anchor)) {
+
+    if (typeof anchorState.columnWidth === 'number' && Number.isFinite(anchorState.columnWidth)) {
+      columnWidthPx = anchorState.columnWidth;
+    }
+
+    if (typeof currentColumnStartWorldX === 'number' && Number.isFinite(currentColumnStartWorldX)) {
+      columnAnchorX = currentColumnStartWorldX;
+      anchorState.anchor = currentColumnStartWorldX;
+      anchorState.columnIdx = currentColumnIdx;
+    } else if (typeof anchorState.anchor === 'number' && Number.isFinite(anchorState.anchor)) {
+      const lastIdx = anchorState.columnIdx ?? currentColumnIdx;
+      const deltaColumns = currentColumnIdx - lastIdx;
+      if (deltaColumns !== 0) {
+        columnAnchorX = anchorState.anchor + deltaColumns * columnWidthPx;
+        anchorState.anchor = columnAnchorX;
+        anchorState.columnIdx = currentColumnIdx;
+      } else {
+        columnAnchorX = anchorState.anchor;
+      }
+    } else {
+      anchorState.anchor = columnAnchorX;
+      anchorState.columnIdx = currentColumnIdx;
+    }
+
+    if (typeof anchorState.anchor === 'number' && Number.isFinite(anchorState.anchor)) {
       columnAnchorX = anchorState.anchor;
-    } else if (!candidateIsFinite) {
-      columnAnchorX = 0;
+    }
+
+    if (typeof anchorState.columnWidth !== 'number' || !Number.isFinite(anchorState.columnWidth)) {
+      anchorState.columnWidth = columnWidthPx;
+    } else {
+      columnWidthPx = anchorState.columnWidth;
     }
   }
   const rowAnchorPrice = Math.floor(basePrice / priceStep) * priceStep;
+  const safeColumnWidthPx = Number.isFinite(columnWidthPx) && columnWidthPx > 0 ? columnWidthPx : rawColumnWidthPx;
+  const safeColumnAnchorX = Number.isFinite(columnAnchorX) ? columnAnchorX : 0;
+  columnWidthPx = safeColumnWidthPx;
+  columnAnchorX = safeColumnAnchorX;
   game?.setGridScale?.(columnWidthPx, priceStep);
   game?.setGridOrigin?.(columnAnchorX, rowAnchorPrice);
 
@@ -165,13 +213,27 @@ function buildMultipliers(
     const row = Math.floor((maxPrice - priceCenter) / priceStep);
     const contractColumnIdx = Math.floor(contract.startTime / timeStep);
     const columnOffset = contractColumnIdx - currentColumnIdx;
-    const worldX = columnAnchorX + columnOffset * columnWidthPx;
+    const contractStartWorldX = game?.getWorldPositionForTimestamp?.(contract.startTime)?.worldX ?? null;
+    const contractEndWorldX = game?.getWorldPositionForTimestamp?.(contract.endTime)?.worldX ?? null;
+    const fallbackWorldX = columnAnchorX + columnOffset * columnWidthPx;
+    const startWorldX = typeof contractStartWorldX === 'number' && Number.isFinite(contractStartWorldX)
+      ? contractStartWorldX
+      : null;
+    const alignedWorldX = startWorldX ?? fallbackWorldX;
     const alignedLower = Math.floor(contract.lowerStrike / priceStep) * priceStep;
     const priceSpan = Math.max(priceStep, contract.upperStrike - contract.lowerStrike);
     const heightSteps = Math.max(1, Math.round(priceSpan / priceStep));
     const height = heightSteps * priceStep;
     const durationColumns = Math.max(1, Math.round((contract.endTime - contract.startTime) / timeStep));
-    const width = durationColumns * columnWidthPx;
+    const endWorldX = typeof contractEndWorldX === 'number' && Number.isFinite(contractEndWorldX)
+      ? contractEndWorldX
+      : null;
+    let width = endWorldX !== null
+      ? Math.max(columnWidthPx * 0.25, endWorldX - alignedWorldX)
+      : durationColumns * columnWidthPx;
+    if (!Number.isFinite(width) || width <= 0) {
+      width = durationColumns * columnWidthPx;
+    }
 
     const position = positionsByContract.get(contract.contractId);
     const status = position?.result === 'win'
@@ -184,7 +246,7 @@ function buildMultipliers(
       value: contract.returnMultiplier,
       x: col,
       y: row,
-      worldX,
+      worldX: alignedWorldX,
       worldY: alignedLower,
       width,
       height,
@@ -279,7 +341,12 @@ export class CanvasController {
   private lastProcessedTimestamp: number | undefined = undefined;
   private confirmedContracts = new Map<string, string | undefined>();
   private resolvedContracts = new Map<string, string | undefined>();
-  private gridAnchorState: GridAnchorState = { anchor: null, timeframe: null };
+  private gridAnchorState: GridAnchorState = {
+    anchor: null,
+    timeframe: null,
+    columnIdx: null,
+    columnWidth: null,
+  };
   private contractHistory = new Map<string, EngineContractSnapshot>();
   private contractMap = new Map<string, EngineContractSnapshot>();
   private positionsByContract = new Map<string, BoxHitPosition>();
@@ -845,7 +912,12 @@ export class CanvasController {
     });
 
     this.game = game;
-    this.gridAnchorState = { anchor: null, timeframe: this.timeframe };
+    this.gridAnchorState = {
+      anchor: null,
+      timeframe: this.timeframe,
+      columnIdx: null,
+      columnWidth: null,
+    };
     this.confirmedContracts.clear();
     this.resolvedContracts.clear();
     this.processedTicks = state.priceSeries.length;
