@@ -84,11 +84,11 @@ const ActivityPanel = () => {
           <div className="border-b border-zinc-800/80"></div>
         </div>
 
-        <div className="space-y-0 max-h-80 overflow-y-auto">
+        <div className="space-y-0 max-h-80 overflow-y-auto -mx-4">
           {activities.map((activity, i) => (
             <div 
               key={activity.id} 
-              className="flex items-center justify-between py-2 px-3 hover:bg-zinc-800/30 transition-colors"
+              className="flex items-center justify-between py-2 px-4 hover:bg-zinc-800/30 transition-colors"
               style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
