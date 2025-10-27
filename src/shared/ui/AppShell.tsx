@@ -149,6 +149,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           onNotificationsOpen={notifications.open}
           notificationsButtonRef={notificationsButtonRef}
           onProfileOpen={handlePlayerProfileOpen}
+          onNewsUpdatesOpen={newsUpdates.open}
+          newsUpdatesButtonRef={newsUpdatesButtonRef}
         />
       </div>
 
@@ -160,8 +162,6 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
             settingsButtonRef={settingsButtonRef}
             onHowToPlayOpen={howToPlay.open}
             howToPlayButtonRef={howToPlayButtonRef}
-            onNewsUpdatesOpen={newsUpdates.open}
-            newsUpdatesButtonRef={newsUpdatesButtonRef}
             onRewardsOpen={rewards.open}
             rewardsButtonRef={rewardsButtonRef}
             onWatchlistOpen={watchlist.open}
@@ -195,6 +195,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         customizeButtonRef={customizeButtonRef}
         isWebSocketConnected={isWebSocketConnected}
         isBackendConnected={isBackendConnected}
+        onSettingsOpen={settings.open}
+        settingsButtonRef={settingsButtonRef}
       />
 
       <AppShellModals
