@@ -17,29 +17,35 @@ import { handleCanvasError } from '@/lib/errorHandler';
 // Activity Panel Component
 const ActivityPanel = () => {
   const [activities, setActivities] = useState([
-    { id: 1, player: 'Dc4q...5X4i', action: 'placed bet', amount: '$250', multiplier: '2.5x', time: '2s ago', isPositive: true },
-    { id: 2, player: 'Kj8m...9Y2p', action: 'placed bet', amount: '$150', multiplier: '1.8x', time: '5s ago', isPositive: true },
-    { id: 3, player: 'Xw2n...7H6q', action: 'won', amount: '$450', multiplier: '3.0x', time: '8s ago', isPositive: true },
-    { id: 4, player: 'Lp5v...3M8r', action: 'placed bet', amount: '$100', multiplier: '2.2x', time: '12s ago', isPositive: true },
-    { id: 5, player: 'Qr9t...1B4s', action: 'lost', amount: '$200', multiplier: '2.0x', time: '15s ago', isPositive: false },
-    { id: 6, player: 'Fh6u...8C2w', action: 'placed bet', amount: '$300', multiplier: '1.5x', time: '18s ago', isPositive: true },
-    { id: 7, player: 'Gm7i...5E9x', action: 'won', amount: '$180', multiplier: '1.8x', time: '22s ago', isPositive: true },
-    { id: 8, player: 'Vk4o...2A7z', action: 'placed bet', amount: '$75', multiplier: '2.8x', time: '25s ago', isPositive: true },
-    { id: 9, player: 'Bw3l...6N1y', action: 'lost', amount: '$120', multiplier: '2.1x', time: '28s ago', isPositive: false },
-    { id: 10, player: 'Hj8p...4Q5t', action: 'placed bet', amount: '$500', multiplier: '1.2x', time: '32s ago', isPositive: true },
+    { id: 1, player: 'Dc4q...5X4i', action: 'placed bet', amount: '$250', multiplier: '2.5x', payout: '$625', isPositive: true },
+    { id: 2, player: 'Kj8m...9Y2p', action: 'placed bet', amount: '$150', multiplier: '1.8x', payout: '$270', isPositive: true },
+    { id: 3, player: 'Xw2n...7H6q', action: 'won', amount: '$450', multiplier: '3.0x', payout: '$1,350', isPositive: true },
+    { id: 4, player: 'Lp5v...3M8r', action: 'placed bet', amount: '$100', multiplier: '2.2x', payout: '$220', isPositive: true },
+    { id: 5, player: 'Qr9t...1B4s', action: 'lost', amount: '$200', multiplier: '2.0x', payout: '$0', isPositive: false },
+    { id: 6, player: 'Fh6u...8C2w', action: 'placed bet', amount: '$300', multiplier: '1.5x', payout: '$450', isPositive: true },
+    { id: 7, player: 'Gm7i...5E9x', action: 'won', amount: '$180', multiplier: '1.8x', payout: '$324', isPositive: true },
+    { id: 8, player: 'Vk4o...2A7z', action: 'placed bet', amount: '$75', multiplier: '2.8x', payout: '$210', isPositive: true },
+    { id: 9, player: 'Bw3l...6N1y', action: 'lost', amount: '$120', multiplier: '2.1x', payout: '$0', isPositive: false },
+    { id: 10, player: 'Hj8p...4Q5t', action: 'placed bet', amount: '$500', multiplier: '1.2x', payout: '$600', isPositive: true },
   ]);
 
   // Simulate live activity updates
   useEffect(() => {
     const interval = setInterval(() => {
+      const amount = Math.floor(Math.random() * 500) + 50;
+      const multiplier = Math.random() * 3 + 1;
+      const action = Math.random() > 0.7 ? (Math.random() > 0.5 ? 'won' : 'lost') : 'placed bet';
+      const isPositive = action === 'won' || action === 'placed bet';
+      const payout = action === 'lost' ? '$0' : `$${Math.floor(amount * multiplier).toLocaleString()}`;
+      
       const newActivity = {
         id: Date.now(),
         player: `${Math.random().toString(36).substring(2, 6)}...${Math.random().toString(36).substring(2, 4)}`,
-        action: Math.random() > 0.7 ? (Math.random() > 0.5 ? 'won' : 'lost') : 'placed bet',
-        amount: `$${Math.floor(Math.random() * 500) + 50}`,
-        multiplier: `${(Math.random() * 3 + 1).toFixed(1)}x`,
-        time: 'now',
-        isPositive: Math.random() > 0.3
+        action,
+        amount: `$${amount}`,
+        multiplier: `${multiplier.toFixed(1)}x`,
+        payout,
+        isPositive
       };
       
       setActivities(prev => [newActivity, ...prev.slice(0, 9)]);
@@ -49,14 +55,15 @@ const ActivityPanel = () => {
   }, []);
 
   const getActionIcon = (action: string) => {
-    switch (action) {
-      case 'won':
-        return <TrendingUp size={12} className="text-green-400" />;
-      case 'lost':
-        return <TrendingDown size={12} className="text-red-400" />;
-      default:
-        return <Activity size={12} className="text-blue-400" />;
-    }
+    // Use a simple box icon for all actions
+    return (
+      <div className="w-3 h-3 rounded-sm border flex items-center justify-center" style={{ 
+        backgroundColor: action === 'won' ? '#10B981' : action === 'lost' ? '#EF4444' : '#3B82F6',
+        borderColor: action === 'won' ? '#10B981' : action === 'lost' ? '#EF4444' : '#3B82F6'
+      }}>
+        <div className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: '#FFFFFF' }}></div>
+      </div>
+    );
   };
 
   const getActionColor = (action: string, isPositive: boolean) => {
@@ -88,31 +95,34 @@ const ActivityPanel = () => {
           {activities.map((activity, i) => (
             <div 
               key={activity.id} 
-              className="flex items-center justify-between py-2 px-4 hover:bg-zinc-800/30 transition-colors"
+              className="flex items-center justify-between py-1.5 px-4 hover:bg-zinc-800/30 transition-colors"
               style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}
             >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div className="flex-shrink-0">
                   {getActionIcon(activity.action)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-zinc-300 truncate" style={{ fontSize: '12px' }}>{activity.player}</span>
-                    <span className="text-zinc-500" style={{ fontSize: '11px' }}>{activity.action}</span>
+                    <span className="text-zinc-300 truncate" style={{ fontSize: '11px' }}>{activity.player}</span>
+                    <span className="text-zinc-500" style={{ fontSize: '10px' }}>{activity.action}</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2">
                     <span className="font-medium" style={{ 
-                      fontSize: '11px',
+                      fontSize: '10px',
                       color: getActionColor(activity.action, activity.isPositive)
                     }}>
                       {activity.amount}
                     </span>
-                    <span className="text-zinc-500" style={{ fontSize: '10px' }}>{activity.multiplier}</span>
+                    <span className="text-zinc-500" style={{ fontSize: '9px' }}>{activity.multiplier}</span>
                   </div>
                 </div>
               </div>
-              <span className="text-zinc-500 flex-shrink-0" style={{ fontSize: '10px' }}>
-                {activity.time}
+              <span className="font-medium flex-shrink-0" style={{ 
+                fontSize: '11px',
+                color: activity.action === 'lost' ? '#EF4444' : activity.action === 'won' ? '#10B981' : '#3B82F6'
+              }}>
+                {activity.payout}
               </span>
             </div>
           ))}
