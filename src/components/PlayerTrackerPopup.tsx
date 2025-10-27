@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Copy, Star, Share, Search, Calendar, ExternalLink } from 'lucide-react';
 import { useAppStore } from '@/stores';
 import type { WatchedPlayer } from '@/stores/tradingStore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PlayerTrackerPopupProps {
   isOpen: boolean;
@@ -178,24 +179,24 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
               </button>
               
               {/* Timeframe Selector */}
-              <div className="flex gap-1">
-                {timeframes.map((timeframe) => (
-                  <button
-                    key={timeframe}
-                    onClick={() => setSelectedTimeframe(timeframe)}
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      selectedTimeframe === timeframe
-                        ? 'text-white'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                    style={{
-                      backgroundColor: selectedTimeframe === timeframe ? signatureColor : 'transparent'
-                    }}
-                  >
-                    {timeframe}
-                  </button>
-                ))}
-              </div>
+              <Select value={selectedTimeframe} onValueChange={setSelectedTimeframe}>
+                <SelectTrigger className="w-fit min-w-[60px] h-8 bg-gray-800 border-gray-600 text-white hover:bg-gray-700 focus:ring-2 focus:ring-green-500/50 focus:border-green-500">
+                  <SelectValue>
+                    <span className="text-white font-medium">{selectedTimeframe}</span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  {timeframes.map((timeframe) => (
+                    <SelectItem 
+                      key={timeframe} 
+                      value={timeframe}
+                      className="text-white hover:bg-gray-700 focus:bg-gray-700"
+                    >
+                      {timeframe}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               
               <button
                 onClick={onClose}
