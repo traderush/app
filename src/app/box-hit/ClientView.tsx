@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import RightPanel from '@/games/box-hit/RightPanel';
 import PositionsTable from '@/games/box-hit/PositionsTable';
-import { Filter, ExternalLink, Users, Activity, Clock, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
+import { Filter, ExternalLink, Users, Activity, Clock, ChevronDown, TrendingUp, TrendingDown, Target } from 'lucide-react';
 import { cleanupSoundManager } from '@/lib/sound/SoundManager';
 import { useAppStore, useTradingStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -17,16 +17,16 @@ import { handleCanvasError } from '@/lib/errorHandler';
 // Activity Panel Component
 const ActivityPanel = () => {
   const [activities, setActivities] = useState([
-    { id: 1, player: 'Dc4q...5X4i', action: 'placed bet', amount: '$250', multiplier: '2.5x', payout: '$625', isPositive: true },
-    { id: 2, player: 'Kj8m...9Y2p', action: 'placed bet', amount: '$150', multiplier: '1.8x', payout: '$270', isPositive: true },
-    { id: 3, player: 'Xw2n...7H6q', action: 'won', amount: '$450', multiplier: '3.0x', payout: '$1,350', isPositive: true },
-    { id: 4, player: 'Lp5v...3M8r', action: 'placed bet', amount: '$100', multiplier: '2.2x', payout: '$220', isPositive: true },
-    { id: 5, player: 'Qr9t...1B4s', action: 'lost', amount: '$200', multiplier: '2.0x', payout: '$0', isPositive: false },
-    { id: 6, player: 'Fh6u...8C2w', action: 'placed bet', amount: '$300', multiplier: '1.5x', payout: '$450', isPositive: true },
-    { id: 7, player: 'Gm7i...5E9x', action: 'won', amount: '$180', multiplier: '1.8x', payout: '$324', isPositive: true },
-    { id: 8, player: 'Vk4o...2A7z', action: 'placed bet', amount: '$75', multiplier: '2.8x', payout: '$210', isPositive: true },
-    { id: 9, player: 'Bw3l...6N1y', action: 'lost', amount: '$120', multiplier: '2.1x', payout: '$0', isPositive: false },
-    { id: 10, player: 'Hj8p...4Q5t', action: 'placed bet', amount: '$500', multiplier: '1.2x', payout: '$600', isPositive: true },
+    { id: 1, player: 'Dc4q...5X4i', action: 'placed bet', amount: '$250', multiplier: '2.5x', payout: '$625', time: '2s ago', isPositive: true },
+    { id: 2, player: 'Kj8m...9Y2p', action: 'placed bet', amount: '$150', multiplier: '1.8x', payout: '$270', time: '5s ago', isPositive: true },
+    { id: 3, player: 'Xw2n...7H6q', action: 'won', amount: '$450', multiplier: '3.0x', payout: '$1,350', time: '8s ago', isPositive: true },
+    { id: 4, player: 'Lp5v...3M8r', action: 'placed bet', amount: '$100', multiplier: '2.2x', payout: '$220', time: '12s ago', isPositive: true },
+    { id: 5, player: 'Qr9t...1B4s', action: 'lost', amount: '$200', multiplier: '2.0x', payout: '$0', time: '15s ago', isPositive: false },
+    { id: 6, player: 'Fh6u...8C2w', action: 'placed bet', amount: '$300', multiplier: '1.5x', payout: '$450', time: '18s ago', isPositive: true },
+    { id: 7, player: 'Gm7i...5E9x', action: 'won', amount: '$180', multiplier: '1.8x', payout: '$324', time: '22s ago', isPositive: true },
+    { id: 8, player: 'Vk4o...2A7z', action: 'placed bet', amount: '$75', multiplier: '2.8x', payout: '$210', time: '25s ago', isPositive: true },
+    { id: 9, player: 'Bw3l...6N1y', action: 'lost', amount: '$120', multiplier: '2.1x', payout: '$0', time: '28s ago', isPositive: false },
+    { id: 10, player: 'Hj8p...4Q5t', action: 'placed bet', amount: '$500', multiplier: '1.2x', payout: '$600', time: '32s ago', isPositive: true },
   ]);
 
   // Simulate live activity updates
@@ -45,6 +45,7 @@ const ActivityPanel = () => {
         amount: `$${amount}`,
         multiplier: `${multiplier.toFixed(1)}x`,
         payout,
+        time: 'now',
         isPositive
       };
       
@@ -55,14 +56,14 @@ const ActivityPanel = () => {
   }, []);
 
   const getActionIcon = (action: string) => {
-    // Use a simple box icon for all actions
+    // Use Target icon for box hit game
     return (
-      <div className="w-3 h-3 rounded-sm border flex items-center justify-center" style={{ 
-        backgroundColor: action === 'won' ? '#10B981' : action === 'lost' ? '#EF4444' : '#3B82F6',
-        borderColor: action === 'won' ? '#10B981' : action === 'lost' ? '#EF4444' : '#3B82F6'
-      }}>
-        <div className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: '#FFFFFF' }}></div>
-      </div>
+      <Target 
+        size={12} 
+        style={{ 
+          color: action === 'won' ? '#10B981' : action === 'lost' ? '#EF4444' : '#3B82F6'
+        }} 
+      />
     );
   };
 
@@ -118,12 +119,17 @@ const ActivityPanel = () => {
                   </div>
                 </div>
               </div>
-              <span className="font-medium flex-shrink-0" style={{ 
-                fontSize: '11px',
-                color: activity.action === 'lost' ? '#EF4444' : activity.action === 'won' ? '#10B981' : '#3B82F6'
-              }}>
-                {activity.payout}
-              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-zinc-500" style={{ fontSize: '9px' }}>
+                  {activity.time}
+                </span>
+                <span className="font-medium" style={{ 
+                  fontSize: '11px',
+                  color: activity.action === 'lost' ? '#EF4444' : activity.action === 'won' ? '#10B981' : '#3B82F6'
+                }}>
+                  {activity.payout}
+                </span>
+              </div>
             </div>
           ))}
         </div>
