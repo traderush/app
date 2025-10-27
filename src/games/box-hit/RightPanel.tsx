@@ -91,10 +91,10 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
 
   return (
     <aside className="w-full rounded-lg border border-zinc-800 overflow-hidden flex-shrink-0" style={{ backgroundColor: '#0E0E0E' }}>
-      <div className="space-y-0 p-4">
+      <div className="p-4">
 
         {/* Second Section: Trading Controls */}
-        <div className="pb-4 pt-2">
+        <div className="pb-4">
           {/* Navigation Tabs */}
           <div className="flex border-b border-zinc-800 mb-3">
             <button
@@ -126,7 +126,7 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
         </div>
 
         {/* Betting Controls Section */}
-        <div className="pb-4">
+        <div>
           {/* Bet Amount Component */}
           <div className="mb-4">
             {/* Active Value Display */}
