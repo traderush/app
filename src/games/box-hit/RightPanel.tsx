@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, memo } from 'react';
-import { TrendingUp, TrendingDown, Filter, ChevronRight, Edit3, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, Edit3 } from 'lucide-react';
 import { useAppStore } from '@/stores';
 import { COLORS } from '@/styles/theme';
 
@@ -19,8 +19,6 @@ const ORANGE = '#FA5616';
  * @property averagePositionPrice - Average BTC price of selected box positions
  * @property betAmount - Current bet amount in USDC
  * @property onBetAmountChange - Callback when bet amount changes
- * @property dailyHigh - 24-hour high price
- * @property dailyLow - 24-hour low price
  * @property activeTab - Currently active tab ('copy' - Mock Backend mode)
  * @property onActiveTabChange - Callback when active tab changes
  */
@@ -34,13 +32,11 @@ interface RightPanelProps {
   averagePositionPrice: number | null; // Average BTC price of selected boxes
   betAmount: number; // Current bet amount
   onBetAmountChange: (amount: number) => void; // Callback when bet amount changes
-  dailyHigh: number; // 24h high price
-  dailyLow: number; // 24h low price
   activeTab?: 'place' | 'copy';
   onActiveTabChange?: (tab: 'place' | 'copy') => void;
 }
 
-function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange, dailyHigh, dailyLow, activeTab: externalActiveTab, onActiveTabChange }: RightPanelProps) {
+function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMultiplier, selectedMultipliers, currentBTCPrice, averagePositionPrice, betAmount, onBetAmountChange, activeTab: externalActiveTab, onActiveTabChange }: RightPanelProps) {
 
   const [internalActiveTab, setInternalActiveTab] = useState<'place' | 'copy'>('copy');
   const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
@@ -61,34 +57,12 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
     }
   }, [betAmount, onBetAmountChange]);
 
-  // Cycle through volatility index values for demo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVolatilityIndex(prev => (prev + 1) % 3);
-    }, 8000); // Change every 8 seconds
-
-    return () => clearInterval(interval);
-  }, []);
   const [activeCell, setActiveCell] = useState<number | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [showLiquidityToggle, setShowLiquidityToggle] = useState(false);
   const [showFeeToggle, setShowFeeToggle] = useState(false);
   const [feeAmount, setFeeAmount] = useState(0.01);
   const [liquidityAmount, setLiquidityAmount] = useState(0);
-  const [volatilityIndex, setVolatilityIndex] = useState(0);
-
-  const leaderboardData = [
-    { rank: 1, player: 'Dc4q...5X4i', pnl: '+$12,512.51', isPositive: true },
-    { rank: 2, player: 'Kj8m...9Y2p', pnl: '+$8,743.29', isPositive: true },
-    { rank: 3, player: 'Xw2n...7H6q', pnl: '+$6,891.45', isPositive: true },
-    { rank: 4, player: 'Lp5v...3M8r', pnl: '+$4,567.12', isPositive: true },
-    { rank: 5, player: 'Qr9t...1B4s', pnl: '+$3,234.78', isPositive: true },
-    { rank: 6, player: 'Fh6u...8C2w', pnl: '+$2,156.34', isPositive: true },
-    { rank: 7, player: 'Gm7i...5E9x', pnl: '+$1,789.56', isPositive: true },
-    { rank: 8, player: 'Vk4o...2A7z', pnl: '+$1,234.89', isPositive: true },
-    { rank: 9, player: 'Bw3l...6N1y', pnl: '+$987.43', isPositive: true },
-    { rank: 10, player: 'Hj8p...4Q5t', pnl: '+$654.21', isPositive: true },
-  ];
 
   const quickBetAmounts = [10, 50, 100, 250];
 
@@ -116,35 +90,8 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
   };
 
   return (
-    <aside className="w-[400px] border-l border-zinc-800/80 bg-zinc-950/60 pr-0 flex-shrink-0">
+    <aside className="w-full rounded-lg border border-zinc-800 overflow-hidden flex-shrink-0" style={{ backgroundColor: '#0E0E0E' }}>
       <div className="space-y-0 p-4">
-        {/* First Section: Daily High/Low BTC Price */}
-        <div>
-          {/* Daily High/Low Display */}
-          <div className="flex">
-            {/* Left container for Daily High */}
-            <div className="flex-1" style={{ background: `linear-gradient(to right, transparent 0%, ${COLORS.trading.positive}20 50%, transparent 100%)` }}>
-              <div className="text-xs text-zinc-400 px-3">Daily High</div>
-              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyHigh > 0 ? COLORS.trading.positive : '#71717a' }}>
-                {dailyHigh > 0 ? `$${dailyHigh.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
-              </div>
-            </div>
-            
-            {/* Separator */}
-            <div className="w-px bg-zinc-700"></div>
-            
-            {/* Right container for Daily Low */}
-            <div className="flex-1" style={{ background: `linear-gradient(to left, transparent 0%, ${COLORS.trading.negative}20 50%, transparent 100%)` }}>
-              <div className="text-xs text-zinc-400 px-3">Daily Low</div>
-              <div className="font-medium px-3" style={{ fontSize: '18px', lineHeight: '18px', color: dailyLow > 0 ? COLORS.trading.negative : '#71717a' }}>
-                {dailyLow > 0 ? `$${dailyLow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
-              </div>
-            </div>
-          </div>
-          
-          {/* Bottom border line - Full width */}
-          <div className="border-t border-zinc-800/80 -mx-4 px-4 mt-3"></div>
-        </div>
 
         {/* Second Section: Trading Controls */}
         <div className="pb-4 pt-2">
@@ -378,92 +325,6 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
           )}
         </div>
 
-        {/* Game Statistics and Options Section */}
-        <div>
-
-                                <div className="flex">
-                        <div className="flex-1">
-                          <div className="text-xs text-zinc-400">Volatility Index</div>
-                          <div className="flex items-center gap-1">
-                            <div className="font-medium" style={{ fontSize: '18px' }}>
-                              {volatilityIndex === 0 && <span style={{ color: COLORS.trading.positive }}>Low</span>}
-                              {volatilityIndex === 1 && <span className="text-yellow-400">Normal</span>}
-                              {volatilityIndex === 2 && <span style={{ color: COLORS.trading.negative }}>High</span>}
-                            </div>
-                            <ChevronRight size={16} className="text-zinc-400" />
-                          </div>
-                        </div>
-                        <div className="w-px bg-zinc-700 mx-4"></div>
-                        <div className="flex-1">
-                          <div className="text-xs text-zinc-400">Avg Position Price</div>
-                          <div className="font-medium text-zinc-100" style={{ fontSize: '18px' }}>
-                            {selectedCount > 0 ? (
-                              typeof averagePositionPrice === 'number' && averagePositionPrice > 0
-                                ? `~$${averagePositionPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                                : (currentBTCPrice && currentBTCPrice > 0 
-                                    ? `$${currentBTCPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                    : <span className="text-zinc-500">...</span>
-                                  )
-                            ) : (
-                              currentBTCPrice && currentBTCPrice > 0 
-                                ? `$${currentBTCPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
-                                : <span className="text-zinc-500">...</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-        </div>
-        
-        {/* Additional spacing under Volatility Index and Avg Position Price */}
-        <div className="pb-4"></div>
-
-        {/* Separator - Full width border */}
-        <div className="border-t border-zinc-800/80 -mx-4 px-4 my-0"></div>
-
-                {/* Leaderboard Section */}
-        <div className="py-0">
-          <div className="mb-3 pt-2">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-zinc-300 font-medium" style={{ fontSize: '14px' }}>Leaderboard</span>
-              <div className="flex items-center gap-3">
-                <button className="text-zinc-400 hover:text-zinc-200 transition-colors" style={{ fontSize: '12px' }}>
-                  View All
-                </button>
-                <button className="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 transition-colors" style={{ fontSize: '12px' }}>
-                  <Filter size={14} />
-                  Filter
-                </button>
-              </div>
-            </div>
-            {/* Full width border under leaderboard title */}
-            <div className="border-b border-zinc-800/80 -mx-4 px-4"></div>
-          </div>
-
-          <div className="space-y-0">
-            {leaderboardData.map((item, i) => (
-              <div 
-                key={item.rank} 
-                className="flex items-center justify-between py-2 px-3"
-                style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-zinc-400 w-6" style={{ fontSize: '12px' }}>#{item.rank}</span>
-                  <ExternalLink size={14} className="text-zinc-500 hover:text-zinc-400 cursor-pointer transition-colors" />
-                  <span className="text-zinc-300 ml-0.5" style={{ fontSize: '12px' }}>{item.player}</span>
-                </div>
-                <span className="font-normal" style={{ 
-                  fontSize: '12px',
-                  color: item.isPositive ? COLORS.trading.positive : COLORS.trading.negative
-                }}>
-                  {item.pnl}
-                </span>
-              </div>
-            ))}
-          </div>
-          
-          {/* Bottom border line - Full width */}
-          <div className="border-t border-zinc-800/80 -mx-4 px-4 mt-3"></div>
-        </div>
       </div>
     </aside>
   );

@@ -746,7 +746,7 @@ function Canvas({ externalControl = false, externalIsStarted = false, onExternal
         colors: {
           primary: signatureColor,
           secondary: '#ffffff',
-          background: '#000000',
+          background: '#0E0E0E',
           text: '#ffffff',
           border: '#333333',
           success: '#00ff00',

@@ -1,31 +1,28 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Menu, Bell, Wallet } from 'lucide-react';
-import clsx from 'clsx';
+import { Bell, Wallet, LayoutDashboard, Target, Building2, PenTool, TrendingUp } from 'lucide-react';
 import { useState, useRef } from 'react';
-import ScrollableGameTabs, { type GameTab } from './ScrollableGameTabs';
+import { usePathname } from 'next/navigation';
+import clsx from 'clsx';
 import { useAppStore } from '@/stores';
 import { COLORS } from '@/styles/theme';
 
+type GameTab = {
+  label: string;
+  href?: string;
+  locked?: boolean;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+};
+
 const gameTabs: GameTab[] = [
-  { href: '/box-hit', label: 'Box Hit' },
-  { href: '/towers',  label: 'Towers'  },
-  { href: '/sketch',  label: 'Sketch'  },
-  { href: '/ahead',   label: 'Ahead'   },
-  // locked previews:
-  { label: 'Soon', locked: true },
-  { label: 'Soon', locked: true },
-  { label: 'Soon', locked: true },
-  { label: 'Soon', locked: true },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/box-hit', label: 'Box Hit', icon: Target },
+  { href: '/towers',  label: 'Towers', icon: Building2 },
+  { href: '/sketch',  label: 'Sketch', icon: PenTool },
+  { href: '/ahead',   label: 'Ahead', icon: TrendingUp },
 ];
 
-const menuItems = [
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/leaderboard', label: 'Leaderboard' },
-  { href: '/refer', label: 'Refer & Earn' },
-];
 
 interface NavbarProps {
   onDepositOpen: () => void;
@@ -54,38 +51,76 @@ const Navbar = React.memo(function Navbar({ onDepositOpen, onNotificationsOpen, 
             />
           </Link>
 
-          {/* Scrollable game tabs */}
-          <ScrollableGameTabs items={gameTabs} bg={COLORS.background.primary} />
-
-          {/* Separator */}
-          <div className="hidden lg:block w-px h-5 bg-white/20 mx-2" />
-
-          {/* Additional menu items */}
-          <nav className="hidden md:flex items-center gap-4">
-            {menuItems.map(t => {
-              const active = path.startsWith(t.href);
+          {/* Game tabs */}
+          <nav className="flex items-center gap-2">
+            {gameTabs.map((tab, index) => {
+              const locked = tab.locked || !tab.href;
+              const active = !!tab.href && path.startsWith(tab.href);
+              const IconComponent = tab.icon;
+              
+              if (locked) {
+                return (
+                  <div
+                    key={`${tab.label}-${index}`}
+                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 cursor-not-allowed"
+                    title="Coming Soon"
+                  >
+                    <IconComponent size={18} className="text-zinc-500" />
+                  </div>
+                );
+              }
+              
               return (
-                <a
-                  key={t.href}
-                  href={t.href}
+                <Link
+                  key={tab.href}
+                  href={tab.href!}
                   className={clsx(
-                    'text-[14px] transition cursor-pointer hover:text-white',
+                    tab.label === 'Dashboard' 
+                      ? 'flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200'
+                      : 'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200',
                     active
-                      ? 'text-white'
-                      : 'text-white/20'
+                      ? 'bg-zinc-800'
+                      : 'hover:bg-zinc-900'
                   )}
-                  style={{fontWeight: 500}}
+                  style={active && tab.label === 'Dashboard' ? {
+                    backgroundColor: signatureColor
+                  } : {
+                    backgroundColor: '#171717'
+                  }}
+                  title={tab.label}
                 >
-                  {t.label}
-                </a>
+                  <IconComponent 
+                    size={tab.label === 'Dashboard' ? 16 : 18} 
+                    className={clsx(
+                      'transition-colors',
+                      active && tab.label === 'Dashboard'
+                        ? 'text-white'
+                        : active
+                          ? 'text-white'
+                          : ''
+                    )}
+                    style={{
+                      color: active 
+                        ? 'white' 
+                        : '#797979'
+                    }}
+                  />
+                  {tab.label === 'Dashboard' && (
+                    <span 
+                      className="text-sm font-medium transition-colors"
+                      style={{
+                        color: active 
+                          ? 'white' 
+                          : '#797979'
+                      }}
+                    >
+                      {tab.label}
+                    </span>
+                  )}
+                </Link>
               );
             })}
           </nav>
-
-          {/* Menu button */}
-          <button className="grid place-items-center w-8 h-8 text-zinc-300 hover:text-zinc-100 cursor-pointer">
-            <Menu size={16} />
-          </button>
 
           {/* Spacer */}
           <div className="flex-1" />

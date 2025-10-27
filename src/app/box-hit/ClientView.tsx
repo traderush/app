@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import RightPanel from '@/games/box-hit/RightPanel';
 import PositionsTable from '@/games/box-hit/PositionsTable';
-import CustomSlider from '@/components/CustomSlider';
+import { Filter, ExternalLink, Users, Activity, Clock, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
 import { cleanupSoundManager } from '@/lib/sound/SoundManager';
 import { useAppStore, useTradingStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -13,6 +13,114 @@ import { ASSET_DATA, TIMEFRAME_OPTIONS } from '@/lib/constants/assets';
 import { COLORS } from '@/styles/theme';
 import { Contract, Position } from '@/types/game';
 import { handleCanvasError } from '@/lib/errorHandler';
+
+// Activity Panel Component
+const ActivityPanel = () => {
+  const [activities, setActivities] = useState([
+    { id: 1, player: 'Dc4q...5X4i', action: 'placed bet', amount: '$250', multiplier: '2.5x', time: '2s ago', isPositive: true },
+    { id: 2, player: 'Kj8m...9Y2p', action: 'placed bet', amount: '$150', multiplier: '1.8x', time: '5s ago', isPositive: true },
+    { id: 3, player: 'Xw2n...7H6q', action: 'won', amount: '$450', multiplier: '3.0x', time: '8s ago', isPositive: true },
+    { id: 4, player: 'Lp5v...3M8r', action: 'placed bet', amount: '$100', multiplier: '2.2x', time: '12s ago', isPositive: true },
+    { id: 5, player: 'Qr9t...1B4s', action: 'lost', amount: '$200', multiplier: '2.0x', time: '15s ago', isPositive: false },
+    { id: 6, player: 'Fh6u...8C2w', action: 'placed bet', amount: '$300', multiplier: '1.5x', time: '18s ago', isPositive: true },
+    { id: 7, player: 'Gm7i...5E9x', action: 'won', amount: '$180', multiplier: '1.8x', time: '22s ago', isPositive: true },
+    { id: 8, player: 'Vk4o...2A7z', action: 'placed bet', amount: '$75', multiplier: '2.8x', time: '25s ago', isPositive: true },
+    { id: 9, player: 'Bw3l...6N1y', action: 'lost', amount: '$120', multiplier: '2.1x', time: '28s ago', isPositive: false },
+    { id: 10, player: 'Hj8p...4Q5t', action: 'placed bet', amount: '$500', multiplier: '1.2x', time: '32s ago', isPositive: true },
+  ]);
+
+  // Simulate live activity updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newActivity = {
+        id: Date.now(),
+        player: `${Math.random().toString(36).substring(2, 6)}...${Math.random().toString(36).substring(2, 4)}`,
+        action: Math.random() > 0.7 ? (Math.random() > 0.5 ? 'won' : 'lost') : 'placed bet',
+        amount: `$${Math.floor(Math.random() * 500) + 50}`,
+        multiplier: `${(Math.random() * 3 + 1).toFixed(1)}x`,
+        time: 'now',
+        isPositive: Math.random() > 0.3
+      };
+      
+      setActivities(prev => [newActivity, ...prev.slice(0, 9)]);
+    }, 3000 + Math.random() * 2000); // Random interval between 3-5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const getActionIcon = (action: string) => {
+    switch (action) {
+      case 'won':
+        return <TrendingUp size={12} className="text-green-400" />;
+      case 'lost':
+        return <TrendingDown size={12} className="text-red-400" />;
+      default:
+        return <Activity size={12} className="text-blue-400" />;
+    }
+  };
+
+  const getActionColor = (action: string, isPositive: boolean) => {
+    switch (action) {
+      case 'won':
+        return COLORS.trading.positive;
+      case 'lost':
+        return COLORS.trading.negative;
+      default:
+        return '#60A5FA'; // Blue for placed bet
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-zinc-800 overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
+      <div className="p-4">
+        <div className="mb-3">
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-zinc-300 font-medium" style={{ fontSize: '14px' }}>Live Activity</span>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-zinc-400" style={{ fontSize: '12px' }}>Live</span>
+            </div>
+          </div>
+          <div className="border-b border-zinc-800/80"></div>
+        </div>
+
+        <div className="space-y-0 max-h-80 overflow-y-auto">
+          {activities.map((activity, i) => (
+            <div 
+              key={activity.id} 
+              className="flex items-center justify-between py-2 px-3 hover:bg-zinc-800/30 transition-colors"
+              style={{ backgroundColor: (i + 1) % 2 === 0 ? '#18181B' : 'transparent' }}
+            >
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex-shrink-0">
+                  {getActionIcon(activity.action)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-300 truncate" style={{ fontSize: '12px' }}>{activity.player}</span>
+                    <span className="text-zinc-500" style={{ fontSize: '11px' }}>{activity.action}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-medium" style={{ 
+                      fontSize: '11px',
+                      color: getActionColor(activity.action, activity.isPositive)
+                    }}>
+                      {activity.amount}
+                    </span>
+                    <span className="text-zinc-500" style={{ fontSize: '10px' }}>{activity.multiplier}</span>
+                  </div>
+                </div>
+              </div>
+              <span className="text-zinc-500 flex-shrink-0" style={{ fontSize: '10px' }}>
+                {activity.time}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 /**
@@ -48,6 +156,8 @@ export default function ClientView() {
   const [mockBackendSelectedMultipliers, setMockBackendSelectedMultipliers] = useState<number[]>([]);
   const [mockBackendBestMultiplier, setMockBackendBestMultiplier] = useState(0);
   const [mockBackendSelectedAveragePrice, setMockBackendSelectedAveragePrice] = useState<number | null>(null);
+  const [isTimeframeDropdownOpen, setIsTimeframeDropdownOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   // Keep track of previous positions using a ref to avoid infinite loops
   const previousPositionsRef = useRef<Map<string, Position>>(new Map());
@@ -200,13 +310,36 @@ export default function ClientView() {
     };
   }, [isAssetDropdownOpen]);
 
+  // Close timeframe dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.timeframe-dropdown') && isTimeframeDropdownOpen) {
+        setIsTimeframeDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTimeframeDropdownOpen]);
+
+  // Update time every second
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
       return (
       <>
-      <div className="relative flex h-full w-full bg-zinc-950 text-white">
-        {/* Left side with header and canvas */}
-        <div className="flex-1 flex flex-col">
-          {/* Top Bar - Only over Canvas */}
-          <div className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 px-6" style={{ backgroundColor: COLORS.background.primary }}>
+      <div className="relative flex h-full w-full bg-zinc-950 text-white p-4 gap-4">
+        {/* Left side: Canvas + Positions */}
+        <div className="flex-1 flex flex-col gap-4">
+          {/* Canvas Component */}
+          <div className="rounded-lg border border-zinc-800 overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
+            {/* Canvas Header */}
+            <div className="flex h-16 items-center justify-between px-6" style={{ backgroundColor: '#0E0E0E' }}>
             {/* Left side: Asset info */}
             <div className="flex items-center gap-4">
               {/* Asset Icon */}
@@ -336,135 +469,193 @@ export default function ClientView() {
                 )}
               </div>
               
-              {/* Current Value */}
-                <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
-                ${(selectedAsset === 'DEMO' ? currentPrice : selectedAssetData.price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              </div>
-              
-              {/* 24h Change */}
-              <div className="leading-none">
-                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Change</div>
-                <div className="font-medium leading-none" style={{ 
-                  fontSize: '18px',
-                  color: (selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? COLORS.trading.positive : COLORS.trading.negative
-                }}>
-                  {(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? '+' : ''}{(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h).toFixed(2)}%
-                </div>
-              </div>
-              
-              {/* 24h Volume */}
-              <div className="leading-none">
-                <div className="text-zinc-400 leading-none" style={{ fontSize: '12px' }}>24h Volume</div>
-                <div className="text-white leading-none" style={{ fontSize: '18px' }}>
-                  {selectedAsset === 'DEMO' ? '45.20B' : selectedAssetData.volume24h}
-                </div>
-              </div>
+               {/* Current Value with 24h Change */}
+               <div className="flex items-baseline gap-2">
+                 <div className="text-white leading-none" style={{ fontSize: '28px', fontWeight: 500 }}>
+                   ${(selectedAsset === 'DEMO' ? currentPrice : selectedAssetData.price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                 </div>
+                 <div className="font-medium leading-none" style={{ 
+                   fontSize: '14px',
+                   color: (selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? COLORS.trading.positive : COLORS.trading.negative
+                 }}>
+                   {(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h) >= 0 ? '+' : ''}{(selectedAsset === 'DEMO' ? 2.5 : selectedAssetData.change24h).toFixed(2)}%
+                 </div>
+               </div>
             </div>
             
-            {/* Right side: Probabilities, User icon and Multiplier filter */}
-            <div className="flex items-center gap-6">
-              {/* Probabilities Checkbox - Toggle for Heatmap Overlay */}
+            {/* Right side: Controls */}
+            <div className="flex items-center gap-4">
+              {/* Multiplier Filter Slider */}
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="showProbabilities"
-                  checked={showProbabilities}
-                onChange={(e) => setShowProbabilities(e.target.checked)}
-                  className="w-3 h-3 rounded cursor-pointer"
-                  style={{
-                    borderColor: showProbabilities ? '#0F0F0F' : 'transparent',
-                    backgroundColor: showProbabilities ? signatureColor : 'transparent',
-                    borderRadius: '4px',
-                    borderWidth: '1px',
-                    padding: '0px',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    outline: showProbabilities ? `1px solid ${signatureColor}` : `1px solid #52525B`,
-                    outlineOffset: '1px'
-                  }}
-                />
-                <label 
-                  htmlFor="showProbabilities" 
-                  className="text-zinc-400 cursor-pointer select-none"
-                  style={{ fontSize: '12px' }}
-                >
-                  Heatmap
-                </label>
+                <span className="text-xs text-zinc-400">Multiplier:</span>
+                <div className="relative w-24 h-1 bg-zinc-800 rounded cursor-pointer" onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const percentage = x / rect.width;
+                  const newValue = 1.0 + (percentage * 14.0); // 1.0 to 15.0 range
+                  setMinMultiplier(Math.max(1.0, Math.min(15.0, newValue)));
+                }}>
+                  <div 
+                    className="absolute top-0 left-0 h-full"
+                    style={{ 
+                      width: `${((minMultiplier - 1.0) / 14.0) * 100}%`,
+                      backgroundColor: '#727272'
+                    }}
+                  />
+                  <div 
+                    className="absolute top-1/2 transform -translate-y-1/2 w-1 h-3"
+                    style={{ 
+                      left: `${((minMultiplier - 1.0) / 14.0) * 100}%`,
+                      backgroundColor: '#727272',
+                      marginLeft: '-2px'
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-white">{minMultiplier.toFixed(1)}x</span>
               </div>
 
-              {/* Other Players Checkbox - Toggle for Other Players */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="showOtherPlayers"
-                  checked={showOtherPlayers}
-                onChange={(e) => setShowOtherPlayers(e.target.checked)}
-                  className="w-3 h-3 rounded cursor-pointer"
+              {/* Timeframe Selector Dropdown */}
+              <div className="relative timeframe-dropdown">
+                <button
+                  onClick={() => setIsTimeframeDropdownOpen(!isTimeframeDropdownOpen)}
+                  className="flex items-center gap-1 px-3 py-1 text-xs rounded transition-colors"
                   style={{
-                    borderColor: showOtherPlayers ? '#0F0F0F' : 'transparent',
-                    backgroundColor: showOtherPlayers ? signatureColor : 'transparent',
-                    borderRadius: '4px',
-                    borderWidth: '1px',
-                    padding: '0px',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    outline: showOtherPlayers ? `1px solid ${signatureColor}` : `1px solid #52525B`,
-                    outlineOffset: '1px'
+                    backgroundColor: '#171717',
+                    color: 'white'
                   }}
-                />
-                <label 
-                  htmlFor="showOtherPlayers" 
-                  className="text-zinc-400 cursor-pointer select-none"
-                  style={{ fontSize: '12px' }}
                 >
-                  Show Players
-                </label>
+                  <span>{timeframe === 500 ? '0.5s' : timeframe < 1000 ? `${timeframe}ms` : `${timeframe/1000}s`}</span>
+                  <ChevronDown size={12} style={{ color: '#727272' }} />
+                </button>
+                
+                {isTimeframeDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1 rounded shadow-lg z-50 min-w-[80px]" style={{ backgroundColor: '#171717' }}>
+                    {TIMEFRAME_OPTIONS.map((ms) => {
+                      const isSelected = timeframe === ms;
+                      const label = ms === 500 ? '0.5s' : ms < 1000 ? `${ms}ms` : `${ms/1000}s`;
+                      return (
+                        <button
+                          key={ms}
+                          onClick={() => {
+                            setTimeframe(ms);
+                            setIsTimeframeDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'text-white'
+                              : 'text-zinc-400 hover:text-white hover:bg-zinc-700'
+                          }`}
+                          style={{
+                            backgroundColor: isSelected ? signatureColor : 'transparent'
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              
-            {/* Multiplier Filter Slider */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400">Multiplier:</span>
-                    <CustomSlider
-                      min={1.0}
-                      max={15.0}
-                      step={0.1}
-                      value={minMultiplier}
-                      onChange={setMinMultiplier}
-                className="w-24"
-              />
-              <span className="text-xs font-medium text-white">{minMultiplier.toFixed(1)}x</span>
 
-                {/* Timeframe Selector */}
-              <div className="flex gap-1 ml-4">
-                {TIMEFRAME_OPTIONS.map((ms) => {
-                  const isSelected = timeframe === ms;
-                  const label = ms === 500 ? '0.5s' : ms < 1000 ? `${ms}ms` : `${ms/1000}s`;
-                  return (
-                  <button
-                      key={ms}
-                      onClick={() => setTimeframe(ms)}
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        isSelected
-                          ? 'text-white'
-                          : 'text-zinc-400 hover:text-white'
-                      }`}
+              {/* Time Display */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg" style={{ backgroundColor: '#171717' }}>
+                  <Clock size={14} style={{ color: signatureColor }} />
+                  <span className="text-sm" style={{ color: signatureColor }}>
+                    {currentTime.toLocaleTimeString('en-US', { 
+                      hour12: false,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit'
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Heatmap and Players Icon Boxes */}
+              <div className="flex items-center gap-2">
+                {/* Heatmap Icon Box */}
+                <button
+                  onClick={() => setShowProbabilities(!showProbabilities)}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-200 hover:bg-zinc-900 relative"
+                  style={{
+                    backgroundColor: '#171717'
+                  }}
+                  title="Toggle Heatmap Overlay"
+                >
+                  <Activity 
+                    size={16} 
+                    style={{
+                      color: '#727272'
+                    }}
+                  />
+                  {!showProbabilities && (
+                    <div 
+                      className="absolute inset-0"
                       style={{
-                        backgroundColor: isSelected ? signatureColor : 'transparent'
+                        zIndex: 999
                       }}
                     >
-                      {label}
-                  </button>
-                  );
-                })}
+                      <div 
+                        style={{
+                          width: '28px',
+                          height: '2px',
+                          backgroundColor: '#727272',
+                          transform: 'rotate(45deg)',
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          marginLeft: '-14px',
+                          marginTop: '-1px'
+                        }}
+                      />
+                    </div>
+                  )}
+                </button>
+
+                {/* Show Players Icon Box */}
+                <button
+                  onClick={() => setShowOtherPlayers(!showOtherPlayers)}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-200 hover:bg-zinc-900 relative"
+                  style={{
+                    backgroundColor: '#171717'
+                  }}
+                  title="Toggle Other Players"
+                >
+                  <Users 
+                    size={16} 
+                    style={{
+                      color: '#727272'
+                    }}
+                  />
+                  {!showOtherPlayers && (
+                    <div 
+                      className="absolute inset-0"
+                      style={{
+                        zIndex: 999
+                      }}
+                    >
+                      <div 
+                        style={{
+                          width: '28px',
+                          height: '2px',
+                          backgroundColor: '#727272',
+                          transform: 'rotate(45deg)',
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          marginLeft: '-14px',
+                          marginTop: '-1px'
+                        }}
+                      />
+                    </div>
+                  )}
+                </button>
               </div>
-                </div>
             </div>
           </div>
           
-          {/* Canvas Area */}
-          <div className="flex-1">
+            {/* Canvas Area */}
             <ErrorBoundary 
               fallback={
                 <div className="h-96 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-lg">
@@ -482,55 +673,61 @@ export default function ClientView() {
                 });
               }}
             >
-              {/* Show Canvas component controlled by Start Trading button */}
-                <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: COLORS.background.secondary }}>
-                  <Canvas 
-                    externalControl={true}
-                    externalIsStarted={isCanvasStarted}
-                    onExternalStartChange={setIsCanvasStarted}
-                    externalTimeframe={timeframe}
-                    onPositionsChange={handleMockBackendPositionsChange}
-                    onSelectionChange={handleMockBackendSelectionChange}
-                    betAmount={betAmount}
-                    onPriceUpdate={(price) => {
-                      // Update real-time price in trading store
-                      useTradingStore.getState().updatePriceStats({
-                        currentPrice: price,
-                        priceChange24h: 0,
-                        priceChangePercent24h: 0,
-                        volume24h: 0,
-                      });
-                    }}
-                    showProbabilities={showProbabilities}
+              <div className="w-full h-[520px] overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
+                <Canvas 
+                  externalControl={true}
+                  externalIsStarted={isCanvasStarted}
+                  onExternalStartChange={setIsCanvasStarted}
+                  externalTimeframe={timeframe}
+                  onPositionsChange={handleMockBackendPositionsChange}
+                  onSelectionChange={handleMockBackendSelectionChange}
+                  betAmount={betAmount}
+                  onPriceUpdate={(price) => {
+                    // Update real-time price in trading store
+                    useTradingStore.getState().updatePriceStats({
+                      currentPrice: price,
+                      priceChange24h: 0,
+                      priceChangePercent24h: 0,
+                      volume24h: 0,
+                    });
+                  }}
+                  showProbabilities={showProbabilities}
                   showOtherPlayers={showOtherPlayers}
-                    minMultiplier={minMultiplier}
-                  />
-                </div>
+                  minMultiplier={minMultiplier}
+                />
+              </div>
             </ErrorBoundary>
+          </div>
           
-          <PositionsTable 
-            betAmount={betAmount}
-            currentBTCPrice={currentPrice}
+          {/* Positions Table Component */}
+          <div className="rounded-lg border border-zinc-800 overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
+            <PositionsTable 
+              betAmount={betAmount}
+              currentBTCPrice={currentPrice}
             />
           </div>
         </div>
         
-        {/* Right: betting panel only */}
-        <RightPanel 
-          isTradingMode={isCanvasStarted}
-          onTradingModeChange={handleTradingModeChange}
-          selectedCount={mockBackendSelectedCount}
-          bestMultiplier={mockBackendBestMultiplier}
-          selectedMultipliers={mockBackendSelectedMultipliers}
-          currentBTCPrice={currentPrice}
-          averagePositionPrice={mockBackendSelectedAveragePrice || null}
-          betAmount={betAmount}
-          onBetAmountChange={setBetAmount}
-          dailyHigh={currentPrice + 2}
-          dailyLow={currentPrice - 2}
-        />
+        {/* Right side: Betting Panel + Leaderboard */}
+        <div className="w-[400px] flex flex-col gap-4">
+          {/* Betting Panel Component */}
+          <RightPanel 
+            isTradingMode={isCanvasStarted}
+            onTradingModeChange={handleTradingModeChange}
+            selectedCount={mockBackendSelectedCount}
+            bestMultiplier={mockBackendBestMultiplier}
+            selectedMultipliers={mockBackendSelectedMultipliers}
+            currentBTCPrice={currentPrice}
+            averagePositionPrice={mockBackendSelectedAveragePrice || null}
+            betAmount={betAmount}
+            onBetAmountChange={setBetAmount}
+          />
+          
+          {/* Activity Panel */}
+          <ActivityPanel />
+        </div>
       </div>
       {/* Toast notifications are now handled by the centralized GlobalToast component */}
-        </>
+      </>
     );
 }
