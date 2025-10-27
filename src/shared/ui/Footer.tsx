@@ -2,6 +2,7 @@ import Image from 'next/image';
 import React, { useEffect, useMemo, useState } from 'react';
 import { TRADING_COLORS } from '@/shared/constants/theme';
 import { ASSETS } from '@/app/box-hit/constants';
+import { Settings } from 'lucide-react';
 
 type PerformanceWithMemory = Performance & {
   memory?: {
@@ -50,6 +51,8 @@ interface FooterProps {
   pnLTrackerButtonRef: React.RefObject<HTMLButtonElement | null>;
   onCustomizeOpen: () => void;
   customizeButtonRef: React.RefObject<HTMLButtonElement | null>;
+  onSettingsOpen?: () => void;
+  settingsButtonRef?: React.RefObject<HTMLButtonElement | null>;
   // Connection status props
   isWebSocketConnected?: boolean;
   isBackendConnected?: boolean; // Backend API status
@@ -60,6 +63,8 @@ const Footer = React.memo(function Footer({
   pnLTrackerButtonRef, 
   onCustomizeOpen, 
   customizeButtonRef,
+  onSettingsOpen,
+  settingsButtonRef,
   isWebSocketConnected = false,
   isBackendConnected = false
 }: FooterProps) {
@@ -96,35 +101,7 @@ const Footer = React.memo(function Footer({
     <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
       <div className="h-8 px-4 flex items-center justify-between text-xs text-zinc-400">
         <div className="flex items-center gap-4">
-          <span>Players Online: {playerCount}</span>
-          <div className="flex items-center gap-2">
-            <span>Volatility Index:</span>
-            <span style={{color: TRADING_COLORS.positive}}>+12.4%</span>
-          </div>
-          <div className="w-px h-4 bg-white/20"></div>
-          {MARKET_SUMMARY.map(({ key, color, icon }) => {
-            const asset = ASSETS[key];
-            return (
-              <div className="flex items-center gap-2" key={key}>
-                <span className="relative w-4 h-4 rounded overflow-hidden">
-                  <Image
-                    src={icon}
-                    alt={asset.name}
-                    fill
-                    className="object-cover"
-                    sizes="16px"
-                  />
-                </span>
-                <span style={{ color }}>
-                  {asset.price.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-            );
-          })}
-          
+                    
           {/* Connection Status - Dynamic styling based on connection */}
           <div className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 relative group" style={{ 
             backgroundColor: isWebSocketConnected ? '#0E2923' : '#2A1A0E', 
@@ -215,28 +192,6 @@ const Footer = React.memo(function Footer({
         
         {/* Right side - Styles for Dev, PnL Tracker, Customize, and social links */}
         <div className="flex items-center gap-4">
-          {/* Styles for Dev Button */}
-          <a 
-            href="/styles-for-dev"
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            <span>Styles for Dev</span>
-          </a>
-          
-          {/* User Flows Button */}
-          <a 
-            href="/user-flows"
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            <span>User Flows</span>
-          </a>
-          
           {/* Separator */}
           <div className="w-px h-4 bg-white/20"></div>
           
@@ -266,7 +221,20 @@ const Footer = React.memo(function Footer({
             </svg>
             <span>Customize</span>
           </button>
-          
+
+          {/* Separator */}
+          <div className="w-px h-4 bg-white/20"></div>
+        
+          {/* Settings Button */}
+          <button 
+            ref={settingsButtonRef}
+            onClick={onSettingsOpen}
+            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+          >
+            <Settings size={14} strokeWidth={1.4} />
+            <span>Settings</span>
+          </button>
+
           {/* Separator */}
           <div className="w-px h-4 bg-white/20"></div>
           
@@ -291,7 +259,7 @@ const Footer = React.memo(function Footer({
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
             </svg>
           </a>
-          <a 
+          {/* <a 
             href="https://docs.traderush.com" 
             target="_blank" 
             rel="noopener noreferrer"
@@ -301,7 +269,7 @@ const Footer = React.memo(function Footer({
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
             </svg>
             <span>Docs</span>
-          </a>
+          </a> */}
         </div>
       </div>
     </footer>
@@ -313,7 +281,8 @@ const Footer = React.memo(function Footer({
     prevProps.isWebSocketConnected === nextProps.isWebSocketConnected &&
     prevProps.isBackendConnected === nextProps.isBackendConnected &&
     prevProps.onPnLTrackerOpen === nextProps.onPnLTrackerOpen &&
-    prevProps.onCustomizeOpen === nextProps.onCustomizeOpen
+    prevProps.onCustomizeOpen === nextProps.onCustomizeOpen &&
+    prevProps.onSettingsOpen === nextProps.onSettingsOpen
   );
 });
 
