@@ -20,12 +20,12 @@ const ActivityPanel = () => {
     { id: 1, player: 'Dc4q...5X4i', action: 'hit', multiplier: '2.5x', amount: '$250', payout: '$625', time: '2s ago', isPositive: true },
     { id: 2, player: 'Kj8m...9Y2p', action: 'hit', multiplier: '1.8x', amount: '$150', payout: '$270', time: '5s ago', isPositive: true },
     { id: 3, player: 'Xw2n...7H6q', action: 'hit', multiplier: '3.0x', amount: '$450', payout: '$1,350', time: '8s ago', isPositive: true },
-    { id: 4, player: 'Lp5v...3M8r', action: 'missed', multiplier: '2.2x', amount: '$100', payout: '$0', time: '12s ago', isPositive: false },
-    { id: 5, player: 'Qr9t...1B4s', action: 'missed', multiplier: '2.0x', amount: '$200', payout: '$0', time: '15s ago', isPositive: false },
+    { id: 4, player: 'Lp5v...3M8r', action: 'missed', multiplier: '2.2x', amount: '$100', payout: '-$100', time: '12s ago', isPositive: false },
+    { id: 5, player: 'Qr9t...1B4s', action: 'missed', multiplier: '2.0x', amount: '$200', payout: '-$200', time: '15s ago', isPositive: false },
     { id: 6, player: 'Fh6u...8C2w', action: 'hit', multiplier: '1.5x', amount: '$300', payout: '$450', time: '18s ago', isPositive: true },
     { id: 7, player: 'Gm7i...5E9x', action: 'hit', multiplier: '1.8x', amount: '$180', payout: '$324', time: '22s ago', isPositive: true },
-    { id: 8, player: 'Vk4o...2A7z', action: 'missed', multiplier: '2.8x', amount: '$75', payout: '$0', time: '25s ago', isPositive: false },
-    { id: 9, player: 'Bw3l...6N1y', action: 'missed', multiplier: '2.1x', amount: '$120', payout: '$0', time: '28s ago', isPositive: false },
+    { id: 8, player: 'Vk4o...2A7z', action: 'missed', multiplier: '2.8x', amount: '$75', payout: '-$75', time: '25s ago', isPositive: false },
+    { id: 9, player: 'Bw3l...6N1y', action: 'missed', multiplier: '2.1x', amount: '$120', payout: '-$120', time: '28s ago', isPositive: false },
     { id: 10, player: 'Hj8p...4Q5t', action: 'hit', multiplier: '1.2x', amount: '$500', payout: '$600', time: '32s ago', isPositive: true },
   ]);
 
@@ -36,7 +36,7 @@ const ActivityPanel = () => {
       const multiplier = Math.random() * 3 + 1;
       const action = Math.random() > 0.5 ? 'hit' : 'missed';
       const isPositive = action === 'hit';
-      const payout = action === 'missed' ? '$0' : `$${Math.floor(amount * multiplier).toLocaleString()}`;
+      const payout = action === 'missed' ? `-$${amount}` : `$${Math.floor(amount * multiplier).toLocaleString()}`;
       
       const newActivity = {
         id: Date.now(),
@@ -59,7 +59,7 @@ const ActivityPanel = () => {
     // Use User icon for all actions
     return (
       <User 
-        size={12} 
+        size={16} 
         style={{ 
           color: '#71717a'
         }} 
@@ -96,12 +96,12 @@ const ActivityPanel = () => {
           {activities.map((activity, i) => (
             <div 
               key={activity.id} 
-              className="flex items-center gap-1 py-1 px-4 hover:bg-zinc-800/30 transition-colors"
+              className="flex items-center gap-2 py-1 px-4 hover:bg-zinc-800/30 transition-colors"
             >
               <div className="flex-shrink-0">
                 {getActionIcon(activity.action)}
               </div>
-              <div className="flex items-center gap-1 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-zinc-300 truncate font-medium" style={{ fontSize: '12px' }}>
                   {activity.player}
                 </span>
