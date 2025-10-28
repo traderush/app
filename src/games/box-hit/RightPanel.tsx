@@ -194,15 +194,6 @@ function RightPanel({ isTradingMode, onTradingModeChange, selectedCount, bestMul
               </button>
             </div>
 
-            <div className="text-xs text-zinc-400 mt-2">
-              Payout per $1:
-              <span style={{ color: '#FFF', marginLeft: '4px' }}>
-                {selectedCount > 0 && betAmount > 0 && selectedMultipliers.length > 0
-                  ? `$${(selectedMultipliers.reduce((sum, mult) => sum + mult, 0)).toFixed(2)}`
-                  : '$0.00'
-                }
-              </span>
-            </div>
           </div>
 
           {/* Summary Statistics */}
