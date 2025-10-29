@@ -613,8 +613,59 @@ async function main() {
     return { timeframe: tf, priceHistory: history, contracts };
   }
 
+  async function resolveTlsConfig(): Promise<Parameters<typeof Bun.serve>[0]["tls"] | undefined> {
+    const certPath = process.env.ENGINE_TLS_CERT_FILE ?? process.env.TLS_CERT_FILE;
+    const keyPath = process.env.ENGINE_TLS_KEY_FILE ?? process.env.TLS_KEY_FILE;
+    const caPath = process.env.ENGINE_TLS_CA_FILE ?? process.env.TLS_CA_FILE;
+    const certInline = process.env.ENGINE_TLS_CERT ?? process.env.TLS_CERT;
+    const keyInline = process.env.ENGINE_TLS_KEY ?? process.env.TLS_KEY;
+    const caInline = process.env.ENGINE_TLS_CA ?? process.env.TLS_CA;
+    const passphrase = process.env.ENGINE_TLS_PASSPHRASE ?? process.env.TLS_PASSPHRASE;
+
+    const loadFile = async (filePath: string | undefined, label: string): Promise<string | undefined> => {
+      if (!filePath) return undefined;
+      try {
+        return await Bun.file(filePath).text();
+      } catch (err) {
+        console.error(`failed to read TLS ${label} file at ${filePath}`, err);
+        return undefined;
+      }
+    };
+
+    const cert = certInline ?? (await loadFile(certPath, "certificate"));
+    const key = keyInline ?? (await loadFile(keyPath, "key"));
+    const ca = caInline ?? (await loadFile(caPath, "CA certificate"));
+
+    if (cert && key) {
+      const tlsConfig: Required<Pick<NonNullable<Parameters<typeof Bun.serve>[0]["tls"]>, "cert" | "key">> & {
+        ca?: string;
+        passphrase?: string;
+      } = { cert, key };
+      if (ca) {
+        tlsConfig.ca = ca;
+      }
+      if (passphrase) {
+        tlsConfig.passphrase = passphrase;
+      }
+      return tlsConfig;
+    }
+
+    if (cert || key) {
+      console.warn("incomplete TLS configuration detected (need both certificate and key); continuing without TLS");
+    }
+
+    return undefined;
+  }
+
+  const parsedPort = Number.parseInt(process.env.PORT ?? process.env.ENGINE_PORT ?? "8080", 10);
+  const port = Number.isNaN(parsedPort) ? 8080 : parsedPort;
+  const hostname = process.env.ENGINE_HOST ?? process.env.HOST ?? "0.0.0.0";
+  const tls = await resolveTlsConfig();
+
   const server = Bun.serve({
-    port: Number(process.env.ENGINE_PORT ?? 8080),
+    port,
+    hostname,
+    ...(tls ? { tls } : {}),
     fetch: async (req, server) => {
       const url = new URL(req.url);
       if (url.pathname === "/ws" && server.upgrade(req)) {
@@ -803,7 +854,12 @@ async function main() {
     }
   }, 2_000);
 
-  console.log(`Engine WebSocket server listening at ${server.url} (ws path /ws)`);
+  const protocol = tls ? "wss" : "ws";
+  console.log(
+    `Engine WebSocket server listening on ${hostname}:${port} (${protocol} path /ws${
+      tls ? "; TLS enabled" : "; expose via HTTPS/WSS proxy for TLS"
+    })`,
+  );
 }
 
 void main().catch((err) => {

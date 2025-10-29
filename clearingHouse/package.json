@@ -7,7 +7,9 @@
     "dev": "bun run src/index.ts",
     "test": "bun test",
     "visualizer": "bun run src/devtools/orderbook-visualizer.ts",
-    "engine": "bun run src/server/engine-ws-server.ts"
+    "engine": "bun run src/server/engine-ws-server.ts",
+    "engine-wss": "ENGINE_TLS_CERT_FILE=./certs/dev-cert.pem ENGINE_TLS_KEY_FILE=./certs/dev-key.pem bun run src/server/engine-ws-server.ts",
+    "start": "bun run src/server/engine-ws-server.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
