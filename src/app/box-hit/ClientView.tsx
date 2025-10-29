@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import RightPanel from '@/games/box-hit/RightPanel';
 import PositionsTable from '@/games/box-hit/PositionsTable';
-import { Filter, ExternalLink, Users, Activity, Clock, ChevronDown, TrendingUp, TrendingDown, Target, User } from 'lucide-react';
+import { Filter, ExternalLink, Users, Activity, Clock, ChevronDown, TrendingUp, TrendingDown, Target, User, Settings } from 'lucide-react';
 import { cleanupSoundManager } from '@/lib/sound/SoundManager';
 import { useAppStore, useTradingStore } from '@/stores';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -17,16 +17,16 @@ import { handleCanvasError } from '@/lib/errorHandler';
 // Activity Panel Component
 const ActivityPanel = () => {
   const [activities, setActivities] = useState([
-    { id: 1, player: 'Dc4q...5X4i', action: 'hit', multiplier: '2.5x', amount: '$250', payout: '$625', time: '2s ago', isPositive: true },
-    { id: 2, player: 'Kj8m...9Y2p', action: 'hit', multiplier: '1.8x', amount: '$150', payout: '$270', time: '5s ago', isPositive: true },
-    { id: 3, player: 'Xw2n...7H6q', action: 'hit', multiplier: '3.0x', amount: '$450', payout: '$1,350', time: '8s ago', isPositive: true },
-    { id: 4, player: 'Lp5v...3M8r', action: 'missed', multiplier: '2.2x', amount: '$100', payout: '-$100', time: '12s ago', isPositive: false },
-    { id: 5, player: 'Qr9t...1B4s', action: 'missed', multiplier: '2.0x', amount: '$200', payout: '-$200', time: '15s ago', isPositive: false },
-    { id: 6, player: 'Fh6u...8C2w', action: 'hit', multiplier: '1.5x', amount: '$300', payout: '$450', time: '18s ago', isPositive: true },
-    { id: 7, player: 'Gm7i...5E9x', action: 'hit', multiplier: '1.8x', amount: '$180', payout: '$324', time: '22s ago', isPositive: true },
-    { id: 8, player: 'Vk4o...2A7z', action: 'missed', multiplier: '2.8x', amount: '$75', payout: '-$75', time: '25s ago', isPositive: false },
-    { id: 9, player: 'Bw3l...6N1y', action: 'missed', multiplier: '2.1x', amount: '$120', payout: '-$120', time: '28s ago', isPositive: false },
-    { id: 10, player: 'Hj8p...4Q5t', action: 'hit', multiplier: '1.2x', amount: '$500', payout: '$600', time: '32s ago', isPositive: true },
+    { id: 1, player: 'Dc4q...5X4i', action: 'won', multiplier: '2.5x', amount: '$250', payout: '$625', time: '2s ago', isPositive: true },
+    { id: 2, player: 'Kj8m...9Y2p', action: 'won', multiplier: '1.8x', amount: '$150', payout: '$270', time: '5s ago', isPositive: true },
+    { id: 3, player: 'Xw2n...7H6q', action: 'won', multiplier: '3.0x', amount: '$450', payout: '$1,350', time: '8s ago', isPositive: true },
+    { id: 4, player: 'Lp5v...3M8r', action: 'lost', multiplier: '2.2x', amount: '$100', payout: '$100', time: '12s ago', isPositive: false },
+    { id: 5, player: 'Qr9t...1B4s', action: 'lost', multiplier: '2.0x', amount: '$200', payout: '$200', time: '15s ago', isPositive: false },
+    { id: 6, player: 'Fh6u...8C2w', action: 'won', multiplier: '1.5x', amount: '$300', payout: '$450', time: '18s ago', isPositive: true },
+    { id: 7, player: 'Gm7i...5E9x', action: 'won', multiplier: '1.8x', amount: '$180', payout: '$324', time: '22s ago', isPositive: true },
+    { id: 8, player: 'Vk4o...2A7z', action: 'lost', multiplier: '2.8x', amount: '$75', payout: '$75', time: '25s ago', isPositive: false },
+    { id: 9, player: 'Bw3l...6N1y', action: 'lost', multiplier: '2.1x', amount: '$120', payout: '$120', time: '28s ago', isPositive: false },
+    { id: 10, player: 'Hj8p...4Q5t', action: 'won', multiplier: '1.2x', amount: '$500', payout: '$600', time: '32s ago', isPositive: true },
   ]);
 
   // Simulate live activity updates
@@ -34,9 +34,9 @@ const ActivityPanel = () => {
     const interval = setInterval(() => {
       const amount = Math.floor(Math.random() * 500) + 50;
       const multiplier = Math.random() * 3 + 1;
-      const action = Math.random() > 0.5 ? 'hit' : 'missed';
-      const isPositive = action === 'hit';
-      const payout = action === 'missed' ? `-$${amount}` : `$${Math.floor(amount * multiplier).toLocaleString()}`;
+      const action = Math.random() > 0.5 ? 'won' : 'lost';
+      const isPositive = action === 'won';
+      const payout = action === 'lost' ? `$${amount}` : `$${Math.floor(amount * multiplier).toLocaleString()}`;
       
       const newActivity = {
         id: Date.now(),
@@ -82,12 +82,15 @@ const ActivityPanel = () => {
     <div className="rounded-lg border border-zinc-800 overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
       <div className="p-4">
         <div className="mb-3">
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-zinc-300 font-medium" style={{ fontSize: '14px' }}>Live Activity</span>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-zinc-400" style={{ fontSize: '12px' }}>Live</span>
-            </div>
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-zinc-300 font-medium" style={{ fontSize: '14px' }}>Live Activity</span>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full" style={{ 
+                  backgroundColor: '#10AE80', 
+                  border: '2px solid #134335' 
+                }}></div>
+                <span className="text-zinc-400 text-xs font-medium">Live</span>
+              </div>
           </div>
           <div className="border-b border-zinc-800/80"></div>
         </div>
@@ -108,19 +111,33 @@ const ActivityPanel = () => {
                 <span className="text-zinc-500" style={{ fontSize: '11px' }}>
                   {activity.action}
                 </span>
-                <span className="text-white font-medium" style={{ fontSize: '12px' }}>
-                  {activity.multiplier}
+                <div className="flex items-center gap-1">
+                  {activity.action === 'won' && (
+                    <TrendingUp 
+                      size={12} 
+                      style={{ color: COLORS.trading.positive }}
+                    />
+                  )}
+                  {activity.action === 'lost' && (
+                    <TrendingDown 
+                      size={12} 
+                      style={{ color: COLORS.trading.negative }}
+                    />
+                  )}
+                  <span className="font-medium" style={{ 
+                    fontSize: '12px',
+                    color: activity.action === 'won' ? COLORS.trading.positive : COLORS.trading.negative
+                  }}>
+                    {activity.payout}
+                  </span>
+                </div>
+                <span className="text-zinc-500" style={{ fontSize: '10px' }}>
+                  ({activity.multiplier})
                 </span>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center flex-shrink-0">
                 <span className="text-zinc-500" style={{ fontSize: '10px' }}>
                   {activity.time}
-                </span>
-                <span className="font-medium" style={{ 
-                  fontSize: '12px',
-                  color: activity.action === 'hit' ? COLORS.trading.positive : COLORS.trading.negative
-                }}>
-                  {activity.payout}
                 </span>
               </div>
             </div>
@@ -348,7 +365,7 @@ export default function ClientView() {
           {/* Canvas Component */}
           <div className="rounded-lg border border-zinc-800 overflow-hidden" style={{ backgroundColor: '#0E0E0E' }}>
             {/* Canvas Header */}
-            <div className="flex h-16 items-center justify-between px-6" style={{ backgroundColor: '#0E0E0E' }}>
+            <div className="flex h-16 items-center justify-between px-3" style={{ backgroundColor: '#0E0E0E' }}>
             {/* Left side: Asset info */}
             <div className="flex items-center gap-4">
               {/* Asset Icon */}
@@ -527,7 +544,7 @@ export default function ClientView() {
               <div className="relative timeframe-dropdown">
                 <button
                   onClick={() => setIsTimeframeDropdownOpen(!isTimeframeDropdownOpen)}
-                  className="flex items-center gap-1 px-3 py-1 text-xs rounded transition-colors"
+                  className="flex items-center justify-center gap-1 px-3 h-8 text-xs rounded transition-colors"
                   style={{
                     backgroundColor: '#171717',
                     color: 'white'
@@ -568,7 +585,7 @@ export default function ClientView() {
 
               {/* Time Display */}
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg" style={{ backgroundColor: '#171717' }}>
+                <div className="flex items-center justify-center gap-2 px-3 h-8 rounded-lg" style={{ backgroundColor: '#171717' }}>
                   <Clock size={14} style={{ color: signatureColor }} />
                   <span className="text-sm" style={{ color: signatureColor }}>
                     {currentTime.toLocaleTimeString('en-US', { 
@@ -659,6 +676,22 @@ export default function ClientView() {
                       />
                     </div>
                   )}
+                </button>
+
+                {/* Settings Icon Box */}
+                <button
+                  className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-200 hover:bg-zinc-900"
+                  style={{
+                    backgroundColor: '#171717'
+                  }}
+                  title="Settings"
+                >
+                  <Settings 
+                    size={16} 
+                    style={{
+                      color: '#727272'
+                    }}
+                  />
                 </button>
               </div>
             </div>
