@@ -661,6 +661,14 @@ async function main() {
   const port = Number.isNaN(parsedPort) ? 8080 : parsedPort;
   const hostname = process.env.ENGINE_HOST ?? process.env.HOST ?? "0.0.0.0";
   const tls = await resolveTlsConfig();
+  const requireTls =
+    ["1", "true", "yes"].includes((process.env.ENGINE_REQUIRE_TLS ?? "").toLowerCase());
+
+  if (requireTls && !tls) {
+    throw new Error(
+      "ENGINE_REQUIRE_TLS is set but TLS configuration is incomplete. Provide ENGINE_TLS_CERT and ENGINE_TLS_KEY (or *_FILE).",
+    );
+  }
 
   const server = Bun.serve({
     port,

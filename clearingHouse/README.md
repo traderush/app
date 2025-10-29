@@ -63,7 +63,10 @@ openssl req -x509 -newkey rsa:2048 -nodes \
 
 # Launch with TLS enabled (serves wss://localhost:8443/ws)
 cd clearingHouse
-PORT=8443 bun run engine-wss
+ENGINE_TLS_CERT_FILE=./certs/dev-cert.pem \
+ENGINE_TLS_KEY_FILE=./certs/dev-key.pem \
+PORT=8443 \
+bun run engine-wss
 ```
 
 When TLS variables are present the server automatically upgrades to HTTPS/WSS; otherwise it continues serving plain WS.
