@@ -154,7 +154,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         />
       </div>
 
-      <div className="fixed left-0 top-14 z-30">
+      <div className="fixed left-0 top-14 z-30 w-16">
         <div className="relative">
           <SidebarRail
             isCollapsed={sidebarCollapsed}
@@ -169,23 +169,18 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
             watchedPlayers={watchedPlayers}
             onSoundToggle={handleSoundToggle}
           />
-          <button
-            onClick={toggleSidebar}
-            className="absolute -right-6 top-1/2 grid h-12 w-6 -translate-y-1/2 place-items-center rounded-r border border-zinc-700/60 bg-zinc-800/60 text-zinc-300 transition-all hover:bg-zinc-700/80 hover:text-zinc-100"
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-          </button>
         </div>
       </div>
 
       <main
-        className={`min-h-[calc(100vh-56px-32px)] pt-14 transition-all duration-300 ${
+        className={`relative flex h-[calc(100vh-32px)] min-h-[calc(100vh-32px)] flex-col overflow-hidden pt-14 transition-all duration-300 ${
           sidebarCollapsed ? 'ml-0' : 'ml-16'
         }`}
       >
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(244,114,182,0.10),transparent)]" />
-        <div className="h-full w-full">{children}</div>
+        <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-auto [&>*]:min-h-0 [&>*]:flex-1">
+          {children}
+        </div>
       </main>
 
       <Footer

@@ -57,7 +57,7 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice }: P
   }, [tradeHistory, currentBTCPrice]);
 
   return (
-    <div>
+    <div className="border-t  border-zinc-800/80">
       {/* Menu Tabs */}
       <div className="flex items-center">
         <button

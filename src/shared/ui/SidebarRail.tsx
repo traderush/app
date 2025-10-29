@@ -55,11 +55,11 @@ const SidebarRail = React.memo(function SidebarRail({
   return (
     <aside className={clsxUtility(
       "hidden md:block h-[calc(100vh-56px-32px)] transition-all duration-300",
-      isCollapsed ? "w-0" : "w-18"
+      isCollapsed ? "w-0" : "w-16"
     )}>
       <div className={clsxUtility(
         "h-full border-r border-zinc-800/80 bg-zinc-950/60 transition-all duration-300 flex flex-col",
-        isCollapsed ? "w-0" : "w-18"
+        isCollapsed ? "w-0" : "w-16"
       )}>
         {/* Top menu items */}
         <div className={clsxUtility(

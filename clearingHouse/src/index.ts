@@ -7,7 +7,6 @@ import { type Timestamp } from "./domain/primitives";
 
 function logEvent(event: ClearingHouseEvent) {
   const { name, ts, clockSeq, payload } = event;
-  console.log(`[event:${name}] ts=${new Date(ts).toISOString()} clockSeq=${clockSeq}`, payload);
 }
 
 const app = createClearingHouseApp();

@@ -88,7 +88,7 @@ interface GameState {
   
   // Game Configuration
   gameSettings: {
-    betAmount: number;             // Current bet amount
+    betAmount: number;             // Current trade amount
     minMultiplier: number;         // Min multiplier filter (1.0-15.0)
     showProbabilities: boolean;    // Heatmap toggle
     showOtherPlayers: boolean;     // Other players toggle
