@@ -11,7 +11,7 @@ import ErrorBoundary from '@/shared/ui/ErrorBoundary';
 import { logger } from '@/shared/utils/logger';
 import Canvas from '@/shared/ui/canvas/Canvas';
 import { Activity, ChevronDown, Clock, Settings, TrendingDown, TrendingUp, User, Users } from 'lucide-react';
-import { ASSETS, DEFAULT_BET_AMOUNT, TIMEFRAME_OPTIONS, TRADING_COLORS } from './constants';
+import { ASSETS, DEFAULT_TRADE_AMOUNT, TIMEFRAME_OPTIONS } from './constants';
 import type { AssetInfo, AssetKey } from './constants';
 import { useToasts } from './hooks/useToasts';
 import type { BoxHitContract, BoxHitPositionMap } from '@/shared/types/boxHit';
@@ -26,23 +26,28 @@ interface ActivityEntry {
   amount: string;
   payout: string;
   time: string;
-  isPositive: boolean;
 }
 
 const MIN_CANVAS_HEIGHT = 520;
 
+const isAssetKeySet = (value: unknown): value is Set<AssetKey> =>
+  value instanceof Set;
+
+const isAssetKeyArray = (value: unknown): value is AssetKey[] =>
+  Array.isArray(value);
+
 const ActivityPanel = () => {
   const [activities, setActivities] = useState<ActivityEntry[]>([
-    { id: 1, player: 'Dc4q...5X4i', action: 'won', multiplier: '2.5x', amount: '$250', payout: '$625', time: '2s ago', isPositive: true },
-    { id: 2, player: 'Kj8m...9Y2p', action: 'won', multiplier: '1.8x', amount: '$150', payout: '$270', time: '5s ago', isPositive: true },
-    { id: 3, player: 'Xw2n...7H6q', action: 'won', multiplier: '3.0x', amount: '$450', payout: '$1,350', time: '8s ago', isPositive: true },
-    { id: 4, player: 'Lp5v...3M8r', action: 'lost', multiplier: '2.2x', amount: '$100', payout: '$100', time: '12s ago', isPositive: false },
-    { id: 5, player: 'Qr9t...1B4s', action: 'lost', multiplier: '2.0x', amount: '$200', payout: '$200', time: '15s ago', isPositive: false },
-    { id: 6, player: 'Fh6u...8C2w', action: 'won', multiplier: '1.5x', amount: '$300', payout: '$450', time: '18s ago', isPositive: true },
-    { id: 7, player: 'Gm7i...5E9x', action: 'won', multiplier: '1.8x', amount: '$180', payout: '$324', time: '22s ago', isPositive: true },
-    { id: 8, player: 'Vk4o...2A7z', action: 'lost', multiplier: '2.8x', amount: '$75', payout: '$75', time: '25s ago', isPositive: false },
-    { id: 9, player: 'Bw3l...6N1y', action: 'lost', multiplier: '2.1x', amount: '$120', payout: '$120', time: '28s ago', isPositive: false },
-    { id: 10, player: 'Hj8p...4Q5t', action: 'won', multiplier: '1.2x', amount: '$500', payout: '$600', time: '32s ago', isPositive: true },
+    { id: 1, player: 'Dc4q...5X4i', action: 'won', multiplier: '2.5x', amount: '$250', payout: '$625', time: '2s ago' },
+    { id: 2, player: 'Kj8m...9Y2p', action: 'won', multiplier: '1.8x', amount: '$150', payout: '$270', time: '5s ago' },
+    { id: 3, player: 'Xw2n...7H6q', action: 'won', multiplier: '3.0x', amount: '$450', payout: '$1,350', time: '8s ago' },
+    { id: 4, player: 'Lp5v...3M8r', action: 'lost', multiplier: '2.2x', amount: '$100', payout: '$100', time: '12s ago' },
+    { id: 5, player: 'Qr9t...1B4s', action: 'lost', multiplier: '2.0x', amount: '$200', payout: '$200', time: '15s ago' },
+    { id: 6, player: 'Fh6u...8C2w', action: 'won', multiplier: '1.5x', amount: '$300', payout: '$450', time: '18s ago' },
+    { id: 7, player: 'Gm7i...5E9x', action: 'won', multiplier: '1.8x', amount: '$180', payout: '$324', time: '22s ago' },
+    { id: 8, player: 'Vk4o...2A7z', action: 'lost', multiplier: '2.8x', amount: '$75', payout: '$75', time: '25s ago' },
+    { id: 9, player: 'Bw3l...6N1y', action: 'lost', multiplier: '2.1x', amount: '$120', payout: '$120', time: '28s ago' },
+    { id: 10, player: 'Hj8p...4Q5t', action: 'won', multiplier: '1.2x', amount: '$500', payout: '$600', time: '32s ago' },
   ]);
 
   useEffect(() => {
@@ -50,7 +55,6 @@ const ActivityPanel = () => {
       const amount = Math.floor(Math.random() * 500) + 50;
       const multiplier = (Math.random() * 3 + 1).toFixed(1);
       const action: ActivityAction = Math.random() > 0.5 ? 'won' : 'lost';
-      const isPositive = action === 'won';
       const payout =
         action === 'lost'
           ? `$${amount}`
@@ -67,7 +71,6 @@ const ActivityPanel = () => {
           amount: `$${amount}`,
           payout,
           time: 'now',
-          isPositive,
         },
         ...prev.slice(0, 9),
       ]);
@@ -75,25 +78,6 @@ const ActivityPanel = () => {
 
     return () => clearInterval(interval);
   }, []);
-
-  const getActionIcon = (action: ActivityAction) => (
-    <User
-      size={16}
-      style={{
-        color: '#71717a',
-      }}
-    />
-  );
-
-  const getActionColor = (action: ActivityAction, isPositive: boolean) => {
-    if (action === 'won') {
-      return TRADING_COLORS.positive;
-    }
-    if (action === 'lost') {
-      return TRADING_COLORS.negative;
-    }
-    return isPositive ? TRADING_COLORS.positive : '#60A5FA';
-  };
 
   return (
     <div
@@ -105,8 +89,7 @@ const ActivityPanel = () => {
             <span className="text-sm font-medium text-zinc-300">Live Activity</span>
             <div className="flex items-center gap-1">
               <div
-                className="h-3 w-3 rounded-full"
-                style={{ backgroundColor: '#10AE80', border: '2px solid #134335' }}
+                className="h-3 w-3 rounded-full border-2 border-live-border bg-live"
               />
               <span className="text-xs font-medium text-zinc-400">Live</span>
             </div>
@@ -115,43 +98,43 @@ const ActivityPanel = () => {
         </div>
 
         <div className="-mx-4 max-h-80 space-y-1 overflow-y-auto px-4">
-          {activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-center gap-2 px-4 py-1 transition-colors hover:bg-zinc-800/30"
-            >
-              <div className="flex-shrink-0">{getActionIcon(activity.action)}</div>
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="truncate text-xs font-medium text-zinc-300">
-                  {activity.player}
-                </span>
-                <span className="text-[11px] text-zinc-500">{activity.action}</span>
-                <div className="flex items-center gap-1">
-                  {activity.action === 'won' && (
-                    <TrendingUp size={12} style={{ color: TRADING_COLORS.positive }} />
-                  )}
-                  {activity.action === 'lost' && (
-                    <TrendingDown size={12} style={{ color: TRADING_COLORS.negative }} />
-                  )}
-                  <span
-                    className="text-xs font-medium"
-                    style={{
-                      color:
-                        activity.action === 'won'
-                          ? TRADING_COLORS.positive
-                          : TRADING_COLORS.negative,
-                    }}
-                  >
-                    {activity.payout}
-                  </span>
+          {activities.map((activity) => {
+            const isWin = activity.action === 'won';
+            return (
+              <div
+                key={activity.id}
+                className="flex items-center gap-2 px-4 py-1 transition-colors hover:bg-zinc-800/30"
+              >
+                <div className="flex-shrink-0">
+                  <User size={16} className="text-muted-icon" />
                 </div>
-                <span className="text-[10px] text-zinc-500">({activity.multiplier})</span>
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="truncate text-xs font-medium text-zinc-300">
+                    {activity.player}
+                  </span>
+                  <span className="text-[11px] text-zinc-500">{activity.action}</span>
+                  <div className="flex items-center gap-1">
+                    {isWin ? (
+                      <TrendingUp size={12} className="text-trading-positive" />
+                    ) : (
+                      <TrendingDown size={12} className="text-trading-negative" />
+                    )}
+                    <span
+                      className={`text-xs font-medium ${
+                        isWin ? 'text-trading-positive' : 'text-trading-negative'
+                      }`}
+                    >
+                      {activity.payout}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-zinc-500">({activity.multiplier})</span>
+                </div>
+                <div className="flex flex-shrink-0 items-center">
+                  <span className="text-[10px] text-zinc-500">{activity.time}</span>
+                </div>
               </div>
-              <div className="flex flex-shrink-0 items-center">
-                <span className="text-[10px] text-zinc-500">{activity.time}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -235,7 +218,7 @@ export default function ClientView() {
   type CanvasContract = BoxHitContract;
   
   // trade amount state - synced with right panel
-  const [betAmount, setBetAmount] = useState(DEFAULT_BET_AMOUNT);
+  const [tradeAmount, setTradeAmount] = useState(DEFAULT_TRADE_AMOUNT);
   const [isCanvasStarted, setIsCanvasStarted] = useState(false); // Controls mock backend canvas
   const [mockBackendCurrentPrice, setMockBackendCurrentPrice] = useState(100);
   
@@ -243,6 +226,16 @@ export default function ClientView() {
   const [mockBackendSelectedCount, setMockBackendSelectedCount] = useState(0);
   const [mockBackendSelectedMultipliers, setMockBackendSelectedMultipliers] = useState<number[]>([]);
   const [mockBackendSelectedAveragePrice, setMockBackendSelectedAveragePrice] = useState<number | null>(null);
+
+  const favoriteAssetSet = useMemo(() => {
+    if (isAssetKeySet(favoriteAssets)) {
+      return favoriteAssets;
+    }
+    if (isAssetKeyArray(favoriteAssets)) {
+      return new Set(favoriteAssets);
+    }
+    return new Set<AssetKey>();
+  }, [favoriteAssets]);
 
   const assetEntries = useMemo(
     () => Object.entries(ASSETS) as Array<[AssetKey, AssetInfo]>,
@@ -256,10 +249,6 @@ export default function ClientView() {
   const displayChange = selectedAssetKey === 'DEMO'
     ? 2.5
     : selectedAssetInfo.change24h;
-  const displayVolume = selectedAssetKey === 'DEMO'
-    ? '45.20B'
-    : selectedAssetInfo.volume24h;
-
   const handleShowProbabilitiesChange = useCallback(
     (value: boolean) => updateGameSettings({ showProbabilities: value }),
     [updateGameSettings],
@@ -434,7 +423,7 @@ export default function ClientView() {
           addTrade({
             id: tradeId,
             contractId: position.contractId,
-            amount: position.amount ?? betAmount,
+            amount: position.amount ?? tradeAmount,
             placedAt: new Date(position.timestamp ?? Date.now()),
           });
         }
@@ -442,13 +431,13 @@ export default function ClientView() {
         const previous = previousPositions.get(tradeId);
         if (position.result && position.result !== previous?.result) {
           const contract = contracts.find((c) => c.contractId === position.contractId);
-          const wager = position.amount ?? previous?.amount ?? betAmount;
+          const tradeValue = position.amount ?? previous?.amount ?? tradeAmount;
           const resolvedPayout = position.result === 'win'
             ? (typeof position.payout === 'number'
               ? position.payout
               : contract
-                ? wager * (contract.returnMultiplier || 1)
-                : wager)
+                ? tradeValue * (contract.returnMultiplier || 1)
+                : tradeValue)
             : 0;
           settleTrade(tradeId, position.result, resolvedPayout);
         }
@@ -461,7 +450,7 @@ export default function ClientView() {
         }),
       );
     },
-    [addTrade, betAmount, settleTrade],
+    [addTrade, tradeAmount, settleTrade],
   );
 
   // Handle mock backend selection changes (immediate feedback when boxes are selected)
@@ -494,7 +483,7 @@ export default function ClientView() {
           {/* Top Bar - Only over Canvas */}
           <div
             ref={topBarRef}
-            className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-[#09090B] px-3"
+            className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-background px-3"
           >
             <div className="flex items-center gap-4">
               <div className="relative h-7 w-7 overflow-hidden rounded-lg">
@@ -525,12 +514,7 @@ export default function ClientView() {
                     className="absolute left-0 top-full z-50 mt-2 w-[360px] overflow-hidden rounded-lg border border-zinc-700/50 bg-[rgba(14,14,14,0.7)] shadow-2xl backdrop-blur-lg"
                   >
                     {assetEntries.map(([key, asset]) => {
-                      const isFavorite =
-                        typeof (favoriteAssets as any)?.has === 'function'
-                          ? (favoriteAssets as Set<AssetKey>).has(key as AssetKey)
-                          : Array.isArray(favoriteAssets)
-                            ? (favoriteAssets as AssetKey[]).includes(key as AssetKey)
-                            : false;
+                      const isFavorite = favoriteAssetSet.has(key as AssetKey);
                       const isSelectable = key === 'DEMO';
                       return (
                         <div
@@ -585,15 +569,13 @@ export default function ClientView() {
                                 : <span className="text-zinc-500">--</span>}
                             </div>
                             <div
-                              className="text-[11px] font-medium"
-                              style={{
-                                color:
-                                  typeof asset.change24h === 'number'
-                                    ? asset.change24h >= 0
-                                      ? TRADING_COLORS.positive
-                                      : TRADING_COLORS.negative
-                                    : '#71717a',
-                              }}
+                              className={`text-[11px] font-medium ${
+                                typeof asset.change24h === 'number'
+                                  ? asset.change24h >= 0
+                                    ? 'text-trading-positive'
+                                    : 'text-trading-negative'
+                                  : 'text-muted-icon'
+                              }`}
                             >
                               {typeof asset.change24h === 'number'
                                 ? `${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`
@@ -612,8 +594,9 @@ export default function ClientView() {
                   ${displayPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </span>
                 <span
-                  className="text-sm font-semibold leading-none"
-                  style={{ color: displayChange >= 0 ? TRADING_COLORS.positive : TRADING_COLORS.negative }}
+                  className={`text-sm font-semibold leading-none ${
+                    displayChange >= 0 ? 'text-trading-positive' : 'text-trading-negative'
+                  }`}
                 >
                   {displayChange >= 0 ? '+' : ''}
                   {displayChange.toFixed(2)}%
@@ -634,17 +617,15 @@ export default function ClientView() {
                   }}
                 >
                   <div
-                    className="absolute left-0 top-0 h-full"
+                    className="absolute left-0 top-0 h-full bg-control-track"
                     style={{
                       width: `${((minMultiplier - 1) / 14) * 100}%`,
-                      backgroundColor: '#727272',
                     }}
                   />
                   <div
-                    className="absolute top-1/2 h-3 w-1 -translate-y-1/2"
+                    className="absolute top-1/2 h-3 w-1 -translate-y-1/2 bg-control-track"
                     style={{
                       left: `${((minMultiplier - 1) / 14) * 100}%`,
-                      backgroundColor: '#727272',
                       marginLeft: '-2px',
                     }}
                   />
@@ -655,7 +636,7 @@ export default function ClientView() {
                 <button
                   type="button"
                   onClick={() => setIsTimeframeDropdownOpen((prev) => !prev)}
-                  className="flex h-8 items-center gap-1 rounded-lg bg-[#171717] px-3 text-xs text-white transition-colors hover:bg-zinc-900"
+                  className="flex h-8 items-center gap-1 rounded-lg bg-surface-900 px-3 text-xs text-white transition-colors hover:bg-surface-850"
                 >
                   <span>{formatTimeframeLabel(timeframe)}</span>
                   <ChevronDown
@@ -664,7 +645,7 @@ export default function ClientView() {
                   />
                 </button>
                 {isTimeframeDropdownOpen && (
-                  <div className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[96px] overflow-hidden rounded-lg border border-zinc-800 bg-[#111111] shadow-xl">
+                  <div className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[96px] overflow-hidden rounded-lg border border-zinc-800 bg-surface-850 shadow-xl">
                     {TIMEFRAME_OPTIONS.map((option) => {
                       const isSelected = option === timeframe;
                       return (
@@ -689,7 +670,7 @@ export default function ClientView() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex h-8 items-center gap-2 rounded-lg bg-[#171717] px-3">
+                <div className="flex h-8 items-center gap-2 rounded-lg bg-surface-900 px-3">
                   <Clock size={14} style={{ color: signatureColor }} />
                   <span className="text-sm font-medium" style={{ color: signatureColor }}>
                     {currentTime.toLocaleTimeString('en-US', {
@@ -705,41 +686,39 @@ export default function ClientView() {
                 <button
                   type="button"
                   onClick={() => handleShowProbabilitiesChange(!showProbabilities)}
-                  className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-[#171717] transition-colors hover:bg-zinc-900"
+                  className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-surface-900 transition-colors hover:bg-surface-850"
                   title="Toggle Heatmap Overlay"
                 >
-                  <Activity size={16} style={{ color: '#727272' }} />
+                  <Activity size={16} className="text-control-track" />
                   {!showProbabilities && (
                     <div className="pointer-events-none absolute inset-0">
-                      <span
-                        className="absolute left-1/2 top-1/2 h-[2px] w-7 -translate-x-1/2 -translate-y-1/2 rotate-45"
-                        style={{ backgroundColor: '#727272' }}
-                      />
+                        <span
+                          className="absolute left-1/2 top-1/2 h-[2px] w-7 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-control-track"
+                        />
                     </div>
                   )}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleShowOtherPlayersChange(!showOtherPlayers)}
-                  className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-[#171717] transition-colors hover:bg-zinc-900"
+                  className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-surface-900 transition-colors hover:bg-surface-850"
                   title="Toggle Other Players"
                 >
-                  <Users size={16} style={{ color: '#727272' }} />
+                  <Users size={16} className="text-control-track" />
                   {!showOtherPlayers && (
                     <div className="pointer-events-none absolute inset-0">
-                      <span
-                        className="absolute left-1/2 top-1/2 h-[2px] w-7 -translate-x-1/2 -translate-y-1/2 rotate-45"
-                        style={{ backgroundColor: '#727272' }}
-                      />
+                    <span
+                      className="absolute left-1/2 top-1/2 h-[2px] w-7 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-control-track"
+                    />
                     </div>
                   )}
                 </button>
                 <button
                   type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#171717] transition-colors hover:bg-zinc-900"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-900 transition-colors hover:bg-surface-850"
                   title="Settings"
                 >
-                  <Settings size={16} style={{ color: '#727272' }} />
+                  <Settings size={16} className="text-control-track" />
                 </button>
               </div>
             </div>
@@ -763,10 +742,7 @@ export default function ClientView() {
             >
               {/* Show Canvas component controlled by Start Trading button */}
               <div className="relative flex-1">
-                <div
-                  className="relative h-full min-h-[520px] w-full overflow-hidden"
-                  style={{ backgroundColor: '#0E0E0E' }}
-                >
+                <div className="relative h-full min-h-[520px] w-full overflow-hidden bg-surface-950">
                   <Canvas
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}
@@ -774,7 +750,7 @@ export default function ClientView() {
                     externalTimeframe={timeframe}
                     onPositionsChange={handleMockBackendPositionsChange}
                     onSelectionChange={handleMockBackendSelectionChange}
-                    betAmount={betAmount}
+                    tradeAmount={tradeAmount}
                     onPriceUpdate={setMockBackendCurrentPrice}
                     showProbabilities={showProbabilities}
                     showOtherPlayers={showOtherPlayers}
@@ -785,7 +761,7 @@ export default function ClientView() {
                       <button
                         type="button"
                         onClick={() => setIsPositionsOverlayOpen(true)}
-                        className={`absolute bottom-0 left-0 z-30 flex items-center gap-2 rounded-none rounded-tr-lg border-t border-r border-zinc-800/80 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-300 shadow-lg transition-all duration-200 hover:bg-[#111113] ${
+                        className={`absolute bottom-0 left-0 z-30 flex items-center gap-2 rounded-none rounded-tr-lg border-t border-r border-zinc-800/80 bg-surface-950 px-3 py-2 text-sm font-medium text-zinc-300 shadow-lg transition-all duration-200 hover:bg-overlay-900 ${
                           isPositionsOverlayOpen ? 'pointer-events-none opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
                         }`}
                       >
@@ -793,14 +769,14 @@ export default function ClientView() {
                         <span className="tracking-tight">Positions</span>
                       </button>
                       <div
-                        className={`absolute bottom-0 left-0 z-30 flex max-h-[70%] w-full max-w-[520px] flex-col overflow-hidden border-t border-zinc-800/80 bg-[#09090B] transition-all duration-200 ease-out ${
+                        className={`absolute bottom-0 left-0 z-30 flex max-h-[70%] w-full max-w-[520px] flex-col overflow-hidden border-t border-zinc-800/80 bg-background transition-all duration-200 ease-out ${
                           isPositionsOverlayOpen
                             ? 'pointer-events-auto opacity-100 translate-y-0'
                             : 'pointer-events-none opacity-0 translate-y-6'
                         } rounded-none rounded-tr-xl`}
                         aria-hidden={!isPositionsOverlayOpen}
                       >
-                        <div className="flex flex-nowrap items-center justify-between gap-3 bg-[#0F0F10] px-3 py-2 text-sm font-medium text-zinc-300">
+                        <div className="flex flex-nowrap items-center justify-between gap-3 bg-surface-800 px-3 py-2 text-sm font-medium text-zinc-300">
                           <div className="flex flex-nowrap items-center gap-2">
                             <button
                               type="button"
@@ -828,7 +804,7 @@ export default function ClientView() {
                           <button
                             type="button"
                             onClick={() => setIsPositionsOverlayOpen(false)}
-                            className="flex h-8 w-8 items-center justify-center rounded-none border-t border-r border-zinc-800/80 bg-[#111113] text-zinc-400 transition-colors hover:bg-[#18181B] hover:text-zinc-200"
+                            className="flex h-8 w-8 items-center justify-center rounded-none border-t border-r border-zinc-800/80 bg-overlay-900 text-zinc-400 transition-colors hover:bg-neutral-900 hover:text-zinc-200"
                             aria-label="Collapse positions overlay"
                           >
                             <ChevronDown size={16} />
@@ -853,7 +829,7 @@ export default function ClientView() {
             {!isPositionsCollapsed && (
               <div
                 ref={positionsContainerRef}
-                className="flex-shrink-0 border-t border-zinc-800/80 bg-[#09090B]"
+                className="flex-shrink-0 border-t border-zinc-800/80 bg-background"
               >
                 {renderPositionsTable()}
               </div>
@@ -861,7 +837,7 @@ export default function ClientView() {
           </div>
         </div>
         
-        {/* Right side: betting panel and activity panel */}
+        {/* Right side: trading panel and activity panel */}
         <div className="flex h-full w-[400px] flex-shrink-0 flex-col gap-4 border-l border-zinc-800/80">
           <RightPanel 
             isTradingMode={isCanvasStarted}
@@ -870,10 +846,8 @@ export default function ClientView() {
             selectedMultipliers={mockBackendSelectedMultipliers}
             currentBTCPrice={mockBackendCurrentPrice}
             averagePositionPrice={mockBackendSelectedAveragePrice || null}
-            betAmount={betAmount}
-            onBetAmountChange={setBetAmount}
-            dailyHigh={mockBackendCurrentPrice + 2}
-            dailyLow={mockBackendCurrentPrice - 2}
+            tradeAmount={tradeAmount}
+            onTradeAmountChange={setTradeAmount}
           />
           <ActivityPanel />
         </div>
@@ -884,7 +858,7 @@ export default function ClientView() {
         {toasts.map((toast, index) => (
           <div
             key={toast.id}
-            className={`bg-[#171717] border border-zinc-700 rounded-lg px-5 py-4 shadow-lg flex items-center gap-4 transition-all duration-300 ease-in-out transform ${
+            className={`bg-surface-900 border border-zinc-700 rounded-lg px-5 py-4 shadow-lg flex items-center gap-4 transition-all duration-300 ease-in-out transform ${
               toast.isVisible
                 ? 'opacity-100 translate-y-0'
                 : 'opacity-0 translate-y-2'

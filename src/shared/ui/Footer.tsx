@@ -1,7 +1,4 @@
-import Image from 'next/image';
-import React, { useEffect, useMemo, useState } from 'react';
-import { TRADING_COLORS } from '@/shared/constants/theme';
-import { ASSETS } from '@/app/box-hit/constants';
+import React, { useEffect, useState } from 'react';
 import { Settings } from 'lucide-react';
 
 type PerformanceWithMemory = Performance & {
@@ -9,12 +6,6 @@ type PerformanceWithMemory = Performance & {
     usedJSHeapSize: number;
   };
 };
-
-const MARKET_SUMMARY = [
-  { key: 'BTC', color: '#FFA21C', icon: ASSETS.BTC.icon },
-  { key: 'ETH', color: '#5080A0', icon: ASSETS.ETH.icon },
-  { key: 'SOL', color: '#26FFA4', icon: ASSETS.SOL.icon },
-] as const;
 
 // Client-side only memory display component to prevent hydration mismatch
 const MemoryDisplay: React.FC = () => {
@@ -96,39 +87,51 @@ const Footer = React.memo(function Footer({
   }, []);
   
   const latencySeconds = 1;
-  const playerCount = useMemo(() => '1,247', []);
+  const latencyClass =
+    latencySeconds <= 1
+      ? 'text-trading-positive'
+      : latencySeconds <= 3
+        ? 'text-warning'
+        : 'text-trading-negative';
+  const fpsClass =
+    fps >= 55 ? 'text-trading-positive' : fps >= 30 ? 'text-warning' : 'text-trading-negative';
+  const connectionClasses = [
+    'group relative flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors border',
+    isWebSocketConnected
+      ? 'border-live-border bg-status-liveBg text-live'
+      : 'border-status-downBorder bg-status-downBg text-trading-negative',
+  ].join(' ');
+  const indicatorClasses = [
+    'h-3 w-3 rounded-full border-2',
+    isWebSocketConnected ? 'border-live-border bg-live' : 'border-status-downBorder bg-trading-negative',
+  ].join(' ');
+  const connectionLabelClass = isWebSocketConnected ? 'text-trading-positive' : 'text-trading-negative';
+  const backendStatusClasses = isBackendConnected ? 'text-trading-positive' : 'text-trading-negative';
+  const backendDotClasses = [
+    'h-1.5 w-1.5 rounded-full',
+    isBackendConnected ? 'bg-trading-positive' : 'bg-trading-negative',
+  ].join(' ');
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
       <div className="h-8 px-4 flex items-center justify-between text-xs text-zinc-400">
         <div className="flex items-center gap-4">
                     
           {/* Connection Status - Dynamic styling based on connection */}
-          <div className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 relative group" style={{ 
-            backgroundColor: isWebSocketConnected ? '#0E2923' : '#2A1A0E', 
-            color: isWebSocketConnected ? '#10AE80' : '#EC397A' 
-          }}>
-            <div className="w-3 h-3 rounded-full" style={{ 
-              backgroundColor: isWebSocketConnected ? '#10AE80' : '#EC397A', 
-              border: `2px solid ${isWebSocketConnected ? '#134335' : '#4A2F1A'}` 
-            }}></div>
+          <div className={connectionClasses}>
+            <div className={indicatorClasses}></div>
             {isWebSocketConnected ? 'Connected' : 'Disconnected'}
             
             {/* Tooltip with detailed connection info and performance metrics */}
             <div 
-              className="absolute bottom-full right-0 mb-2 px-3 py-2.5 border border-zinc-700/50 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 min-w-[260px]"
-              style={{ 
-                backgroundColor: 'rgba(14, 14, 14, 0.7)', 
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)'
-              }}
+              className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 min-w-[260px] whitespace-nowrap rounded-lg border border-zinc-700/50 bg-status-glass px-3 py-2.5 opacity-0 shadow-2xl backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
             >
               <div className="text-xs text-zinc-300 space-y-2">
                 {/* Status Header with inline status */}
                 <div className="flex items-center justify-between">
-                  <span className={`font-medium text-xs`} style={{ color: isWebSocketConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                  <span className={`text-xs font-medium ${connectionLabelClass}`}>
                     {isWebSocketConnected ? 'Live Data Feed' : 'Connection Failed'}
                   </span>
-                  <span className={`text-xs`} style={{ color: isWebSocketConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                  <span className={`text-xs ${connectionLabelClass}`}>
                     {isWebSocketConnected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
@@ -139,13 +142,13 @@ const Footer = React.memo(function Footer({
                     <div className="space-y-1 pt-1 border-t border-zinc-700/50">
                       <div className="flex justify-between">
                         <span className="text-zinc-400">FPS:</span>
-                        <span style={{ color: fps >= 55 ? TRADING_COLORS.positive : fps >= 30 ? '#facc15' : TRADING_COLORS.negative }}>
+                        <span className={fpsClass}>
                           {fps}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Latency:</span>
-                        <span style={{ color: latencySeconds <= 1 ? TRADING_COLORS.positive : latencySeconds <= 3 ? '#facc15' : TRADING_COLORS.negative }}>
+                        <span className={latencyClass}>
                           {latencySeconds}s
                         </span>
                       </div>
@@ -162,11 +165,8 @@ const Footer = React.memo(function Footer({
                       <div className="flex items-center justify-between">
                         <span className="text-zinc-400">Backend API:</span>
                         <div className="flex items-center gap-1.5">
-                          <div 
-                            className="w-1.5 h-1.5 rounded-full" 
-                            style={{ backgroundColor: isBackendConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}
-                          />
-                          <span style={{ color: isBackendConnected ? TRADING_COLORS.positive : TRADING_COLORS.negative }}>
+                          <div className={backendDotClasses} />
+                          <span className={backendStatusClasses}>
                             {isBackendConnected ? 'Connected' : 'Disconnected'}
                           </span>
                         </div>
@@ -183,8 +183,7 @@ const Footer = React.memo(function Footer({
               </div>
               {/* Arrow */}
               <div 
-                className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" 
-                style={{ borderTopColor: 'rgba(14, 14, 14, 0.7)' }}
+                className="absolute top-full right-4 h-0 w-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-status-glass" 
               />
             </div>
           </div>

@@ -3,13 +3,11 @@ import Image from 'next/image';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell, Globe } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import clsxUtility from 'clsx';
-import ScrollableGameTabs from './ScrollableGameTabs';
 import { useUIStore } from '@/shared/state';
 import { useUserStore } from '@/shared/state/userStore';
 import {
-  GAME_TABS,
   PRIMARY_NAVIGATION,
   NOTIFICATION_COUNT,
   PROFILE_AVATAR,
@@ -31,19 +29,18 @@ const Navbar = React.memo(function Navbar({
   onNotificationsOpen,
   notificationsButtonRef,
   onProfileOpen,
-  onNewsUpdatesOpen,
-  newsUpdatesButtonRef,
+  onNewsUpdatesOpen: _onNewsUpdatesOpen,
+  newsUpdatesButtonRef: _newsUpdatesButtonRef,
 }: NavbarProps) {
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
   const totalBalance = useUserStore((state) => state.totalBalance);
-  const balanceHistory = useUserStore((state) => state.balanceHistory);
 
   return (
     <>
-      <header className="border-b border-zinc-800/80 bg-[#09090B] backdrop-blur w-full">
-        <div className="w-full h-14 px-4 flex items-center gap-4">
-          <div className='flex justify-between w-full'>
+      <header className="w-full border-b border-zinc-800/80 bg-background backdrop-blur">
+        <div className="flex h-14 w-full items-center gap-4 px-4">
+          <div className="flex w-full justify-between">
             {/* Brand */}
             <Link href="/" className="flex items-center">
               <Image
@@ -69,12 +66,9 @@ const Navbar = React.memo(function Navbar({
                     key={item.href}
                     href={item.href}
                     className={clsxUtility(
-                      'text-[13px] transition cursor-pointer hover:text-white',
-                      active
-                        ? 'text-white'
-                        : 'text-white/20'
+                      'text-[13px] font-normal transition-colors hover:text-white',
+                      active ? 'text-white' : 'text-white/20',
                     )}
-                    style={{fontWeight: 400}}
                   >
                     {item.label}
                   </Link>
@@ -93,12 +87,8 @@ const Navbar = React.memo(function Navbar({
             <button 
               ref={depositButtonRef}
               onClick={onDepositOpen}
-              className="px-2 py-1 text-sm rounded transition-colors cursor-pointer"
-              style={{
-                backgroundColor: signatureColor,
-                fontWeight: 500, 
-                color: '#09090B'
-              }}
+              className="rounded px-2 py-1 text-sm font-medium text-brand-foreground transition-colors"
+              style={{ backgroundColor: signatureColor }}
             >
               Deposit
             </button>
@@ -112,11 +102,11 @@ const Navbar = React.memo(function Navbar({
               >
                 <Bell size={18} />
                 {NOTIFICATION_COUNT > 0 && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center" style={{ 
-                  backgroundColor: signatureColor,
-                  borderRadius: '7px' 
-                }}>
-                  <span className="text-[10px]" style={{fontWeight: 600, color: '#09090B'}}>
+                  <div
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-md"
+                    style={{ backgroundColor: signatureColor }}
+                  >
+                    <span className="text-[10px] font-semibold text-brand-foreground">
                       {Math.min(NOTIFICATION_COUNT, 99)}
                     </span>
                   </div>
@@ -147,8 +137,8 @@ const Navbar = React.memo(function Navbar({
             
             {/* Portfolio */}
             <Link href="/portfolio" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="text-xs text-zinc-400" style={{fontWeight: 500}}>Portfolio</div>
-              <div className="text-zinc-100 text-sm" style={{fontWeight: 600}}>
+              <div className="text-xs font-medium text-zinc-400">Portfolio</div>
+              <div className="text-sm font-semibold text-zinc-100">
                 ${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </Link>

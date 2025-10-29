@@ -1,7 +1,7 @@
 export type PricePoint = { t: number; p: number };
 export type PriceSeries = PricePoint[];
 
-export type Bet = {
+export type Trade = {
   id: string;
   game: 'box-hit';
   size: number;             // USDC

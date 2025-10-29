@@ -41,8 +41,8 @@ export type AssetInfo = (typeof ASSET_DATA)[AssetKey];
 
 export const TIMEFRAME_OPTIONS = [500, 1000, 2000, 4000, 10_000] as const;
 
-export const DEFAULT_BET_AMOUNT = 200;
+export const DEFAULT_TRADE_AMOUNT = 200;
 
 export const TRADING_COLORS = THEME_TRADING_COLORS;
 
-export const QUICK_BET_AMOUNTS = [10, 50, 100, 250] as const;
+export const QUICK_TRADE_AMOUNTS = [10, 50, 100, 250] as const;

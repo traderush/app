@@ -1,12 +1,11 @@
 'use client';
 
 import React, { memo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Navbar from './Navbar';
 import SidebarRail from './SidebarRail';
 import Footer from './Footer';
 import AppShellModals from './AppShellModals';
-import { useUIStore, usePlayerStore, useModal, useSidebar, type WatchedPlayer } from '@/shared/state';
+import { useUIStore, usePlayerStore, useModal, type WatchedPlayer } from '@/shared/state';
 
 type ModalController = ReturnType<typeof useModal>;
 
@@ -50,8 +49,6 @@ const useAppModalRefs = () => ({
 const AppShellContent = memo(function AppShellContent({ children }: { children: React.ReactNode }) {
   const signatureColor = useUIStore((state) => state.signatureColor);
   const sidebarCollapsed = useUIStore((state) => state.layout.sidebarCollapsed);
-  const { toggle: toggleSidebar } = useSidebar();
-
   const watchedPlayers = usePlayerStore((state) => state.watchedPlayers);
   const selectedPlayer = usePlayerStore((state) => state.selectedPlayer);
   const setSelectedPlayer = usePlayerStore((state) => state.setSelectedPlayer);
@@ -141,7 +138,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
   }, [customize]);
 
   return (
-    <div className="min-h-screen text-zinc-100" style={{ backgroundColor: '#09090B' }}>
+    <div className="min-h-screen bg-background text-zinc-100">
       <div className="fixed top-0 left-0 right-0 z-50">
         <Navbar
           onDepositOpen={deposit.open}

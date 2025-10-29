@@ -3,8 +3,7 @@
 import React, { memo, useEffect, useState } from 'react';
 import { Edit3 } from 'lucide-react';
 
-import { QUICK_BET_AMOUNTS } from '@/modules/box-hit/constants';
-import { COLORS } from '@/shared/constants/theme';
+import { DEFAULT_TRADE_AMOUNT, QUICK_TRADE_AMOUNTS } from '@/modules/box-hit/constants';
 import { useUIStore } from '@/shared/state';
 
 interface RightPanelProps {
@@ -14,12 +13,8 @@ interface RightPanelProps {
   selectedMultipliers: number[];
   currentBTCPrice: number;
   averagePositionPrice: number | null;
-  betAmount: number;
-  onBetAmountChange: (amount: number) => void;
-  dailyHigh?: number;
-  dailyLow?: number;
-  activeTab?: 'place' | 'copy';
-  onActiveTabChange?: (tab: 'place' | 'copy') => void;
+  tradeAmount: number;
+  onTradeAmountChange: (amount: number) => void;
 }
 
 function RightPanel({
@@ -29,30 +24,16 @@ function RightPanel({
   selectedMultipliers,
   currentBTCPrice,
   averagePositionPrice,
-  betAmount,
-  onBetAmountChange,
-  dailyHigh,
-  dailyLow,
-  activeTab: externalActiveTab,
-  onActiveTabChange,
+  tradeAmount,
+  onTradeAmountChange,
 }: RightPanelProps) {
-  const [internalActiveTab, setInternalActiveTab] = useState<'place' | 'copy'>('copy');
-  const activeTab = externalActiveTab ?? internalActiveTab;
-  const setActiveTab = (tab: 'place' | 'copy') => {
-    if (onActiveTabChange) {
-      onActiveTabChange(tab);
-      return;
-    }
-    setInternalActiveTab(tab);
-  };
-
   const signatureColor = useUIStore((state) => state.signatureColor);
 
   useEffect(() => {
-    if (betAmount === 0) {
-      onBetAmountChange(200);
+    if (tradeAmount === 0) {
+      onTradeAmountChange(DEFAULT_TRADE_AMOUNT);
     }
-  }, [betAmount, onBetAmountChange]);
+  }, [tradeAmount, onTradeAmountChange]);
 
   const [activeCell, setActiveCell] = useState<number | null>(null);
   const [showWarning, setShowWarning] = useState(false);
@@ -61,14 +42,14 @@ function RightPanel({
   const [feeAmount, setFeeAmount] = useState(0.01);
   const [liquidityAmount, setLiquidityAmount] = useState(0);
 
-  const handleBetAmountClick = (amount: number) => {
-    onBetAmountChange(amount);
+  const handleTradeAmountClick = (amount: number) => {
+    onTradeAmountChange(amount);
     setShowWarning(false);
   };
 
-  const handleCustomBetAmount = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCustomTradeAmount = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number.parseFloat(event.target.value) || 0;
-    onBetAmountChange(value);
+    onTradeAmountChange(value);
     setShowWarning(false);
   };
 
@@ -76,34 +57,26 @@ function RightPanel({
     if (event.key === 'ArrowLeft' && index > 0) {
       setActiveCell(index - 1);
     }
-    if (event.key === 'ArrowRight' && index < QUICK_BET_AMOUNTS.length) {
+    if (event.key === 'ArrowRight' && index < QUICK_TRADE_AMOUNTS.length) {
       setActiveCell(index + 1);
     }
-    if (event.key === 'Enter' && index < QUICK_BET_AMOUNTS.length) {
-      handleBetAmountClick(QUICK_BET_AMOUNTS[index]);
+    if (event.key === 'Enter' && index < QUICK_TRADE_AMOUNTS.length) {
+      handleTradeAmountClick(QUICK_TRADE_AMOUNTS[index]);
     }
   };
 
 
   return (
-    <aside className="w-[400px] bg-zinc-950/60 pr-0 flex-shrink-0">
+    <aside className="w-[400px] flex-shrink-0 bg-zinc-950/60 pr-0">
       <div className="space-y-0 p-4">
 
         <div className="pb-4 pt-2">
 
-          <div
-            className="-mx-4 flex items-center justify-center gap-2 px-3 py-2"
-            style={{ backgroundColor: `${COLORS.trading.negative}10` }}
-          >
-            <div
-              className="flex h-4 w-4 items-center justify-center rounded-full"
-              style={{ backgroundColor: `${COLORS.trading.negative}20` }}
-            >
-              <span className="text-xs font-bold" style={{ color: COLORS.trading.negative }}>
-                i
-              </span>
+          <div className="-mx-4 flex items-center justify-center gap-2 bg-trading-negative/10 px-3 py-2">
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-trading-negative/20">
+              <span className="text-xs font-bold text-trading-negative">i</span>
             </div>
-            <span style={{ fontSize: '12px', color: COLORS.trading.negative }}>
+            <span className="text-[12px] text-trading-negative">
               Your trades will be live after selecting each box
             </span>
           </div>
@@ -111,13 +84,13 @@ function RightPanel({
 
         <div>
           <div className="mb-4">
-            <div className="rounded-t-lg border border-zinc-800 bg-[#171717] px-3 py-1">
-              <div className="text-xs text-zinc-400">Bet amount</div>
+            <div className="rounded-t-lg border border-zinc-800 bg-surface-900 px-3 py-1">
+              <div className="text-xs text-zinc-400">Trade amount</div>
               <div className="flex items-center justify-between">
                 <input
                   type="number"
-                  value={betAmount}
-                  onChange={handleCustomBetAmount}
+                  value={tradeAmount}
+                  onChange={handleCustomTradeAmount}
                   className="w-20 border-none bg-transparent text-lg font-medium text-zinc-100 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   placeholder="0"
                   min="0"
@@ -128,19 +101,19 @@ function RightPanel({
             </div>
 
             <div className="grid h-6 grid-cols-5 overflow-hidden rounded-b-lg border border-t-0 border-zinc-800 bg-zinc-900/60">
-              {QUICK_BET_AMOUNTS.map((amount, index) => (
+              {QUICK_TRADE_AMOUNTS.map((amount, index) => (
                 <button
                   key={amount}
-                  onClick={() => handleBetAmountClick(amount)}
+                  onClick={() => handleTradeAmountClick(amount)}
                   onKeyDown={(event) => handleQuickAmountKeyDown(event, index)}
                   onFocus={() => setActiveCell(index)}
                   onBlur={() => setActiveCell(null)}
                   className={[
                     'flex items-center justify-center text-xs font-medium transition-colors',
                     index === 0 ? 'rounded-bl-lg' : '',
-                    index === QUICK_BET_AMOUNTS.length - 1 ? 'rounded-br-none' : '',
-                    index < QUICK_BET_AMOUNTS.length - 1 ? 'border-r border-zinc-700' : '',
-                    betAmount === amount
+                    index === QUICK_TRADE_AMOUNTS.length - 1 ? 'rounded-br-none' : '',
+                    index < QUICK_TRADE_AMOUNTS.length - 1 ? 'border-r border-zinc-700' : '',
+                    tradeAmount === amount
                       ? 'bg-zinc-700 text-white'
                       : 'bg-transparent text-zinc-200 hover:bg-zinc-700 hover:text-white',
                     activeCell === index ? 'ring-1 ring-zinc-500' : '',
@@ -151,16 +124,16 @@ function RightPanel({
                 </button>
               ))}
               <button
-                onKeyDown={(event) => handleQuickAmountKeyDown(event, QUICK_BET_AMOUNTS.length)}
-                onFocus={() => setActiveCell(QUICK_BET_AMOUNTS.length)}
+                onKeyDown={(event) => handleQuickAmountKeyDown(event, QUICK_TRADE_AMOUNTS.length)}
+                onFocus={() => setActiveCell(QUICK_TRADE_AMOUNTS.length)}
                 onBlur={() => setActiveCell(null)}
                 className={[
                   'flex items-center justify-center text-xs font-medium transition-colors',
                   'rounded-br-lg',
-                  activeCell === QUICK_BET_AMOUNTS.length
+                  activeCell === QUICK_TRADE_AMOUNTS.length
                     ? 'bg-zinc-700 text-white'
                     : 'bg-transparent text-zinc-200 hover:bg-zinc-700 hover:text-white',
-                  activeCell === QUICK_BET_AMOUNTS.length ? 'ring-1 ring-zinc-500' : '',
+                  activeCell === QUICK_TRADE_AMOUNTS.length ? 'ring-1 ring-zinc-500' : '',
                 ].join(' ')}
                 tabIndex={0}
               >
@@ -186,9 +159,9 @@ function RightPanel({
               <div className="text-xs text-white">Potential Payout</div>
               <div className="font-medium">
                 <span style={{ color: signatureColor, fontSize: '28px' }}>
-                  {selectedCount > 0 && betAmount > 0 && selectedMultipliers.length > 0
+                  {selectedCount > 0 && tradeAmount > 0 && selectedMultipliers.length > 0
                     ? Math.round(
-                        betAmount *
+                        tradeAmount *
                           selectedMultipliers.reduce((sum, multiplier) => sum + multiplier, 0),
                       )
                     : '0'}
@@ -200,7 +173,7 @@ function RightPanel({
             </div>
           </div>
 
-          <div className="mb-4 space-y-2 rounded-lg border border-zinc-800/80 bg-[#111111] px-3 py-2">
+          <div className="mb-4 space-y-2 rounded-lg border border-zinc-800/80 bg-surface-850 px-3 py-2">
             <div className="flex items-center justify-between text-xs text-zinc-400">
               <span>Current Price</span>
               <span className="text-zinc-300">
@@ -233,7 +206,7 @@ function RightPanel({
           <button
             onClick={() => {
               if (!isTradingMode) {
-                if (betAmount === 0) {
+                if (tradeAmount === 0) {
                   setShowWarning(true);
                   setTimeout(() => setShowWarning(false), 3000);
                 } else {
@@ -244,11 +217,18 @@ function RightPanel({
               onTradingModeChange(false);
             }}
             className={[
-              'h-10 w-full rounded-lg font-medium text-[#09090B] transition-colors hover:opacity-90',
-              betAmount === 0 && !isTradingMode ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+              'h-10 w-full rounded-lg font-medium text-brand-foreground transition-colors hover:opacity-90',
+              tradeAmount === 0 && !isTradingMode ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+              isTradingMode ? 'bg-danger' : '',
             ].join(' ')}
-            style={{ backgroundColor: isTradingMode ? '#DD4141' : signatureColor }}
-            disabled={betAmount === 0 && !isTradingMode}
+            style={
+              isTradingMode
+                ? undefined
+                : {
+                    backgroundColor: signatureColor,
+                  }
+            }
+            disabled={tradeAmount === 0 && !isTradingMode}
           >
             {isTradingMode ? 'Exit Trading' : 'Start Trading'}
           </button>
@@ -303,14 +283,9 @@ function RightPanel({
 
           {showWarning && (
             <div
-              className="mt-2 rounded px-3 py-2 text-center text-xs"
-              style={{
-                color: COLORS.trading.negative,
-                backgroundColor: `${COLORS.trading.negative}10`,
-                border: `1px solid ${COLORS.trading.negative}20`,
-              }}
+              className="mt-2 rounded border border-trading-negative/20 bg-trading-negative/10 px-3 py-2 text-center text-xs text-trading-negative"
             >
-              Please enter a bet amount to start trading
+              Please enter a trade amount to start trading
             </div>
           )}
         </div>

@@ -50,8 +50,8 @@ interface CanvasMultiplier {
   worldY: number;
   width: number;
   height: number;
-  totalBets: number;
-  userBet: number;
+  totalTrades: number;
+  userTrade: number;
   timestampRange: {
     start: number;
     end: number;
@@ -82,7 +82,7 @@ export interface CanvasProps {
     hitBoxes: string[],
     missedBoxes: string[],
   ) => void;
-  betAmount?: number;
+  tradeAmount?: number;
   onPriceUpdate?: (price: number) => void;
   onSelectionChange?: (count: number, best: number, multipliers: number[], averagePrice?: number | null) => void;
   showProbabilities?: boolean;
@@ -250,8 +250,8 @@ function buildMultipliers(
       worldY: alignedLower,
       width,
       height,
-      totalBets: contract.totalVolume,
-      userBet: position?.amount ?? 0,
+      totalTrades: contract.totalVolume,
+      userTrade: position?.amount ?? 0,
       timestampRange: {
         start: contract.startTime,
         end: contract.endTime,
@@ -285,6 +285,7 @@ interface CanvasElements {
   errorView: HTMLDivElement;
   canvasView: HTMLDivElement;
   canvasContainer: HTMLDivElement;
+  canvasMask: HTMLDivElement;
   tradeErrorBanner: HTMLDivElement;
 }
 
@@ -323,7 +324,7 @@ export class CanvasController {
 
   private options: CanvasProps;
   private signatureColor: string;
-  private betAmount: number;
+  private tradeAmount: number;
   private showProbabilities: boolean;
   private showOtherPlayers: boolean;
   private minMultiplier: number;
@@ -355,12 +356,17 @@ export class CanvasController {
   private selectionStats: SelectionStats = createSelectionStats();
 
   private isStarted = false;
+  private isInteractionLocked = true;
   private timeframe: TimeFrame = TimeFrame.TWO_SECONDS;
+  private isEngineConnected = false;
+  private initialCoverActive = true;
+  private initialCoverTimer: ReturnType<typeof setTimeout> | null = null;
+  private shouldShowInitialCover = true;
 
   constructor(root: HTMLElement, options: CanvasProps = {}) {
     this.root = root;
     this.options = { ...options };
-    this.betAmount = options.betAmount ?? 100;
+    this.tradeAmount = options.tradeAmount ?? 100;
     this.showProbabilities = options.showProbabilities ?? false;
     this.showOtherPlayers = options.showOtherPlayers ?? false;
     this.minMultiplier = options.minMultiplier ?? 1.0;
@@ -369,6 +375,8 @@ export class CanvasController {
     this.signatureColor = useUIStore.getState().signatureColor;
 
     this.elements = this.buildLayout();
+    this.activateInitialCover();
+    this.applyInteractionLock();
     this.attachGlobalHandlers();
     this.attachControls();
 
@@ -392,6 +400,7 @@ export class CanvasController {
     this.unsubscribeTradeError = this.service.subscribeToTradeErrors((error) => this.handleTradeError(error));
 
     this.timeframe = this.resolveInitialTimeframe();
+    this.ensureEngineConnection();
     this.updateTimeframeButtons();
     this.syncStartState();
     this.startClock();
@@ -400,7 +409,7 @@ export class CanvasController {
 
   update(options: CanvasProps = {}): void {
     const next = { ...options };
-    this.betAmount = next.betAmount ?? this.betAmount;
+    this.tradeAmount = next.tradeAmount ?? this.tradeAmount;
     this.showProbabilities = next.showProbabilities ?? this.showProbabilities;
     this.showOtherPlayers = next.showOtherPlayers ?? this.showOtherPlayers;
     this.minMultiplier = next.minMultiplier ?? this.minMultiplier;
@@ -409,7 +418,7 @@ export class CanvasController {
     const newTimeframe = this.resolveInitialTimeframe();
     if (newTimeframe !== this.timeframe) {
       this.timeframe = newTimeframe;
-      if (this.isStarted) {
+      if (this.isEngineConnected) {
         this.service.subscribe(this.timeframe);
       }
       this.updateTimeframeButtons();
@@ -431,6 +440,11 @@ export class CanvasController {
     this.unsubscribeSignature?.();
     this.unsubscribeState?.();
     this.unsubscribeTradeError?.();
+    if (this.initialCoverTimer) {
+      clearTimeout(this.initialCoverTimer);
+      this.initialCoverTimer = null;
+    }
+    this.teardownEngineConnection();
     this.teardownGame();
     useConnectionStore.getState().setBackendConnected(false);
     this.root.innerHTML = '';
@@ -554,16 +568,8 @@ export class CanvasController {
     contentWrapper.appendChild(recenterButton);
 
     const placeholderView = document.createElement('div');
-    placeholderView.className = 'flex h-full items-center justify-center text-center text-gray-400';
-    placeholderView.innerHTML = `
-      <div>
-        <h2 class="mb-2 text-2xl font-semibold text-white">TradeRush - Canvas Edition</h2>
-        <p class="mb-4">Click Start to begin trading.</p>
-        <p class="text-xs text-gray-500">
-          The chart animates in real-time once connected to the clearing house engine.
-        </p>
-      </div>
-    `;
+    placeholderView.className = 'pointer-events-none absolute inset-0 hidden';
+    placeholderView.innerHTML = '';
     contentWrapper.appendChild(placeholderView);
 
     const loadingView = document.createElement('div');
@@ -588,6 +594,18 @@ export class CanvasController {
     const canvasContainer = document.createElement('div');
     canvasContainer.className = 'absolute inset-0';
     canvasView.appendChild(canvasContainer);
+
+    const canvasMask = document.createElement('div');
+    canvasMask.className = 'absolute inset-0 z-40 flex items-center justify-center bg-[#09090bcc] backdrop-blur-sm transition-opacity duration-500';
+    canvasMask.style.opacity = '1';
+    canvasMask.innerHTML = `
+      <div class="flex items-center gap-3 text-sm text-gray-300">
+        <span class="h-2 w-2 animate-pulse rounded-full bg-green-400"></span>
+        <span>Preparing live feed…</span>
+      </div>
+    `;
+    canvasView.appendChild(canvasMask);
+
     contentWrapper.appendChild(canvasView);
 
     return {
@@ -607,6 +625,7 @@ export class CanvasController {
       errorView,
       canvasView,
       canvasContainer,
+      canvasMask,
       tradeErrorBanner,
     };
   }
@@ -678,13 +697,14 @@ export class CanvasController {
       return;
     }
     this.isStarted = true;
+    this.ensureEngineConnection();
     this.updateStartStopVisibility();
-    this.placeholderToLoading();
+    this.hideInitialCover();
+    this.shouldShowInitialCover = false;
     if (triggeredByUser) {
       this.options.onExternalStartChange?.(true);
     }
-    this.service.connect();
-    this.service.subscribe(this.timeframe);
+    this.handleEngineState(this.service.getState());
   }
 
   private stopEngine(triggeredByUser?: boolean): void {
@@ -696,9 +716,9 @@ export class CanvasController {
     this.showPlaceholder();
     if (triggeredByUser) {
       this.options.onExternalStartChange?.(false);
+      this.teardownEngineConnection();
+      this.teardownGame();
     }
-    this.service.disconnect();
-    this.teardownGame();
     this.resetCameraFollowing(true);
   }
 
@@ -708,7 +728,7 @@ export class CanvasController {
     }
     this.timeframe = timeframe;
     this.updateTimeframeButtons();
-    if (this.isStarted) {
+    if (this.isEngineConnected) {
       this.service.subscribe(timeframe);
     }
   }
@@ -747,19 +767,123 @@ export class CanvasController {
     }
   }
 
+  private applyInteractionLock(): void {
+    const container = this.elements.canvasContainer;
+    const canvasView = this.elements.canvasView;
+    if (canvasView) {
+      canvasView.style.pointerEvents = this.isInteractionLocked ? 'none' : 'auto';
+    }
+    if (container) {
+      container.style.pointerEvents = this.isInteractionLocked ? 'none' : 'auto';
+    }
+    if (this.game?.canvas) {
+      this.game.canvas.style.pointerEvents = this.isInteractionLocked ? 'none' : 'auto';
+    }
+  }
+
+  private setInteractionLocked(isLocked: boolean): void {
+    if (this.isInteractionLocked === isLocked) {
+      this.applyInteractionLock();
+      return;
+    }
+    this.isInteractionLocked = isLocked;
+    this.applyInteractionLock();
+  }
+
+  private activateInitialCover(force = false): void {
+    if (!force && !this.shouldShowInitialCover && !this.initialCoverActive) {
+      return;
+    }
+    if (!force && this.initialCoverActive && this.initialCoverTimer) {
+      return;
+    }
+    if (this.initialCoverTimer) {
+      if (force) {
+        clearTimeout(this.initialCoverTimer);
+        this.initialCoverTimer = null;
+      } else {
+        return;
+      }
+    }
+    const mask = this.elements.canvasMask;
+    if (!mask) {
+      return;
+    }
+    this.initialCoverActive = true;
+    this.shouldShowInitialCover = true;
+    mask.style.display = '';
+    mask.style.opacity = '1';
+    mask.style.pointerEvents = 'auto';
+  }
+
+  private scheduleInitialCoverRelease(): void {
+    if (!this.initialCoverActive) {
+      return;
+    }
+    if (this.initialCoverTimer) {
+      return;
+    }
+    this.initialCoverTimer = window.setTimeout(() => {
+      this.initialCoverTimer = null;
+      this.hideInitialCover();
+    }, 2000);
+  }
+
+  private hideInitialCover(): void {
+    if (!this.initialCoverActive) {
+      return;
+    }
+    const mask = this.elements.canvasMask;
+    if (!mask) {
+      this.initialCoverActive = false;
+      return;
+    }
+    this.initialCoverActive = false;
+    this.shouldShowInitialCover = false;
+    mask.style.opacity = '0';
+    mask.style.pointerEvents = 'none';
+    window.setTimeout(() => {
+      if (!this.initialCoverActive) {
+        mask.style.display = 'none';
+      }
+    }, 500);
+  }
+
+  private ensureEngineConnection(): void {
+    if (this.isEngineConnected) {
+      return;
+    }
+    this.service.connect();
+    this.service.subscribe(this.timeframe);
+    this.isEngineConnected = true;
+  }
+
+  private teardownEngineConnection(): void {
+    if (!this.isEngineConnected) {
+      return;
+    }
+    this.service.disconnect();
+    this.isEngineConnected = false;
+  }
+
   private placeholderToLoading(): void {
     this.elements.placeholderView.style.display = 'none';
     this.elements.loadingView.classList.remove('hidden');
     this.elements.errorView.classList.add('hidden');
     this.elements.canvasView.classList.add('hidden');
+    this.setInteractionLocked(true);
+    this.activateInitialCover();
   }
 
   private showPlaceholder(): void {
-    this.elements.placeholderView.style.display = 'flex';
+    this.elements.placeholderView.style.display = 'none';
     this.elements.loadingView.classList.add('hidden');
     this.elements.errorView.classList.add('hidden');
-    this.elements.canvasView.classList.add('hidden');
+    this.elements.canvasView.classList.remove('hidden');
     this.elements.recenterButton.style.display = 'none';
+    this.setInteractionLocked(true);
+    this.activateInitialCover();
+    this.scheduleInitialCoverRelease();
   }
 
   private showLoading(state: EngineState): void {
@@ -767,6 +891,8 @@ export class CanvasController {
     this.elements.loadingView.classList.remove('hidden');
     this.elements.errorView.classList.add('hidden');
     this.elements.canvasView.classList.add('hidden');
+    this.setInteractionLocked(true);
+    this.activateInitialCover();
     const statusEl = this.elements.loadingView.querySelector('[data-status]');
     const tfEl = this.elements.loadingView.querySelector('[data-timeframe]');
     if (statusEl) {
@@ -782,6 +908,8 @@ export class CanvasController {
     this.elements.loadingView.classList.add('hidden');
     this.elements.errorView.classList.remove('hidden');
     this.elements.canvasView.classList.add('hidden');
+    this.setInteractionLocked(true);
+    this.activateInitialCover();
     const details = this.elements.errorView.querySelector('[data-error-details]');
     if (details) {
       details.textContent = state.error ?? '';
@@ -794,6 +922,8 @@ export class CanvasController {
     this.elements.loadingView.classList.add('hidden');
     this.elements.errorView.classList.add('hidden');
     this.elements.canvasView.classList.remove('hidden');
+    this.setInteractionLocked(false);
+    this.scheduleInitialCoverRelease();
   }
 
   private updateHeaderState(state: EngineState): void {
@@ -856,6 +986,12 @@ export class CanvasController {
     this.updatePositions(state);
 
     if (!this.isStarted) {
+      this.ensureGameInitialized(state);
+      if (this.game) {
+        this.updateMultipliersAndSelections(state);
+        this.processPriceSeries(state);
+        this.updateContractResolutions();
+      }
       this.showPlaceholder();
       return;
     }
@@ -865,13 +1001,17 @@ export class CanvasController {
       return;
     }
 
-    if (
-      state.snapshotVersion === 0
+    const isPreLive = state.snapshotVersion === 0
       || state.status === 'awaiting_snapshot'
       || state.status === 'handshake'
-      || state.status === 'connecting'
-    ) {
-      this.showLoading(state);
+      || state.status === 'connecting';
+
+    if (isPreLive) {
+      if (!this.game) {
+        this.showLoading(state);
+      } else {
+        this.showCanvas();
+      }
       return;
     }
 
@@ -956,8 +1096,8 @@ export class CanvasController {
 
     game.on('squareSelected', ({ squareId }: { squareId: string }) => {
       this.updateSelectionStats();
-      const wager = this.betAmount;
-      this.service.placeTrade(squareId, wager);
+      const tradeValue = this.tradeAmount;
+      this.service.placeTrade(squareId, tradeValue);
     });
 
     game.on('selectionChanged', () => {
@@ -971,6 +1111,7 @@ export class CanvasController {
 
     this.isCameraFollowing = game.isCameraFollowingPrice();
     game.startWithExternalData();
+    this.applyInteractionLock();
   }
 
   private teardownGame(): void {

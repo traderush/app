@@ -10,7 +10,7 @@ export interface WatchedPlayer {
   game: string;
   isOnline: boolean;
   lastSeen?: number;
-  totalBets?: number;
+  totalTrades?: number;
   totalWins?: number;
   winRate?: number;
   currentStreak?: number;
@@ -90,7 +90,7 @@ const defaultWatchlist: WatchedPlayer[] = [
     game: 'Box Hit',
     isOnline: true,
     lastSeen: Date.now(),
-    totalBets: 156,
+    totalTrades: 156,
     totalWins: 89,
     winRate: 0.57,
     currentStreak: 5,
@@ -106,7 +106,7 @@ const defaultWatchlist: WatchedPlayer[] = [
     game: 'Box Hit',
     isOnline: false,
     lastSeen: Date.now() - 3600000, // 1 hour ago
-    totalBets: 89,
+    totalTrades: 89,
     totalWins: 45,
     winRate: 0.51,
     currentStreak: 0,
@@ -122,7 +122,7 @@ const defaultWatchlist: WatchedPlayer[] = [
     game: 'Box Hit',
     isOnline: true,
     lastSeen: Date.now(),
-    totalBets: 234,
+    totalTrades: 234,
     totalWins: 134,
     winRate: 0.57,
     currentStreak: 3,
@@ -138,7 +138,7 @@ const defaultWatchlist: WatchedPlayer[] = [
     game: 'Box Hit',
     isOnline: false,
     lastSeen: Date.now() - 7200000, // 2 hours ago
-    totalBets: 178,
+    totalTrades: 178,
     totalWins: 98,
     winRate: 0.55,
     currentStreak: 0,
@@ -387,7 +387,7 @@ export const usePlayerStore = create<PlayerState>()(
       getTopPerformers: (limit = 10) => {
         const state = get();
         return state.watchedPlayers
-          .filter((player) => player.totalBets && player.totalBets > 0)
+          .filter((player) => player.totalTrades && player.totalTrades > 0)
           .sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
           .slice(0, limit);
       },

@@ -76,8 +76,8 @@ export interface BackendBox {
   worldY: number;
   width: number;
   height: number;
-  totalBets: number;
-  userBet?: number;
+  totalTrades: number;
+  userTrade?: number;
   timestampRange?: {
     start: number;
     end: number;
@@ -856,11 +856,11 @@ export class GridGame extends BaseGame {
             value: 0, // Empty boxes have NO multiplier - heatmap won't render on them
             x: 0,
             y: 0,
-            totalBets: 0,
+            totalTrades: 0,
             status: undefined,
             timestampRange: undefined,
             priceRange: undefined,
-            userBet: undefined
+            userTrade: undefined
           }
         ])
       )
@@ -1335,7 +1335,7 @@ export class GridGame extends BaseGame {
 
     // Draw black background at bottom to cover boxes behind axis
     const axisY = this.height - 30;
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#09090b';
     ctx.fillRect(0, axisY - 5, this.width, this.height - (axisY - 5));
 
     // Set up styling - make more visible when heatmap is enabled
@@ -1442,7 +1442,7 @@ export class GridGame extends BaseGame {
     ctx.save();
 
     // Draw background strip similar to X-axis styling
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#09090b';
     ctx.fillRect(axisX, 0, axisWidth, this.height);
 
     const axisOpacity = this.config.showProbabilities ? 0.6 : 0.3;
@@ -1865,8 +1865,8 @@ export class GridGame extends BaseGame {
       // Only update if the box is new or has changed
       if (
         !existingContract ||
-        existingContract.totalBets !== newContract.totalBets ||
-        existingContract.userBet !== newContract.userBet ||
+        existingContract.totalTrades !== newContract.totalTrades ||
+        existingContract.userTrade !== newContract.userTrade ||
         existingContract.value !== newContract.value ||
         existingContract.worldX !== newContract.worldX ||
         existingContract.worldY !== newContract.worldY

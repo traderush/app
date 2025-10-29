@@ -75,11 +75,11 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
       '<-50%': 19
     },
     recentActivity: [
-      { result: 'Win', gameName: 'Box Hit', betAmount: '$10', targetPrice: '+15%', age: '20s' },
-      { result: 'Loss', gameName: 'Box Hit', betAmount: '$50', targetPrice: '-8%', age: '56s' },
-      { result: 'Win', gameName: 'Box Hit', betAmount: '$100', targetPrice: '+22%', age: '1m' },
-      { result: 'Loss', gameName: 'Box Hit', betAmount: '$250', targetPrice: '-12%', age: '2m' },
-      { result: 'Win', gameName: 'Box Hit', betAmount: '$10', targetPrice: '+18%', age: '3m' }
+      { result: 'Win', gameName: 'Box Hit', tradeAmount: '$10', targetPrice: '+15%', age: '20s' },
+      { result: 'Loss', gameName: 'Box Hit', tradeAmount: '$50', targetPrice: '-8%', age: '56s' },
+      { result: 'Win', gameName: 'Box Hit', tradeAmount: '$100', targetPrice: '+22%', age: '1m' },
+      { result: 'Loss', gameName: 'Box Hit', tradeAmount: '$250', targetPrice: '-12%', age: '2m' },
+      { result: 'Win', gameName: 'Box Hit', tradeAmount: '$10', targetPrice: '+18%', age: '3m' }
     ]
   };
 
@@ -351,7 +351,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                 <div className="grid grid-cols-12 gap-4 pb-3 border-b border-zinc-800/70 text-zinc-400 text-xs font-medium">
                   <div className="col-span-2">Result</div>
                   <div className="col-span-3">Game Name</div>
-                  <div className="col-span-2">Bet Amount</div>
+                  <div className="col-span-2">Trade Amount</div>
                   <div className="col-span-2">Target Price</div>
                   <div className="col-span-2">Age</div>
                   <div className="col-span-1">Explorer</div>
@@ -373,7 +373,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                       <div className="col-span-3">
                         <span className="text-white text-xs font-medium">{activity.gameName}</span>
                       </div>
-                      <div className="col-span-2 text-white text-xs">{activity.betAmount}</div>
+                      <div className="col-span-2 text-white text-xs">{activity.tradeAmount}</div>
                       <div className="col-span-2 text-zinc-300 text-xs">{activity.targetPrice}</div>
                       <div className="col-span-2 text-zinc-400 text-xs">{activity.age}</div>
                       <div className="col-span-1">

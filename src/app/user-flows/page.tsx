@@ -22,7 +22,7 @@ export default function Page() {
                 <div className="space-y-2 text-sm text-zinc-400">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                    <span>Box Hit → Active game with grid-based betting</span>
+                    <span>Box Hit → Active game with grid-based trading</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-zinc-600 rounded-full"></span>
@@ -107,10 +107,10 @@ export default function Page() {
                   </div>
                 </div>
                 <div className="bg-zinc-800 rounded p-4">
-                  <h4 className="text-md font-medium text-zinc-300 mb-2">2. Betting Flow</h4>
+                  <h4 className="text-md font-medium text-zinc-300 mb-2">2. Trading Flow</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
                     <div>• Click &quot;Place Trade&quot; mode</div>
-                    <div>• Set bet amount (10, 50, 100, 250, custom)</div>
+                    <div>• Set trade amount (10, 50, 100, 250, custom)</div>
                     <div>• Click grid cells to select</div>
                     <div>• Selected cells show orange border</div>
                     <div>• View potential payout</div>
@@ -210,9 +210,9 @@ export default function Page() {
               <div>
                 <h4 className="text-md font-medium text-zinc-300 mb-3">Trade Mode Toggle</h4>
                 <div className="text-sm text-zinc-400 space-y-1">
-                  <div>• Click &quot;Place Trade&quot; → Enter betting mode</div>
+                  <div>• Click &quot;Place Trade&quot; → Enter trading mode</div>
                   <div>• Click &quot;Copy Trade&quot; → Enter copy mode</div>
-                    <div>• Click &quot;Exit Trade Mode&quot; → Exit betting</div>
+                    <div>• Click &quot;Exit Trade Mode&quot; → Exit trading mode</div>
                   <div>• Mode affects interaction behavior</div>
                 </div>
               </div>
@@ -220,13 +220,13 @@ export default function Page() {
           </div>
         </section>
 
-        {/* Trading & Betting Flows */}
+        {/* Trading Flows */}
         <section className="space-y-6">
-          <h2 className="text-2xl font-semibold text-zinc-100 border-b border-zinc-800 pb-2">Trading & Betting Flows</h2>
+          <h2 className="text-2xl font-semibold text-zinc-100 border-b border-zinc-800 pb-2">Trading Flows</h2>
           
-          {/* Betting Flow */}
+          {/* Trading Flow */}
           <div className="bg-zinc-900 border border-zinc-800 rounded p-6">
-            <h3 className="text-lg font-semibold text-zinc-100 mb-4">Complete Betting Flow</h3>
+            <h3 className="text-lg font-semibold text-zinc-100 mb-4">Complete Trading Flow</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-zinc-800 rounded p-4">
@@ -234,7 +234,7 @@ export default function Page() {
                   <div className="text-sm text-zinc-400 space-y-1">
                     <div>• Select game (Box Hit/Towers)</div>
                     <div>• Click &quot;Place Trade&quot;</div>
-                    <div>• Set bet amount</div>
+                    <div>• Set trade amount</div>
                     <div>• View potential payout</div>
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function Page() {
                     <div>• PnL updates immediately</div>
                     <div>• Balance reflects winnings</div>
                     <div>• Position history recorded</div>
-                    <div>• Ready for next bet</div>
+                    <div>• Ready for next trade</div>
                   </div>
                 </div>
               </div>
@@ -287,7 +287,7 @@ export default function Page() {
                   <h4 className="text-md font-medium text-zinc-300 mb-2">2. Auto Execution</h4>
                   <div className="text-sm text-zinc-400 space-y-1">
                     <div>• System copies trader&apos;s moves</div>
-                    <div>• Proportional bet sizing</div>
+                    <div>• Proportional trade sizing</div>
                     <div>• Real-time synchronization</div>
                     <div>• Risk management applied</div>
                   </div>
@@ -385,7 +385,7 @@ export default function Page() {
               <div>
                 <h4 className="text-md font-medium text-zinc-300 mb-3">Game State Issues</h4>
                 <div className="text-sm text-zinc-400 space-y-1">
-                  <div>• Invalid bet amounts</div>
+                  <div>• Invalid trade amounts</div>
                   <div>• Insufficient balance</div>
                   <div>• Grid generation failures</div>
                   <div>• Collision detection errors</div>

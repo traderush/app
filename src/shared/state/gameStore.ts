@@ -16,7 +16,7 @@ export interface GameCell {
 export interface GamePosition {
   id: string;
   cellIds: string[];
-  betAmount: number;
+  tradeAmount: number;
   multipliers: number[];
   totalMultiplier: number;
   potentialPayout: number;
@@ -27,7 +27,7 @@ export interface GamePosition {
 }
 
 export interface GameSettings {
-  betAmount: number;
+  tradeAmount: number;
   selectedCount: number;
   selectedMultipliers: number[];
   bestMultiplier: number;
@@ -43,7 +43,7 @@ export interface GameSettings {
 }
 
 export interface GameStats {
-  totalBets: number;
+  totalTrades: number;
   totalWins: number;
   totalLosses: number;
   winRate: number;
@@ -112,7 +112,7 @@ interface GameState {
 }
 
 const initialGameSettings: GameSettings = {
-  betAmount: 200,
+  tradeAmount: 200,
   selectedCount: 0,
   selectedMultipliers: [],
   bestMultiplier: 0,
@@ -128,7 +128,7 @@ const initialGameSettings: GameSettings = {
 };
 
 const initialGameStats: GameStats = {
-  totalBets: 0,
+  totalTrades: 0,
   totalWins: 0,
   totalLosses: 0,
   winRate: 0,
@@ -258,7 +258,7 @@ export const useGameStore = create<GameState>()(
           activePositions: [...state.activePositions, newPosition],
           gameStats: {
             ...state.gameStats,
-            totalBets: state.gameStats.totalBets + 1,
+            totalTrades: state.gameStats.totalTrades + 1,
           },
         };
       }),
@@ -340,7 +340,7 @@ export const useGameStore = create<GameState>()(
             ...state.gameStats,
             totalWins: newWins,
             totalWinnings: state.gameStats.totalWinnings + totalWinnings,
-            winRate: newWins / state.gameStats.totalBets || 0,
+            winRate: newWins / state.gameStats.totalTrades || 0,
             currentStreak: state.gameStats.currentStreak + 1,
             longestWinStreak: Math.max(
               state.gameStats.longestWinStreak,
@@ -376,7 +376,7 @@ export const useGameStore = create<GameState>()(
               isActive: false 
             };
             missedPositionsCount++;
-            totalLossAmount += pos.betAmount;
+            totalLossAmount += pos.tradeAmount;
           }
         }
 
@@ -389,7 +389,7 @@ export const useGameStore = create<GameState>()(
             ...state.gameStats,
             totalLosses: newLossCount,
             totalLossAmount: state.gameStats.totalLossAmount + totalLossAmount,
-            winRate: state.gameStats.totalWins / state.gameStats.totalBets || 0,
+            winRate: state.gameStats.totalWins / state.gameStats.totalTrades || 0,
             currentStreak: 0,
             longestLossStreak: Math.max(
               state.gameStats.longestLossStreak,

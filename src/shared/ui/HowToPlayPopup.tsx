@@ -12,7 +12,7 @@ interface HowToPlayPopupProps {
 const slides: SlideShowSlide[] = [
   {
     title: 'Getting Started',
-    description: 'Learn the basics of trading and how to place your first bet on the platform.',
+    description: 'Learn the basics of trading and how to place your first trade on the platform.',
     image: 'https://i.ibb.co/chN47y4X/customwallettrackernotifications-ezgif-com-optimize.gif',
   },
   {

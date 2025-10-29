@@ -1,11 +1,9 @@
 'use client';
-import Image from 'next/image';
-import React, { useEffect, useMemo } from 'react';
-import { Play, Globe, Gift, Settings, Volume2, VolumeX } from 'lucide-react';
+import React from 'react';
+import { Play } from 'lucide-react';
 import clsxUtility from 'clsx';
-import { useUIStore, usePlayerStore, type WatchedPlayer } from '@/shared/state';
-import { TOP_PLAYERS } from '@/shared/ui/constants/sidebar';
 import Link from 'next/link';
+import type { WatchedPlayer } from '@/shared/state';
 
 interface SidebarRailProps {
   isCollapsed?: boolean;
@@ -23,35 +21,17 @@ interface SidebarRailProps {
 
 const SidebarRail = React.memo(function SidebarRail({ 
   isCollapsed = false, 
-  onSettingsOpen, 
-  settingsButtonRef,
+  onSettingsOpen: _onSettingsOpen, 
+  settingsButtonRef: _settingsButtonRef,
   onHowToPlayOpen,
   howToPlayButtonRef,
-  onRewardsOpen,
-  rewardsButtonRef,
-  onWatchlistOpen,
-  onPlayerClick,
-  watchedPlayers = [],
-  onSoundToggle
+  onRewardsOpen: _onRewardsOpen,
+  rewardsButtonRef: _rewardsButtonRef,
+  onWatchlistOpen: _onWatchlistOpen,
+  onPlayerClick: _onPlayerClick,
+  watchedPlayers: _watchedPlayers = [],
+  onSoundToggle: _onSoundToggle
 }: SidebarRailProps) {
-  const signatureColor = useUIStore((state) => state.signatureColor);
-  const settings = useUIStore((state) => state.settings);
-  const storeWatchedPlayers = usePlayerStore((state) => state.watchedPlayers);
-  const [isClient, setIsClient] = React.useState(false);
-
-  // Use store players if not provided via props
-  const displayPlayers = watchedPlayers.length > 0 ? watchedPlayers : storeWatchedPlayers;
-
-  // Ensure consistent rendering between server and client
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const topPlayers = useMemo(
-    () => TOP_PLAYERS,
-    [],
-  );
-
   return (
     <aside className={clsxUtility(
       "hidden md:block h-[calc(100vh-56px-32px)] transition-all duration-300",
