@@ -1,3 +1,5 @@
+import { getDevEngineWsUrl, getEngineWsUrl } from '@/shared/lib/engine/getEngineWsUrl';
+
 // WebSocket Service for TradeRush
 
 export interface WebSocketMessage {
@@ -40,7 +42,7 @@ class WebSocketService {
 
   constructor(config: WebSocketConfig = {}) {
       this.config = {
-        url: config.url || 'ws://localhost:8080/ws',
+        url: config.url || getEngineWsUrl(getDevEngineWsUrl()),
         reconnectAttempts: config.reconnectAttempts || 5,
         reconnectDelay: config.reconnectDelay || 1000,
       };

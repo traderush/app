@@ -1,4 +1,5 @@
 import { EventEmitter } from '@/shared/lib/canvasLogic/utils/EventEmitter';
+import { getDevEngineWsUrl, getEngineWsUrl } from '@/shared/lib/engine/getEngineWsUrl';
 import type { TimeFrame } from '@/shared/types/timeframe';
 import type {
   EngineClientMessage,
@@ -11,27 +12,7 @@ import type { BoxHitPosition } from '@/shared/types/boxHit';
 const MAX_PRICE_POINTS = 600;
 const RECONNECT_DELAY_MS = 1_000;
 
-const getEngineUrl = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_ENGINE_WS;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  if (typeof window === 'undefined') {
-    return 'ws://localhost:8080/ws';
-  }
-
-  const { protocol, hostname, port } = window.location;
-  const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-
-  const shouldUseDefaultPort = !port || ['3000', '3001', '3002'].includes(port);
-  const targetPort = shouldUseDefaultPort
-    ? (wsProtocol === 'wss:' ? '443' : '8080')
-    : port;
-
-  const authority = `${hostname}${targetPort ? `:${targetPort}` : ''}`;
-  return `${wsProtocol}//${authority}/ws`;
-};
+const getEngineUrl = (): string => getEngineWsUrl(getDevEngineWsUrl());
 
 export type ConnectionStatus =
   | 'idle'

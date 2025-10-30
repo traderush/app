@@ -366,9 +366,10 @@ bun run dev
 # Frontend (Next.js)
 npm run dev       # Starts on http://localhost:3000
 
-# Backend (Bun)
-cd backend
-bun run dev       # Starts on ws://localhost:8080
+# Backend (Clearing House via Bun)
+cd clearingHouse
+bun run engine       # Serves ws://localhost:8080 in development; Railway exposes WSS in production
+# ENGINE_TLS_CERT_FILE=./certs/dev-cert.pem ENGINE_TLS_KEY_FILE=./certs/dev-key.pem PORT=8443 bun run engine-wss
 ```
 
 ---
@@ -491,9 +492,9 @@ SIGNATURE_COLOR = '#FA5616' // User-customizable primary color
 ## 🔐 Security
 
 ### Content Security Policy
-Configured in `next.config.ts`:
+Configured in `next.config.ts` (with runtime values from `middleware.ts`):
 - Restricts script/style sources
-- Allows WebSocket connections to localhost:8080
+- Dynamically allows the configured engine endpoint (defaults to localhost:8080 in dev)
 - Prevents XSS attacks
 - Enables font loading from data URIs
 
@@ -506,6 +507,13 @@ Configured in `next.config.ts`:
 npm run build
 npm run start
 ```
+
+### Railway Deployment (Clearing House)
+1. Create a Railway service targeting the `clearingHouse/` directory (Bun is auto-detected).
+2. Use `bun install` as the build command and `bun run start` as the start command.
+3. Railway sets the `PORT` environment variable automatically; the clearing house listens on it.
+4. Configure your frontend deployment with `NEXT_PUBLIC_ENGINE_WS=wss://<your-railway-subdomain>.up.railway.app/ws` so clients connect over WSS.
+5. (Optional) Set `ENGINE_HOST=0.0.0.0` if you need to explicitly bind the listener or supply `ENGINE_TLS_*` variables when running TLS directly.
 
 ### Auto-Deployment
 - **Git hooks**: Auto-push on commit

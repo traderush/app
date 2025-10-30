@@ -360,7 +360,7 @@ export class CanvasController {
   private timeframe: TimeFrame = TimeFrame.TWO_SECONDS;
   private isEngineConnected = false;
   private initialCoverActive = true;
-  private initialCoverTimer: ReturnType<typeof setTimeout> | null = null;
+  private initialCoverTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
   private shouldShowInitialCover = true;
 
   constructor(root: HTMLElement, options: CanvasProps = {}) {
@@ -823,7 +823,7 @@ export class CanvasController {
     if (this.initialCoverTimer) {
       return;
     }
-    this.initialCoverTimer = window.setTimeout(() => {
+    this.initialCoverTimer = globalThis.setTimeout(() => {
       this.initialCoverTimer = null;
       this.hideInitialCover();
     }, 2000);
