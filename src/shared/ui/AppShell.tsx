@@ -20,6 +20,7 @@ type AppModals = {
   customize: ModalController;
   watchlist: ModalController;
   pnLCustomize: ModalController;
+  mobileMenu: ModalController;
 };
 
 const useAppModals = (): AppModals => ({
@@ -33,6 +34,7 @@ const useAppModals = (): AppModals => ({
   customize: useModal('customize'),
   watchlist: useModal('watchlist'),
   pnLCustomize: useModal('pnLCustomize'),
+  mobileMenu: useModal('mobileMenu'),
 });
 
 const useAppModalRefs = () => ({
@@ -44,6 +46,7 @@ const useAppModalRefs = () => ({
   rewardsButtonRef: React.useRef<HTMLButtonElement | null>(null),
   pnLTrackerButtonRef: React.useRef<HTMLButtonElement | null>(null),
   customizeButtonRef: React.useRef<HTMLButtonElement | null>(null),
+  mobileMenuButtonRef: React.useRef<HTMLButtonElement | null>(null),
 });
 
 const AppShellContent = memo(function AppShellContent({ children }: { children: React.ReactNode }) {
@@ -70,6 +73,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     customize,
     watchlist,
     pnLCustomize,
+    mobileMenu,
   } = modals;
 
   const {
@@ -81,6 +85,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     rewardsButtonRef,
     pnLTrackerButtonRef,
     customizeButtonRef,
+    mobileMenuButtonRef,
   } = modalRefs;
 
   const isWebSocketConnected = true;
@@ -148,6 +153,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           onProfileOpen={handlePlayerProfileOpen}
           onNewsUpdatesOpen={newsUpdates.open}
           newsUpdatesButtonRef={newsUpdatesButtonRef}
+          mobileMenuButtonRef={mobileMenuButtonRef}
+          onMobileMenuOpen={mobileMenu.open}
         />
       </div>
 
@@ -200,6 +207,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           newsUpdatesButtonRef,
           rewardsButtonRef,
           customizeButtonRef,
+          mobileMenuButtonRef,
         }}
         modals={{
           deposit,
@@ -212,6 +220,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           customize,
           watchlist,
           pnLCustomize,
+          mobileMenu,
         }}
         watchedPlayers={watchedPlayers}
         onUpdateWatchedPlayers={handleWatchedPlayersUpdate}

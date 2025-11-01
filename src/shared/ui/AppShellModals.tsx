@@ -15,7 +15,7 @@ const LazyPnLTrackerPopup = React.lazy(() => import('./PnLTrackerPopup'));
 const LazyCustomizePopup = React.lazy(() => import('./CustomizePopup'));
 const LazyWatchlistPopup = React.lazy(() => import('./WatchlistPopup'));
 const LazyPlayerTrackerPopup = React.lazy(() => import('./PlayerTrackerPopup'));
-
+const LazyMobileMenuPopup = React.lazy(() => import('./MobileMenuPopup'));
 const MODAL_FALLBACK = <div className="fixed inset-0 bg-black/60 z-[1000]" />;
 
 type ModalController = {
@@ -35,7 +35,8 @@ type ModalKey =
   | 'pnLTracker'
   | 'customize'
   | 'watchlist'
-  | 'pnLCustomize';
+  | 'pnLCustomize'
+  | 'mobileMenu';
 
 interface AppShellModalsProps {
   signatureColor: string;
@@ -46,6 +47,7 @@ interface AppShellModalsProps {
     newsUpdatesButtonRef: React.RefObject<HTMLButtonElement | null>;
     rewardsButtonRef: React.RefObject<HTMLButtonElement | null>;
     customizeButtonRef: React.RefObject<HTMLButtonElement | null>;
+    mobileMenuButtonRef: React.RefObject<HTMLButtonElement | null>;
   };
   modals: Record<ModalKey, ModalController>;
   watchedPlayers: WatchedPlayer[];
@@ -257,6 +259,11 @@ const MODAL_DEFINITIONS: ModalDefinition[] = [
       watchedPlayers: ctx.watchedPlayers,
       setWatchedPlayers: ctx.onUpdateWatchedPlayers,
     }),
+  },
+  {
+    key: 'mobileMenu',
+    Component: LazyMobileMenuPopup,
+    getProps: (ctx) => ({ triggerRef: ctx.modalRefs.mobileMenuButtonRef }),
   },
 ];
 

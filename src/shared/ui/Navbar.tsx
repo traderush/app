@@ -21,6 +21,8 @@ interface NavbarProps {
   onProfileOpen: () => void;
   onNewsUpdatesOpen: () => void;
   newsUpdatesButtonRef: React.RefObject<HTMLButtonElement | null>;
+  mobileMenuButtonRef: React.RefObject<HTMLButtonElement | null>;
+  onMobileMenuOpen: () => void;
 }
 
 const Navbar = React.memo(function Navbar({
@@ -31,6 +33,8 @@ const Navbar = React.memo(function Navbar({
   onProfileOpen,
   onNewsUpdatesOpen: _onNewsUpdatesOpen,
   newsUpdatesButtonRef: _newsUpdatesButtonRef,
+  mobileMenuButtonRef: _mobileMenuButtonRef,
+  onMobileMenuOpen: _onMobileMenuOpen,
 }: NavbarProps) {
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
@@ -155,9 +159,9 @@ const Navbar = React.memo(function Navbar({
                 height={40}
                 className="w-10 h-10 rounded object-cover hover:opacity-80 transition-opacity"
               />
-            </button>
+            </button> 
             {/* Menu button */}
-            <button className="lg:hidden grid place-items-center w-8 h-8 text-zinc-300 hover:text-zinc-100 cursor-pointer">
+            <button ref={_mobileMenuButtonRef} onClick={_onMobileMenuOpen} className="lg:hidden grid place-items-center w-8 h-8 text-zinc-300 hover:text-zinc-100 cursor-pointer">
               <Menu size={16} />
             </button>
           </div>

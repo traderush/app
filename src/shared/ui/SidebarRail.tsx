@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Play } from 'lucide-react';
+import { LogOut, Volume2 } from 'lucide-react';
 import clsxUtility from 'clsx';
 import Link from 'next/link';
 import type { WatchedPlayer } from '@/shared/state';
@@ -38,36 +38,13 @@ const SidebarRail = React.memo(function SidebarRail({
       isCollapsed ? "w-0" : "w-16"
     )}>
       <div className={clsxUtility(
-        "h-full border-r border-zinc-800/80 bg-zinc-950/60 transition-all duration-300 flex flex-col",
+        "h-full border-r border-zinc-800/80 bg-zinc-950/60 transition-all duration-300 flex flex-col justify-between py-4",
         isCollapsed ? "w-0" : "w-16"
       )}>
-        {/* Top menu items */}
-        <div className={clsxUtility(
-          "flex flex-col items-center gap-3 pt-3 transition-all duration-300",
-          isCollapsed && "opacity-0 scale-95"
-        )}>
-          <button
-            ref={howToPlayButtonRef}
-            onClick={() => {
-              onHowToPlayOpen?.();
-            }}
-            className="grid place-items-center w-10 h-10 rounded text-zinc-300 hover:text-zinc-100 transition-all duration-300 cursor-pointer"
-            title="How to Play"
-          >
-            <Play size={26} strokeWidth={1.4} />
-          </button>
-
-        </div>
-
-        {/* Separator */}
-        <div className={clsxUtility(
-          "border-t border-zinc-800/60 my-2 transition-all duration-300",
-          isCollapsed && "opacity-0 scale-95"
-        )}></div>
         
         {/* Active Positions placeholder */}
         <div className={clsxUtility(
-          "flex flex-col items-center gap-2 px-2 transition-all duration-300 mt-2",
+          "flex flex-col items-center gap-2 px-2 transition-all duration-300",
           isCollapsed && "opacity-0 scale-95"
         )}>
           <Link href="/box-hit">
@@ -83,7 +60,39 @@ const SidebarRail = React.memo(function SidebarRail({
             </div>
             <p className='text-[11px] text-zinc-400 text-center mt-1'>Box Hit</p>
           </Link>
-          
+        </div>
+
+        <div className='flex flex-col gap-6 mb-2'>
+          <div className={clsxUtility(
+            "group flex flex-col items-center gap-2 transition-all duration-300",
+            isCollapsed && "opacity-0 scale-95"
+          )}>
+            <button
+              ref={howToPlayButtonRef}
+              onClick={() => {}}
+              className="grid place-items-center w-10 h-10 rounded text-zinc-300 group-hover:text-zinc-100 transition-all duration-300 cursor-pointer"
+              title="Sound"
+            >
+              <Volume2 className='text-gray-500' size={26} strokeWidth={2} />
+              <p className='text-[11px] text-zinc-400 text-center mt-1 group-hover:text-zinc-100 transition-all duration-300'>Sound</p>
+            </button>
+
+          </div>
+          <div className={clsxUtility(
+            "group flex flex-col items-center gap-2 transition-all duration-300",
+            isCollapsed && "opacity-0 scale-95"
+          )}>
+            <button
+              ref={howToPlayButtonRef}
+              onClick={() => {}}
+              className="grid place-items-center w-10 h-10 rounded text-zinc-300 group-hover:text-zinc-100 transition-all duration-300 cursor-pointer"
+              title="Sound"
+            >
+              <LogOut className='text-gray-500' size={26} strokeWidth={2} />
+              <p className='text-[11px] text-zinc-400 text-center mt-1 group-hover:text-zinc-100 transition-all duration-300'>Log out</p>
+            </button>
+
+          </div>
         </div>
       </div>
     </aside>
