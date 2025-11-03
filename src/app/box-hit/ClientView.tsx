@@ -756,76 +756,65 @@ export default function ClientView() {
                     showOtherPlayers={showOtherPlayers}
                     minMultiplier={minMultiplier}
                   />
-                  {isPositionsCollapsed && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setIsPositionsOverlayOpen(true)}
-                        className={`absolute bottom-0 left-0 z-30 flex items-center gap-2 rounded-none rounded-tr-lg border-t border-r border-zinc-800/80 bg-surface-950 px-3 py-2 text-sm font-medium text-zinc-300 shadow-lg transition-all duration-200 hover:bg-overlay-900 ${
-                          isPositionsOverlayOpen ? 'pointer-events-none opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
-                        }`}
-                      >
-                        <Activity size={16} className="text-zinc-400" />
-                        <span className="tracking-tight">Positions</span>
-                      </button>
-                      <div
-                        className={`absolute bottom-0 left-0 z-30 flex max-h-[70%] w-full max-w-[520px] flex-col overflow-hidden border-t border-zinc-800/80 bg-background transition-all duration-200 ease-out ${
-                          isPositionsOverlayOpen
-                            ? 'pointer-events-auto opacity-100 translate-y-0'
-                            : 'pointer-events-none opacity-0 translate-y-6'
-                        } rounded-none rounded-tr-xl`}
-                        aria-hidden={!isPositionsOverlayOpen}
-                      >
-                        <div className="flex flex-nowrap items-center justify-between gap-3 bg-surface-800 px-3 py-2 text-sm font-medium text-zinc-300">
-                          <div className="flex flex-nowrap items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setPositionsOverlayView('positions')}
-                              className={`rounded-none px-2 py-1 transition-colors ${
-                                positionsOverlayView === 'positions'
-                                  ? 'bg-zinc-800 text-zinc-100'
-                                  : 'bg-transparent text-zinc-400 hover:text-zinc-200'
-                              }`}
-                            >
-                              Positions
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPositionsOverlayView('history')}
-                              className={`rounded-none px-2 py-1 transition-colors ${
-                                positionsOverlayView === 'history'
-                                  ? 'bg-zinc-800 text-zinc-100'
-                                  : 'bg-transparent text-zinc-400 hover:text-zinc-200'
-                              }`}
-                            >
-                              Positions History
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setIsPositionsOverlayOpen(false)}
-                            className="flex h-8 w-8 items-center justify-center rounded-none border-t border-r border-zinc-800/80 bg-overlay-900 text-zinc-400 transition-colors hover:bg-neutral-900 hover:text-zinc-200"
-                            aria-label="Collapse positions overlay"
-                          >
-                            <ChevronDown size={16} />
-                          </button>
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                          <div className="h-full w-full overflow-y-auto">
-                            {positionsOverlayView === 'positions' ? (
-                              renderPositionsTable()
-                            ) : (
-                              <div className="px-3 py-2 text-sm text-zinc-400">Positions history is not available yet.</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
+              {/* Small screens Positions Overlay */}
+              {
+              isPositionsCollapsed && (
+                <div className='flex h-[30px] w-full'>
+                    <button
+                      type="button"
+                      onClick={() => setIsPositionsOverlayOpen(true)}
+                      className={`shrink-0 z-30 flex items-center gap-2 rounded-none border-t border-r border-zinc-800/80 bg-surface-950 px-3 h-full text-sm font-medium text-zinc-300 shadow-lg transition-all duration-200 hover:bg-overlay-900 ${
+                        isPositionsOverlayOpen ? 'pointer-events-none opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
+                      }`}
+                    >
+                      <Activity size={16} className="text-zinc-400" />
+                      <span className="tracking-tight">Positions</span>
+                    </button>
+                    {/* Latest Positions Short Summary */}
+                    <div className='flex w-full items-center'>
+                    {
+                      Array(10).keys().map((_, index) => (
+                          <div key={index} style={{backgroundColor: Number(index) % 2 === 0 ? '#101212' : '#130E11'}} className='flex-1 text-center p-5'>
+                            <p style={{color: Number(index) % 2 === 0 ? '#04C68AB2' : '#DD4141B2'}} className='text-xs'>$131.04</p>
+                          </div>
+                      ))
+                    }
+                    </div>
+                    {/* Full Positions Table */}
+                    <div
+                      className={`absolute bottom-0 left-0 z-30 flex max-h-[70%] w-full flex-col overflow-hidden border-t border-zinc-800/80 bg-background transition-all duration-200 ease-out ${
+                        isPositionsOverlayOpen
+                          ? 'pointer-events-auto opacity-100 translate-y-0'
+                          : 'pointer-events-none opacity-0 translate-y-6'
+                      }`}
+                      aria-hidden={!isPositionsOverlayOpen}
+                    >
+                      <div className="flex flex-nowrap items-center justify-between gap-3 bg-surface-800 px-3 py-2 text-sm font-medium text-zinc-300">
+                        <button
+                          type="button"
+                          onClick={() => setIsPositionsOverlayOpen(false)}
+                          className="flex h-8 w-8 items-center justify-center rounded-none border-t border-r border-zinc-800/80 bg-overlay-900 text-zinc-400 transition-colors hover:bg-neutral-900 hover:text-zinc-200"
+                          aria-label="Collapse positions overlay"
+                        >
+                          <ChevronDown size={16} />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <div className="h-full w-full overflow-y-auto">
+                          {positionsOverlayView === 'positions' ? (
+                            renderPositionsTable()
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-zinc-400">Positions history is not available yet.</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                </div>
+              )}
             </ErrorBoundary>
-
+            {/* Large screens Positions Table */}
             {!isPositionsCollapsed && (
               <div
                 ref={positionsContainerRef}
