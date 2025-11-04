@@ -15,6 +15,8 @@ import { ASSETS, DEFAULT_TRADE_AMOUNT, TIMEFRAME_OPTIONS } from './constants';
 import type { AssetInfo, AssetKey } from './constants';
 import { useToasts } from './hooks/useToasts';
 import type { BoxHitContract, BoxHitPositionMap } from '@/shared/types/boxHit';
+import { MOCK_ACTIVE_TRADES, MOCK_TRADE_HISTORY } from '@/shared/utils/mockTradeData';
+import RecentPositions from '@/modules/box-hit/components/RecentPositions';
 
 type ActivityAction = 'won' | 'lost';
 
@@ -159,6 +161,25 @@ export default function ClientView() {
     return () => {
       cleanupSoundManager();
     };
+  }, []);
+  
+  // Load mock trade data (REMOVE THIS IN PRODUCTION)
+  useEffect(() => {
+    // Clear existing trades
+    useUserStore.getState().clearTrades();
+    
+    // Add mock active trades
+    MOCK_ACTIVE_TRADES.forEach((trade) => {
+      useUserStore.getState().addTrade(trade);
+    });
+    
+    // Set mock trade history directly
+    useUserStore.setState({ tradeHistory: MOCK_TRADE_HISTORY });
+    
+    // Calculate stats
+    useUserStore.getState().calculateStats();
+    
+    console.log('✅ Mock trade data loaded');
   }, []);
   
   // Get signature color from UI store
@@ -471,8 +492,8 @@ export default function ClientView() {
   }, []);
 
   const renderPositionsTable = useCallback(
-    () => <PositionsTable currentBTCPrice={mockBackendCurrentPrice} />,
-    [mockBackendCurrentPrice],
+    () => <PositionsTable currentBTCPrice={mockBackendCurrentPrice} close={() => setIsPositionsOverlayOpen(false)}/>,
+    [mockBackendCurrentPrice, setIsPositionsOverlayOpen],
   );
 
   return (
@@ -773,15 +794,7 @@ export default function ClientView() {
                       <span className="tracking-tight">Positions</span>
                     </button>
                     {/* Latest Positions Short Summary */}
-                    <div className='flex w-full items-center'>
-                    {
-                      Array(10).keys().map((_, index) => (
-                          <div key={index} style={{backgroundColor: Number(index) % 2 === 0 ? '#101212' : '#130E11'}} className='flex-1 text-center p-5'>
-                            <p style={{color: Number(index) % 2 === 0 ? '#04C68AB2' : '#DD4141B2'}} className='text-xs'>$131.04</p>
-                          </div>
-                      ))
-                    }
-                    </div>
+                    <RecentPositions />
                     {/* Full Positions Table */}
                     <div
                       className={`absolute bottom-0 left-0 z-30 flex max-h-[70%] w-full flex-col overflow-hidden border-t border-zinc-800/80 bg-background transition-all duration-200 ease-out ${
@@ -791,25 +804,15 @@ export default function ClientView() {
                       }`}
                       aria-hidden={!isPositionsOverlayOpen}
                     >
-                      <div className="flex flex-nowrap items-center justify-between gap-3 bg-surface-800 px-3 py-2 text-sm font-medium text-zinc-300">
-                        <button
-                          type="button"
-                          onClick={() => setIsPositionsOverlayOpen(false)}
-                          className="flex h-8 w-8 items-center justify-center rounded-none border-t border-r border-zinc-800/80 bg-overlay-900 text-zinc-400 transition-colors hover:bg-neutral-900 hover:text-zinc-200"
-                          aria-label="Collapse positions overlay"
-                        >
-                          <ChevronDown size={16} />
-                        </button>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="h-full w-full overflow-y-auto">
+                        {positionsOverlayView === 'positions' ? (
+                          renderPositionsTable()
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-zinc-400">Positions history is not available yet.</div>
+                        )}
                       </div>
-                      <div className="flex-1 overflow-hidden">
-                        <div className="h-full w-full overflow-y-auto">
-                          {positionsOverlayView === 'positions' ? (
-                            renderPositionsTable()
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-zinc-400">Positions history is not available yet.</div>
-                          )}
-                        </div>
-                      </div>
+                    </div>
                     </div>
                 </div>
               )}
