@@ -112,87 +112,8 @@ const Footer = React.memo(function Footer({
     isBackendConnected ? 'bg-trading-positive' : 'bg-trading-negative',
   ].join(' ');
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
-      <div className="h-8 px-4 flex items-center justify-between text-xs text-zinc-400">
-        <div className="flex items-center gap-4">
-                    
-          {/* Connection Status - Dynamic styling based on connection */}
-          <div className={connectionClasses}>
-            <div className={indicatorClasses}></div>
-            {isWebSocketConnected ? 'Connected' : 'Disconnected'}
-            
-            {/* Tooltip with detailed connection info and performance metrics */}
-            <div 
-              className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 min-w-[260px] whitespace-nowrap rounded-lg border border-zinc-700/50 bg-status-glass px-3 py-2.5 opacity-0 shadow-2xl backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
-            >
-              <div className="text-xs text-zinc-300 space-y-2">
-                {/* Status Header with inline status */}
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs font-medium ${connectionLabelClass}`}>
-                    {isWebSocketConnected ? 'Live Data Feed' : 'Connection Failed'}
-                  </span>
-                  <span className={`text-xs ${connectionLabelClass}`}>
-                    {isWebSocketConnected ? 'Connected' : 'Disconnected'}
-                  </span>
-                </div>
-                
-                {isWebSocketConnected ? (
-                  <>
-                    {/* Performance Metrics */}
-                    <div className="space-y-1 pt-1 border-t border-zinc-700/50">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">FPS:</span>
-                        <span className={fpsClass}>
-                          {fps}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Latency:</span>
-                        <span className={latencyClass}>
-                          {latencySeconds}s
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Memory:</span>
-                        <span className="text-zinc-300">
-                          <MemoryDisplay />
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Backend Status */}
-                    <div className="pt-1 border-t border-zinc-700/50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400">Backend API:</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className={backendDotClasses} />
-                          <span className={backendStatusClasses}>
-                            {isBackendConnected ? 'Connected' : 'Disconnected'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="pt-1">No active connections</div>
-                    <div className="text-zinc-500">Check your internet connection</div>
-                    <div className="text-zinc-500">Retrying automatically...</div>
-                  </>
-                )}
-              </div>
-              {/* Arrow */}
-              <div 
-                className="absolute top-full right-4 h-0 w-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-status-glass" 
-              />
-            </div>
-          </div>
-        </div>
-        
-        {/* Right side - Styles for Dev, PnL Tracker, Customize, and social links */}
-        <div className="flex items-center gap-4">
-          {/* Separator */}
-          <div className="w-px h-4 bg-white/20"></div>
+    <footer className="fixed bottom-0 left-16 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
+      <div className="h-8 px-4 flex items-center justify-end gap-4 text-xs text-zinc-400">
           
           {/* PnL Tracker Button */}
           <button 
@@ -269,8 +190,80 @@ const Footer = React.memo(function Footer({
             </svg>
             <span>Docs</span>
           </a> */}
+
+           {/* Connection Status - Dynamic styling based on connection */}
+           <div className={connectionClasses}>
+            <div className={indicatorClasses}></div>
+            {isWebSocketConnected ? 'Connected' : 'Disconnected'}
+            
+            {/* Tooltip with detailed connection info and performance metrics */}
+            <div 
+              className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 min-w-[260px] whitespace-nowrap rounded-lg border border-zinc-700/50 bg-status-glass px-3 py-2.5 opacity-0 shadow-2xl backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
+            >
+              <div className="text-xs text-zinc-300 space-y-2">
+                {/* Status Header with inline status */}
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-medium ${connectionLabelClass}`}>
+                    {isWebSocketConnected ? 'Live Data Feed' : 'Connection Failed'}
+                  </span>
+                  <span className={`text-xs ${connectionLabelClass}`}>
+                    {isWebSocketConnected ? 'Connected' : 'Disconnected'}
+                  </span>
+                </div>
+                
+                {isWebSocketConnected ? (
+                  <>
+                    {/* Performance Metrics */}
+                    <div className="space-y-1 pt-1 border-t border-zinc-700/50">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">FPS:</span>
+                        <span className={fpsClass}>
+                          {fps}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Latency:</span>
+                        <span className={latencyClass}>
+                          {latencySeconds}s
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Memory:</span>
+                        <span className="text-zinc-300">
+                          <MemoryDisplay />
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Backend Status */}
+                    <div className="pt-1 border-t border-zinc-700/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-400">Backend API:</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className={backendDotClasses} />
+                          <span className={backendStatusClasses}>
+                            {isBackendConnected ? 'Connected' : 'Disconnected'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="pt-1">No active connections</div>
+                    <div className="text-zinc-500">Check your internet connection</div>
+                    <div className="text-zinc-500">Retrying automatically...</div>
+                  </>
+                )}
+              </div>
+              {/* Arrow */}
+              <div 
+                className="absolute top-full right-4 h-0 w-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-status-glass" 
+              />
+            </div>
+          </div>
+
         </div>
-      </div>
     </footer>
   );
 }, (prevProps, nextProps) => {

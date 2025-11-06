@@ -144,7 +144,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
 
   return (
     <div className="min-h-screen bg-background text-zinc-100">
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed top-0 left-16 right-0 z-50">
         <Navbar
           onDepositOpen={deposit.open}
           depositButtonRef={depositButtonRef}
@@ -158,7 +158,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         />
       </div>
 
-      <div className="fixed left-0 top-14 z-30 w-16">
+      <div className="fixed left-0 top-0 z-30 w-16">
         <div className="relative">
           <SidebarRail
             isCollapsed={sidebarCollapsed}
