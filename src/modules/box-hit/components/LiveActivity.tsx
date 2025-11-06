@@ -71,7 +71,7 @@ export default function LiveActivity() {
                     key={activity.id}
                     className='grid grid-cols-4 gap-x-2 items-center py-2 px-2 text-xs font-regular'
                     >
-                        <ArrowUp size={16} className={clsx(isWin ? 'text-[#04C68A]' : 'text-[#DD4141] rotate-180')} />
+                        {isWin ? <TrendingUp size={16} className='text-[#04C68A]' /> : <TrendingDown size={16} className='text-[#DD4141]' />}
                         <p>{activity.amount}</p>
                         <p>@{activity.player}</p>
                         <p className={clsx("text-end", isWin ? 'text-[#04C68A]' : 'text-[#DD4141]')}>{isWin ? '+' : '-'}{activity.payout}</p>
