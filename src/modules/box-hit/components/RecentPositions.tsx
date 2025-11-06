@@ -1,5 +1,6 @@
 import { useUserStore } from '@/shared/state';
-import React, { useMemo } from 'react'
+import clsx from 'clsx';
+import React, { useMemo, useState } from 'react'
 
 export default function RecentPositions() {
     const tradeHistory = useUserStore((state) => state.tradeHistory);
@@ -12,18 +13,67 @@ export default function RecentPositions() {
                 size: trade.amount,
                 equity: `$${trade.amount.toFixed(2)}`,
                 hit: trade.result === 'win' ? 'Win' : 'Loss',
+                time: trade.settledAt,
+                multiplier: trade.payout ? trade.payout / trade.amount : 0,
             }));
     }, [tradeHistory]);
     
     return (
         <div className='flex w-full items-center'>
-           {
-            recentPositions.map((position, index) => (
-                <div key={index} style={{backgroundColor: position.hit === 'Win' ? '#101212' : '#130E11'}} className='flex-1 text-center p-5'>
-                    <p style={{color: position.hit === 'Win' ? '#04C68AB2' : '#DD4141B2'}} className='text-xs'>${position.size.toFixed(2)}</p>
-                </div>
-            ))
-           }
+            {recentPositions.map((position, index) => <RecentPosition key={index} position={position} />)}
         </div>
+    )
+}
+
+const RecentPosition = ({ position }: { position: any }) => {
+    const [isHovering, setIsHovering] = useState(false);
+    return (
+        <div onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} key={position.id} style={{backgroundColor: position.hit === 'Win' ? '#101212' : '#130E11'}} className='relative flex-1 text-center p-2 z-30'>
+            <p style={{color: position.hit === 'Win' ? '#04C68AB2' : '#DD4141B2'}} className='text-xs'>${position.size.toFixed(2)}</p>
+            {isHovering && <RecentPositionHover position={position} />}
+        </div>
+    )
+}
+
+const RecentPositionHover = ({ position }: { position: any }) => {
+    return (
+        <div className='flex flex-col absolute bottom-0 -translate-y-[50%] left-1/2 -translate-x-1/2 bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/80 p-2 w-full gap-1'>
+            <p className={clsx("text-xs", position.hit === 'Win' ? 'text-[#04C68AB2]' : 'text-[#DD4141B2]')}>{position.hit}</p>
+            <p className='text-xs'>{position.multiplier.toFixed(1)}x</p>
+            <RelativeTime time={position.time} />
+        </div>
+    )
+}
+
+const RelativeTime = ({ time }: { time: Date }) => {
+    const relativeTime = useMemo(() => {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now.getTime() - new Date(time).getTime()) / 1000);
+        
+        if (diffInSeconds < 60) {
+            return 'just now';
+        }
+        
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) {
+            return `${diffInMinutes}m ago`;
+        }
+        
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) {
+            return `${diffInHours}h ago`;
+        }
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays < 7) {
+            return `${diffInDays}d ago`;
+        }
+        
+        const diffInWeeks = Math.floor(diffInDays / 7);
+        return `${diffInWeeks}w ago`;
+    }, [time]);
+
+    return (
+        <p className='text-xs shrink-0 text-neutral-600'>{relativeTime}</p>
     )
 }
