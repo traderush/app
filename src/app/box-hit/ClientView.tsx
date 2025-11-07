@@ -18,7 +18,6 @@ import type { BoxHitContract, BoxHitPositionMap } from '@/shared/types/boxHit';
 import LiveActivity from '@/modules/box-hit/components/LiveActivity';
 import { MOCK_ACTIVE_TRADES, MOCK_TRADE_HISTORY } from '@/shared/utils/mockTradeData';
 import RecentPositions from '@/modules/box-hit/components/RecentPositions';
-
 const MIN_CANVAS_HEIGHT = 520;
 
 const isAssetKeySet = (value: unknown): value is Set<AssetKey> =>
