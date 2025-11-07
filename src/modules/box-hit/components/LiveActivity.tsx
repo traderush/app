@@ -59,9 +59,6 @@ export default function LiveActivity() {
     
       return (
         <div>
-            <div className='p-2 border-t border-zinc-800/80'>
-                <p className='text-sm'>Live Feed</p>
-            </div>
             <div className="max-h-80 overflow-y-auto">
                 {activities.map((activity) => {
                 const isWin = activity.action === 'won';
