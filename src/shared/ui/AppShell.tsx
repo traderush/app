@@ -20,6 +20,7 @@ type AppModals = {
   customize: ModalController;
   watchlist: ModalController;
   pnLCustomize: ModalController;
+  mobileMenu: ModalController;
 };
 
 const useAppModals = (): AppModals => ({
@@ -33,6 +34,7 @@ const useAppModals = (): AppModals => ({
   customize: useModal('customize'),
   watchlist: useModal('watchlist'),
   pnLCustomize: useModal('pnLCustomize'),
+  mobileMenu: useModal('mobileMenu'),
 });
 
 const useAppModalRefs = () => ({
@@ -44,6 +46,7 @@ const useAppModalRefs = () => ({
   rewardsButtonRef: React.useRef<HTMLButtonElement | null>(null),
   pnLTrackerButtonRef: React.useRef<HTMLButtonElement | null>(null),
   customizeButtonRef: React.useRef<HTMLButtonElement | null>(null),
+  mobileMenuButtonRef: React.useRef<HTMLButtonElement | null>(null),
 });
 
 const AppShellContent = memo(function AppShellContent({ children }: { children: React.ReactNode }) {
@@ -70,6 +73,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     customize,
     watchlist,
     pnLCustomize,
+    mobileMenu,
   } = modals;
 
   const {
@@ -81,6 +85,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     rewardsButtonRef,
     pnLTrackerButtonRef,
     customizeButtonRef,
+    mobileMenuButtonRef,
   } = modalRefs;
 
   const isWebSocketConnected = true;
@@ -139,7 +144,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
 
   return (
     <div className="min-h-screen bg-background text-zinc-100">
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed top-0 left-16 right-0 z-50">
         <Navbar
           onDepositOpen={deposit.open}
           depositButtonRef={depositButtonRef}
@@ -148,10 +153,12 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           onProfileOpen={handlePlayerProfileOpen}
           onNewsUpdatesOpen={newsUpdates.open}
           newsUpdatesButtonRef={newsUpdatesButtonRef}
+          mobileMenuButtonRef={mobileMenuButtonRef}
+          onMobileMenuOpen={mobileMenu.open}
         />
       </div>
 
-      <div className="fixed left-0 top-14 z-30 w-16">
+      <div className="fixed left-0 top-0 z-30 w-16">
         <div className="relative">
           <SidebarRail
             isCollapsed={sidebarCollapsed}
@@ -200,6 +207,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           newsUpdatesButtonRef,
           rewardsButtonRef,
           customizeButtonRef,
+          mobileMenuButtonRef,
         }}
         modals={{
           deposit,
@@ -212,6 +220,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           customize,
           watchlist,
           pnLCustomize,
+          mobileMenu,
         }}
         watchedPlayers={watchedPlayers}
         onUpdateWatchedPlayers={handleWatchedPlayersUpdate}

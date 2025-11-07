@@ -15,20 +15,9 @@ import { ASSETS, DEFAULT_TRADE_AMOUNT, TIMEFRAME_OPTIONS } from './constants';
 import type { AssetInfo, AssetKey } from './constants';
 import { useToasts } from './hooks/useToasts';
 import type { BoxHitContract, BoxHitPositionMap } from '@/shared/types/boxHit';
+import LiveActivity from '@/modules/box-hit/components/LiveActivity';
 import { MOCK_ACTIVE_TRADES, MOCK_TRADE_HISTORY } from '@/shared/utils/mockTradeData';
 import RecentPositions from '@/modules/box-hit/components/RecentPositions';
-
-type ActivityAction = 'won' | 'lost';
-
-interface ActivityEntry {
-  id: number;
-  player: string;
-  action: ActivityAction;
-  multiplier: string;
-  amount: string;
-  payout: string;
-  time: string;
-}
 
 const MIN_CANVAS_HEIGHT = 520;
 
@@ -37,111 +26,6 @@ const isAssetKeySet = (value: unknown): value is Set<AssetKey> =>
 
 const isAssetKeyArray = (value: unknown): value is AssetKey[] =>
   Array.isArray(value);
-
-const ActivityPanel = () => {
-  const [activities, setActivities] = useState<ActivityEntry[]>([
-    { id: 1, player: 'Dc4q...5X4i', action: 'won', multiplier: '2.5x', amount: '$250', payout: '$625', time: '2s ago' },
-    { id: 2, player: 'Kj8m...9Y2p', action: 'won', multiplier: '1.8x', amount: '$150', payout: '$270', time: '5s ago' },
-    { id: 3, player: 'Xw2n...7H6q', action: 'won', multiplier: '3.0x', amount: '$450', payout: '$1,350', time: '8s ago' },
-    { id: 4, player: 'Lp5v...3M8r', action: 'lost', multiplier: '2.2x', amount: '$100', payout: '$100', time: '12s ago' },
-    { id: 5, player: 'Qr9t...1B4s', action: 'lost', multiplier: '2.0x', amount: '$200', payout: '$200', time: '15s ago' },
-    { id: 6, player: 'Fh6u...8C2w', action: 'won', multiplier: '1.5x', amount: '$300', payout: '$450', time: '18s ago' },
-    { id: 7, player: 'Gm7i...5E9x', action: 'won', multiplier: '1.8x', amount: '$180', payout: '$324', time: '22s ago' },
-    { id: 8, player: 'Vk4o...2A7z', action: 'lost', multiplier: '2.8x', amount: '$75', payout: '$75', time: '25s ago' },
-    { id: 9, player: 'Bw3l...6N1y', action: 'lost', multiplier: '2.1x', amount: '$120', payout: '$120', time: '28s ago' },
-    { id: 10, player: 'Hj8p...4Q5t', action: 'won', multiplier: '1.2x', amount: '$500', payout: '$600', time: '32s ago' },
-  ]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const amount = Math.floor(Math.random() * 500) + 50;
-      const multiplier = (Math.random() * 3 + 1).toFixed(1);
-      const action: ActivityAction = Math.random() > 0.5 ? 'won' : 'lost';
-      const payout =
-        action === 'lost'
-          ? `$${amount}`
-          : `$${Math.floor(amount * Number(multiplier)).toLocaleString()}`;
-
-      setActivities((prev) => [
-        {
-          id: Date.now(),
-          player: `${Math.random().toString(36).slice(2, 6)}...${Math.random()
-            .toString(36)
-            .slice(2, 6)}`,
-          action,
-          multiplier: `${multiplier}x`,
-          amount: `$${amount}`,
-          payout,
-          time: 'now',
-        },
-        ...prev.slice(0, 9),
-      ]);
-    }, 3000 + Math.random() * 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div
-      className="overflow-hidden"
-    >
-      <div className="py-4">
-        <div className="mb-3 border-t border-zinc-800/80 pt-4">
-          <div className="flex items-center justify-between pb-2 px-4">
-            <span className="text-sm font-medium text-zinc-300">Live Activity</span>
-            <div className="flex items-center gap-1">
-              <div
-                className="h-3 w-3 rounded-full border-2 border-live-border bg-live"
-              />
-              <span className="text-xs font-medium text-zinc-400">Live</span>
-            </div>
-          </div>
-          <div className="border-b border-zinc-800/80" />
-        </div>
-
-        <div className="-mx-4 max-h-80 space-y-1 overflow-y-auto px-4">
-          {activities.map((activity) => {
-            const isWin = activity.action === 'won';
-            return (
-              <div
-                key={activity.id}
-                className="flex items-center gap-2 px-4 py-1 transition-colors hover:bg-zinc-800/30"
-              >
-                <div className="flex-shrink-0">
-                  <User size={16} className="text-muted-icon" />
-                </div>
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="truncate text-xs font-medium text-zinc-300">
-                    {activity.player}
-                  </span>
-                  <span className="text-[11px] text-zinc-500">{activity.action}</span>
-                  <div className="flex items-center gap-1">
-                    {isWin ? (
-                      <TrendingUp size={12} className="text-trading-positive" />
-                    ) : (
-                      <TrendingDown size={12} className="text-trading-negative" />
-                    )}
-                    <span
-                      className={`text-xs font-medium ${
-                        isWin ? 'text-trading-positive' : 'text-trading-negative'
-                      }`}
-                    >
-                      {activity.payout}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-zinc-500">({activity.multiplier})</span>
-                </div>
-                <div className="flex flex-shrink-0 items-center">
-                  <span className="text-[10px] text-zinc-500">{activity.time}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 /**
  * Main ClientView component for the BoxHit trading game
@@ -841,7 +725,7 @@ export default function ClientView() {
             tradeAmount={tradeAmount}
             onTradeAmountChange={setTradeAmount}
           />
-          <ActivityPanel />
+          <LiveActivity />
         </div>
       </div>
       

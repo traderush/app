@@ -7,6 +7,7 @@ import { Menu, Bell } from 'lucide-react';
 import clsxUtility from 'clsx';
 import { useUIStore } from '@/shared/state';
 import { useUserStore } from '@/shared/state/userStore';
+
 import {
   PRIMARY_NAVIGATION,
   NOTIFICATION_COUNT,
@@ -21,6 +22,8 @@ interface NavbarProps {
   onProfileOpen: () => void;
   onNewsUpdatesOpen: () => void;
   newsUpdatesButtonRef: React.RefObject<HTMLButtonElement | null>;
+  mobileMenuButtonRef: React.RefObject<HTMLButtonElement | null>;
+  onMobileMenuOpen: () => void;
 }
 
 const Navbar = React.memo(function Navbar({
@@ -31,6 +34,8 @@ const Navbar = React.memo(function Navbar({
   onProfileOpen,
   onNewsUpdatesOpen: _onNewsUpdatesOpen,
   newsUpdatesButtonRef: _newsUpdatesButtonRef,
+  mobileMenuButtonRef: _mobileMenuButtonRef,
+  onMobileMenuOpen: _onMobileMenuOpen,
 }: NavbarProps) {
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
@@ -40,22 +45,12 @@ const Navbar = React.memo(function Navbar({
     <>
       <header className="w-full border-b border-zinc-800/80 bg-background backdrop-blur">
         <div className="flex h-14 w-full items-center gap-4 px-4">
-          <div className="flex w-full justify-between">
-            {/* Brand */}
-            <Link href="/" className="flex items-center">
-              <Image
-                src="https://i.ibb.co/DPzsQbm0/a-logo.png"
-                alt="TradeRush Logo"
-                width={96}
-                height={24}
-                className="h-6 w-auto"
-                priority
-              />
-            </Link>
 
-            {/* Scrollable game tabs */}
-            {/* <ScrollableGameTabs items={GAME_TABS} bg="#09090B" /> */}
+          <button className='group shrink-0 text-xs bg-[#FFFFFF05] hover:bg-[#FFFFFF10] rounded-sm px-4 py-2 transition-colors cursor-pointer'>
+            <p className='group-hover:bg-[#0445c6] bg-gradient-to-r from-[#0475C687] to-[#0475C6] bg-clip-text text-transparent transition-colors'>Get a 20% Discount on Trading Fees ⋆˙⟡</p>
+          </button>
 
+          <div className="flex w-full justify-end">
 
             {/* Additional menu items */}
             <nav className="max-lg:hidden flex items-center gap-4">
@@ -155,9 +150,9 @@ const Navbar = React.memo(function Navbar({
                 height={40}
                 className="w-10 h-10 rounded object-cover hover:opacity-80 transition-opacity"
               />
-            </button>
+            </button> 
             {/* Menu button */}
-            <button className="lg:hidden grid place-items-center w-8 h-8 text-zinc-300 hover:text-zinc-100 cursor-pointer">
+            <button ref={_mobileMenuButtonRef} onClick={_onMobileMenuOpen} className="lg:hidden grid place-items-center w-8 h-8 text-zinc-300 hover:text-zinc-100 cursor-pointer">
               <Menu size={16} />
             </button>
           </div>
