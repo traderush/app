@@ -45,14 +45,13 @@ const SidebarRail = React.memo(function SidebarRail({
       )}>
         <div className='flex flex-col items-center gap-4'>
           {/* Brand */}
-          <Link href="/" className="relative aspect-square w-12 flex items-center">
-            <Image  
-              src={Logo}
-              alt="TradeRush Logo"
-              className="object-contain"
-              fill
-              priority
-            />
+          <Link href="/" className="relative aspect-square w-8 mt-2.5 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 304 234.53">
+              <g>
+                <path fill="#fe7701" d="M150.5 22 76.75 234l-1.47.53L26 234 81.01 73.26 0 72.5 18.25 22H150.5z"/>
+                <path fill="#bf5401" d="m304 0-19 49.75L205.25 51l-55.5 161.5H99.5L172.75 0H304z"/>
+              </g>
+            </svg>
           </Link>
           
           {/* Active Positions placeholder */}
