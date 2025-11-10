@@ -67,19 +67,15 @@ function RightPanel({
 
 
   return (
-    <aside className="w-[400px] flex-shrink-0 bg-zinc-950/60 pr-0">
-      <div className="space-y-0 p-4">
-
-        <div className="pb-4 pt-2">
-
-          <div className="-mx-4 flex items-center justify-center gap-2 bg-trading-negative/10 px-3 py-2">
-            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-trading-negative/20">
-              <span className="text-xs font-bold text-trading-negative">i</span>
-            </div>
-            <span className="text-[12px] text-trading-negative">
-              Your trades will be live after selecting each box
-            </span>
+    <aside className="bg-zinc-950/60 border border-zinc-800/80 p-2 rounded-sm">
+      <div className='flex flex-col gap-3'>
+        <div className="flex items-center justify-center gap-2 bg-trading-negative/10 px-3 py-2">
+          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-trading-negative/20">
+            <span className="text-xs font-bold text-trading-negative">i</span>
           </div>
+          <span className="text-[12px] text-trading-negative">
+            Your trades will be live after selecting each box
+          </span>
         </div>
 
         <div>
@@ -173,36 +169,6 @@ function RightPanel({
             </div>
           </div>
 
-          <div className="mb-4 space-y-2 rounded-lg border border-zinc-800/80 bg-surface-850 px-3 py-2">
-            <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>Current Price</span>
-              <span className="text-zinc-300">
-                {currentBTCPrice
-                  ? `$${currentBTCPrice.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`
-                  : '...'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>Avg Position Price</span>
-              <span className="text-zinc-300">
-                {selectedCount > 0
-                  ? averagePositionPrice && averagePositionPrice > 0
-                    ? `$${averagePositionPrice.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}`
-                    : `$${currentBTCPrice.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}`
-                  : '-'}
-              </span>
-            </div>
-          </div>
-
           <button
             onClick={() => {
               if (!isTradingMode) {
@@ -233,7 +199,7 @@ function RightPanel({
             {isTradingMode ? 'Exit Trading' : 'Start Trading'}
           </button>
 
-          <div className="mt-1 flex items-center justify-between">
+          <div className="mt-2 flex items-center justify-between">
             <button
               onClick={() => setShowLiquidityToggle((value) => !value)}
               className="flex items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-zinc-300"

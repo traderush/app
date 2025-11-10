@@ -633,8 +633,8 @@ export class GridGame extends BaseGame {
 
     if (data.length < 2) {
       // Still render Y-axis and X-axis even without price data
-      this.renderYAxis();
-      this.renderXAxis();
+      // this.renderYAxis();
+      // this.renderXAxis();
 
       // Draw a message when waiting for data
       this.ctx.save();
@@ -656,10 +656,10 @@ export class GridGame extends BaseGame {
     this.renderPriceLine(data);
 
     // Draw Y-axis last (on top as overlay)
-    this.renderYAxis();
+    // this.renderYAxis();
 
     // Draw X-axis
-    this.renderXAxis();
+    // this.renderXAxis();
 
     // Selectability boundary (dashed vertical line) disabled for cleaner look
     // if (
