@@ -182,7 +182,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         }`}
       >
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(244,114,182,0.10),transparent)]" />
-        <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-auto [&>*]:min-h-0 [&>*]:flex-1">
+        <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-auto [&>*]:min-h-0 [&>*]:flex-1 overflow-hidden">
           {children}
         </div>
       </main>

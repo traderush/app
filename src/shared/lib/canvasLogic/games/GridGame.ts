@@ -825,6 +825,46 @@ export class GridGame extends BaseGame {
   }
 
   /**
+   * Calculate viewport bounds in world coordinates for culling
+   * @param buffer - Extra space around viewport to include partially visible boxes
+   * @returns Viewport bounds in world space
+   */
+  private getViewportBoundsForCulling(buffer: number = 100): {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  } {
+    const viewportBounds = this.world.getVisibleWorldBounds(0);
+    return {
+      minX: viewportBounds.left - buffer,
+      maxX: viewportBounds.right + buffer,
+      minY: viewportBounds.bottom - buffer,
+      maxY: viewportBounds.top + buffer,
+    };
+  }
+
+  /**
+   * Check if a box is outside the viewport (for early culling)
+   * @param box - Box with worldX, worldY, width, height
+   * @param viewport - Viewport bounds in world coordinates
+   * @returns true if box is outside viewport, false if visible
+   */
+  private isBoxOutsideViewport(
+    box: { worldX: number; worldY: number; width: number; height: number },
+    viewport: { minX: number; maxX: number; minY: number; maxY: number }
+  ): boolean {
+    const boxRightEdge = box.worldX + box.width;
+    const boxTopEdge = box.worldY + box.height;
+    return (
+      boxRightEdge < viewport.minX ||
+      box.worldX > viewport.maxX ||
+      boxTopEdge < viewport.minY ||
+      box.worldY > viewport.maxY
+    );
+  }
+
+  /**
    * Render probability heatmap overlay on unselected boxes
    * Uses color coding: Green (high probability) -> Yellow (medium) -> Red (low probability)
    * Probability is calculated based on multiplier values (lower multiplier = higher probability)
@@ -843,6 +883,9 @@ export class GridGame extends BaseGame {
     ) {
       return;
     }
+    
+    // ⚡ VIEWPORT CULLING: Calculate viewport bounds in world coordinates
+    const viewport = this.getViewportBoundsForCulling();
     
     // Combine backend boxes with empty boxes for rendering
     // NOTE: Empty boxes do NOT have multiplier values - heatmap only shows on backend boxes
@@ -873,6 +916,7 @@ export class GridGame extends BaseGame {
     let skippedNoValue = 0;
     let skippedMinMult = 0;
     let skippedOffscreen = 0;
+    let skippedViewportCull = 0;
 
     const now = Date.now();
     if (now - this.lastDebugLog > 2000) {
@@ -885,6 +929,12 @@ export class GridGame extends BaseGame {
     }
 
     Object.entries(allBoxes).forEach(([squareId, box]) => {
+      // ⚡ EARLY VIEWPORT CULL: Check world coordinates before expensive worldToScreen conversion
+      if (this.isBoxOutsideViewport(box, viewport)) {
+        skippedViewportCull++;
+        return;
+      }
+      
       // Skip if we have visible squares defined and this square is not in the list
       if (this.visibleSquares.size > 0 && !this.visibleSquares.has(squareId)) {
         skippedVisibility++;
@@ -981,13 +1031,14 @@ export class GridGame extends BaseGame {
       this.debug('🔍 GridGame: Heatmap rendering complete', {
         rendered: renderedCount,
         skipped: {
+          viewportCull: skippedViewportCull,
           visibility: skippedVisibility,
           selected: skippedSelected,
           empty: skippedEmpty,
           noValue: skippedNoValue,
           minMult: skippedMinMult,
           offscreen: skippedOffscreen,
-          total: skippedVisibility + skippedSelected + skippedEmpty + skippedNoValue + skippedMinMult + skippedOffscreen,
+          total: skippedViewportCull + skippedVisibility + skippedSelected + skippedEmpty + skippedNoValue + skippedMinMult + skippedOffscreen,
         }
       });
       this.lastDebugLog = now;
@@ -1003,6 +1054,9 @@ export class GridGame extends BaseGame {
       return;
     }
 
+    // ⚡ VIEWPORT CULLING: Calculate viewport bounds in world coordinates
+    const viewport = this.getViewportBoundsForCulling(100);
+
     // Use only backend boxes (filler grid archived)
     const allBoxes = {
       ...this.backendMultipliers
@@ -1013,6 +1067,11 @@ export class GridGame extends BaseGame {
 
     // Render all boxes (backend + empty)
     Object.entries(allBoxes).forEach(([squareId, box]) => {
+      // ⚡ EARLY VIEWPORT CULL: Check world coordinates before expensive worldToScreen conversion
+      if (this.isBoxOutsideViewport(box, viewport)) {
+        return;
+      }
+      
       // Skip if we have visible squares defined and this square is not in the list
       if (this.visibleSquares.size > 0 && !this.visibleSquares.has(squareId)) {
         return;
