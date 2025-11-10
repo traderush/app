@@ -143,8 +143,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
   }, [customize]);
 
   return (
-    <div className="min-h-screen bg-background text-zinc-100">
-      <div className="fixed top-0 left-16 right-0 z-50">
+    <div className="min-h-screen bg-black text-zinc-100">
+      <div className="fixed top-0 left-18 right-0 z-50">
         <Navbar
           onDepositOpen={deposit.open}
           depositButtonRef={depositButtonRef}
@@ -158,31 +158,26 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         />
       </div>
 
-      <div className="fixed left-0 top-0 z-30 w-16">
-        <div className="relative">
-          <SidebarRail
-            isCollapsed={sidebarCollapsed}
-            onSettingsOpen={settings.open}
-            settingsButtonRef={settingsButtonRef}
-            onHowToPlayOpen={howToPlay.open}
-            howToPlayButtonRef={howToPlayButtonRef}
-            onRewardsOpen={rewards.open}
-            rewardsButtonRef={rewardsButtonRef}
-            onWatchlistOpen={watchlist.open}
-            onPlayerClick={openPlayerTracker}
-            watchedPlayers={watchedPlayers}
-            onSoundToggle={handleSoundToggle}
-          />
-        </div>
-      </div>
+      <SidebarRail
+        isCollapsed={sidebarCollapsed}
+        onSettingsOpen={settings.open}
+        settingsButtonRef={settingsButtonRef}
+        onHowToPlayOpen={howToPlay.open}
+        howToPlayButtonRef={howToPlayButtonRef}
+        onRewardsOpen={rewards.open}
+        rewardsButtonRef={rewardsButtonRef}
+        onWatchlistOpen={watchlist.open}
+        onPlayerClick={openPlayerTracker}
+        watchedPlayers={watchedPlayers}
+        onSoundToggle={handleSoundToggle}
+      />
 
       <main
-        className={`relative flex h-[calc(100vh-32px)] min-h-[calc(100vh-32px)] flex-col overflow-hidden pt-14 transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-0' : 'ml-16'
+        className={`h-screen relative flex flex-col pt-11 transition-all duration-300 ${
+          sidebarCollapsed ? 'ml-0' : 'ml-18'
         }`}
       >
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(244,114,182,0.10),transparent)]" />
-        <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-auto [&>*]:min-h-0 [&>*]:flex-1">
+        <div className='h-full p-3 pl-0'>
           {children}
         </div>
       </main>

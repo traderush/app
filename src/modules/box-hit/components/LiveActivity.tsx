@@ -58,8 +58,8 @@ export default function LiveActivity() {
       }, []);
     
       return (
-        <div>
-            <div className="max-h-80 overflow-y-auto">
+        <div className='border border-zinc-800/80 rounded-sm p-2'>
+            <div className="max-h-80">
                 {activities.map((activity) => {
                 const isWin = activity.action === 'won';
                 return (

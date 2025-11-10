@@ -96,7 +96,7 @@ const Footer = React.memo(function Footer({
   const fpsClass =
     fps >= 55 ? 'text-trading-positive' : fps >= 30 ? 'text-warning' : 'text-trading-negative';
   const connectionClasses = [
-    'group relative flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors border',
+    'group relative flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition-colors border',
     isWebSocketConnected
       ? 'border-live-border bg-status-liveBg text-live'
       : 'border-status-downBorder bg-status-downBg text-trading-negative',
@@ -112,24 +112,8 @@ const Footer = React.memo(function Footer({
     isBackendConnected ? 'bg-trading-positive' : 'bg-trading-negative',
   ].join(' ');
   return (
-    <footer className="fixed bottom-0 left-16 right-0 z-30 border-t border-zinc-800/80 bg-zinc-950/75 backdrop-blur">
-      <div className="h-8 px-4 flex items-center justify-end gap-4 text-xs text-zinc-400">
-          
-          {/* PnL Tracker Button */}
-          <button 
-            ref={pnLTrackerButtonRef}
-            onClick={onPnLTrackerOpen}
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-            </svg>
-            <span>PnL Tracker</span>
-          </button>
-          
-          {/* Separator */}
-          <div className="w-px h-4 bg-white/20"></div>
-          
+    <footer className="fixed bottom-3 right-3 z-30">
+      <div className="h-8 flex items-center justify-between p-2 gap-4 text-xs text-zinc-400 w-[400px] bg-black border border-zinc-800 rounded-sm">
           {/* Customize Button */}
           <button 
             ref={customizeButtonRef}
@@ -277,5 +261,12 @@ const Footer = React.memo(function Footer({
     prevProps.onSettingsOpen === nextProps.onSettingsOpen
   );
 });
+
+export const FooterSkeleton = ({ wireframes }: { wireframes?: boolean }) => {
+  return (
+    <div style={{ borderWidth: wireframes ? 1 : 0 }} className='w-[400px] h-8 border border-red-600 rounded-sm'>
+    </div>
+  )
+}
 
 export default Footer;

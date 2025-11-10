@@ -18,6 +18,7 @@ import type { BoxHitContract, BoxHitPositionMap } from '@/shared/types/boxHit';
 import LiveActivity from '@/modules/box-hit/components/LiveActivity';
 import { MOCK_ACTIVE_TRADES, MOCK_TRADE_HISTORY } from '@/shared/utils/mockTradeData';
 import RecentPositions from '@/modules/box-hit/components/RecentPositions';
+import { FooterSkeleton } from '@/shared/ui/Footer';
 
 const MIN_CANVAS_HEIGHT = 520;
 
@@ -382,124 +383,125 @@ export default function ClientView() {
 
   return (
     <>
-      <div className="relative flex h-full w-full bg-zinc-950 text-white ">
+      <div className="h-full relative flex text-white gap-3">
         {/* Left side with header and canvas */}
-        <div ref={leftColumnRef} className="flex flex-1 flex-col">
+        <div ref={leftColumnRef} className="flex flex-1 flex-col p-0.5 rounded-sm border border-zinc-800/80">
           {/* Top Bar - Only over Canvas */}
           <div
             ref={topBarRef}
-            className="relative z-10 flex h-16 w-full items-center justify-between border-b border-zinc-800 bg-background px-3"
+            className="relative z-10 flex h-12 w-full items-center justify-between border-zinc-800 bg-background px-3"
           >
-            <div className="flex items-center gap-4">
-              <div className="relative h-7 w-7 overflow-hidden rounded-lg">
-                <Image
-                  src={selectedAssetInfo.icon}
-                  alt={selectedAssetInfo.name}
-                  fill
-                  className="object-cover"
-                  sizes="28px"
-                />
-              </div>
-              <div className="relative asset-dropdown">
-                <div
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-opacity hover:opacity-80"
-                  onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
-                  title="Select asset"
-                >
-                  <span className="text-lg font-medium text-white leading-none">
-                    {selectedAssetInfo.symbol}
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    className={`text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`}
+            <div className="flex items-center gap-2">
+                <div className="relative h-7 w-7 overflow-hidden rounded-lg">
+                  <Image
+                    src={selectedAssetInfo.icon}
+                    alt={selectedAssetInfo.name}
+                    fill
+                    className="object-cover"
+                    sizes="28px"
                   />
                 </div>
-                {isAssetDropdownOpen && (
+                <div className="relative asset-dropdown">
                   <div
-                    className="absolute left-0 top-full z-50 mt-2 w-[360px] overflow-hidden rounded-lg border border-zinc-700/50 bg-[rgba(14,14,14,0.7)] shadow-2xl backdrop-blur-lg"
+                    className="flex cursor-pointer items-center gap-1 rounded-lg pl-1 py-1 transition-opacity hover:opacity-80"
+                    onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
+                    title="Select asset"
                   >
-                    {assetEntries.map(([key, asset]) => {
-                      const isFavorite = favoriteAssetSet.has(key as AssetKey);
-                      const isSelectable = key === 'DEMO';
-                      return (
-                        <div
-                          key={key}
-                          className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
-                            selectedAsset === key ? 'bg-zinc-800/50' : 'hover:bg-zinc-800/40'
-                          } ${isSelectable ? '' : 'opacity-50'}`}
-                          onClick={() => {
-                            if (isSelectable) {
-                              handleAssetSelect(key as AssetKey);
-                            }
-                          }}
-                          title={
-                            isSelectable
-                              ? `Select ${asset.name}`
-                              : 'Asset selection not available in mock backend mode'
-                          }
-                        >
-                          <button
-                            type="button"
-                            onClick={(event) => handleToggleFavorite(key as AssetKey, event)}
-                            className="flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-zinc-700/50"
-                          >
-                            <svg
-                              className={`h-3.5 w-3.5 transition-colors ${
-                                isFavorite ? 'fill-yellow-400 text-yellow-400' : 'fill-none text-zinc-500'
-                              }`}
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={isFavorite ? 0 : 1.5}
-                            >
-                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                            </svg>
-                          </button>
-                          <div className="relative h-7 w-7 overflow-hidden rounded">
-                            <Image
-                              src={asset.icon}
-                              alt={asset.name}
-                              fill
-                              className="object-cover"
-                              sizes="28px"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-white">{asset.symbol}</div>
-                            <div className="text-[11px] text-zinc-400">{asset.name}</div>
-                          </div>
-                          <div className="mr-2 text-right">
-                            <div className="text-xs font-medium text-white">
-                              {typeof asset.price === 'number'
-                                ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                                : <span className="text-zinc-500">--</span>}
-                            </div>
-                            <div
-                              className={`text-[11px] font-medium ${
-                                typeof asset.change24h === 'number'
-                                  ? asset.change24h >= 0
-                                    ? 'text-trading-positive'
-                                    : 'text-trading-negative'
-                                  : 'text-muted-icon'
-                              }`}
-                            >
-                              {typeof asset.change24h === 'number'
-                                ? `${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`
-                                : '--'}
-                            </div>
-                          </div>
-                          <div className="text-[11px] text-zinc-400">Vol: {asset.volume24h ?? '--'}</div>
-                        </div>
-                      );
-                    })}
+                    <span className="text-md font-medium text-white leading-none">
+                      {selectedAssetInfo.symbol}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      className={`text-zinc-400 transition-transform ${isAssetDropdownOpen ? 'rotate-180' : ''}`}
+                    />
                   </div>
-                )}
-              </div>
+                  {isAssetDropdownOpen && (
+                    <div
+                      className="absolute left-0 top-full z-50 mt-2 w-[360px] overflow-hidden rounded-lg border border-zinc-700/50 bg-[rgba(14,14,14,0.7)] shadow-2xl backdrop-blur-lg"
+                    >
+                      {assetEntries.map(([key, asset]) => {
+                        const isFavorite = favoriteAssetSet.has(key as AssetKey);
+                        const isSelectable = key === 'DEMO';
+                        return (
+                          <div
+                            key={key}
+                            className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
+                              selectedAsset === key ? 'bg-zinc-800/50' : 'hover:bg-zinc-800/40'
+                            } ${isSelectable ? '' : 'opacity-50'}`}
+                            onClick={() => {
+                              if (isSelectable) {
+                                handleAssetSelect(key as AssetKey);
+                              }
+                            }}
+                            title={
+                              isSelectable
+                                ? `Select ${asset.name}`
+                                : 'Asset selection not available in mock backend mode'
+                            }
+                          >
+                            <button
+                              type="button"
+                              onClick={(event) => handleToggleFavorite(key as AssetKey, event)}
+                              className="flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-zinc-700/50"
+                            >
+                              <svg
+                                className={`h-3.5 w-3.5 transition-colors ${
+                                  isFavorite ? 'fill-yellow-400 text-yellow-400' : 'fill-none text-zinc-500'
+                                }`}
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={isFavorite ? 0 : 1.5}
+                              >
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                            </button>
+                            <div className="relative h-7 w-7 overflow-hidden rounded">
+                              <Image
+                                src={asset.icon}
+                                alt={asset.name}
+                                fill
+                                className="object-cover"
+                                sizes="28px"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-medium text-white">{asset.symbol}</div>
+                              <div className="text-[11px] text-zinc-400">{asset.name}</div>
+                            </div>
+                            <div className="mr-2 text-right">
+                              <div className="text-xs font-medium text-white">
+                                {typeof asset.price === 'number'
+                                  ? asset.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                  : <span className="text-zinc-500">--</span>}
+                              </div>
+                              <div
+                                className={`text-[11px] font-medium ${
+                                  typeof asset.change24h === 'number'
+                                    ? asset.change24h >= 0
+                                      ? 'text-trading-positive'
+                                      : 'text-trading-negative'
+                                    : 'text-muted-icon'
+                                }`}
+                              >
+                                {typeof asset.change24h === 'number'
+                                  ? `${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`
+                                  : '--'}
+                              </div>
+                            </div>
+                            <div className="text-[11px] text-zinc-400">Vol: {asset.volume24h ?? '--'}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
               <div className="flex items-baseline gap-2">
-                <span className="text-[28px] font-semibold leading-none text-white">
+                <span className="text-[21px] font-semibold leading-none text-white min-w-[85px]">
                   ${displayPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 </span>
                 <span
-                  className={`text-sm font-semibold leading-none ${
+                  className={`text-[14px] leading-none ${
                     displayChange >= 0 ? 'text-trading-positive' : 'text-trading-negative'
                   }`}
                 >
@@ -508,8 +510,8 @@ export default function ClientView() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">Multiplier:</span>
                 <div
                   className="relative h-1 w-24 cursor-pointer rounded bg-zinc-800"
@@ -536,7 +538,7 @@ export default function ClientView() {
                   />
                 </div>
                 <span className="text-xs font-medium text-white">{minMultiplier.toFixed(1)}x</span>
-              </div>
+              </div> */}
               <div className="relative timeframe-dropdown">
                 <button
                   type="button"
@@ -714,19 +716,23 @@ export default function ClientView() {
         </div>
         
         {/* Right side: trading panel and activity panel */}
-        <div className="flex h-full w-[400px] flex-shrink-0 flex-col gap-4 border-l border-zinc-800/80">
-          <RightPanel 
-            isTradingMode={isCanvasStarted}
-            onTradingModeChange={handleTradingModeChange}
-            selectedCount={mockBackendSelectedCount}
-            selectedMultipliers={mockBackendSelectedMultipliers}
-            currentBTCPrice={mockBackendCurrentPrice}
-            averagePositionPrice={mockBackendSelectedAveragePrice || null}
-            tradeAmount={tradeAmount}
-            onTradeAmountChange={setTradeAmount}
-          />
-          <LiveActivity />
+        <div className='flex flex-col gap-3'>
+          <div className="flex w-[400px] flex-col gap-3 h-auto">
+            <RightPanel 
+              isTradingMode={isCanvasStarted}
+              onTradingModeChange={handleTradingModeChange}
+              selectedCount={mockBackendSelectedCount}
+              selectedMultipliers={mockBackendSelectedMultipliers}
+              currentBTCPrice={mockBackendCurrentPrice}
+              averagePositionPrice={mockBackendSelectedAveragePrice || null}
+              tradeAmount={tradeAmount}
+              onTradeAmountChange={setTradeAmount}
+            />
+            <LiveActivity />
+          </div>
+          <FooterSkeleton />
         </div>
+
       </div>
       
       {/* Toast Notifications - Stacked from bottom-right, oldest on top, newest on bottom */}
