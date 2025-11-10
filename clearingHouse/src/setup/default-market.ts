@@ -24,8 +24,8 @@ const SUPPORTED_TIMEFRAMES: Timeframe[] = [
 const BASE_TEMPLATE_CONFIG = {
   productTypeId: IRON_CONDOR_PRODUCT_ID,
   priceStep: 1,
-  placeOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 20_000 },
-  updateOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 20_000 },
+  placeOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 60_000 },
+  updateOrdersBounds: { pricePlusBound: 10, priceMinusBound: 10, timeBuffer: 0, timeLimit: 60_000 },
   cancelOrdersBounds: { pricePlusBound: 15, priceMinusBound: 15, timeBuffer: 0, timeLimit: 10_000 },
   symbol: Asset.BTC,
 } as const;
