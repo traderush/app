@@ -1729,8 +1729,8 @@ export class GridGame extends BaseGame {
     // This replaces individual box borders with a single grid system
     
     this.ctx.save();
-    const borderOpacity = this.config.showProbabilities ? 0.55 : 0.35;
-    this.ctx.strokeStyle = `rgba(43, 43, 43, ${borderOpacity})`; // Softer border to avoid glare
+    const borderOpacity = 1;
+    this.ctx.strokeStyle = `rgba(43, 43, 43, ${borderOpacity})`;
     const borderLineWidth = Math.max(1, Math.min(1.4, this.dpr * 0.6));
     const pixelAlignOffset = borderLineWidth % 2 === 0 ? 0 : 0.5;
     this.ctx.lineWidth = borderLineWidth;
