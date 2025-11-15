@@ -1,4 +1,4 @@
-import { GridGame } from '@/shared/lib/canvasLogic/games/GridGame';
+import { GridGame } from '@/shared/lib/canvasLogic/games/grid/GridGame';
 import { defaultTheme } from '@/shared/lib/canvasLogic/config/theme';
 import { getTimeframeConfig, getAllTimeframes, TimeFrame } from '@/shared/types/timeframe';
 import type { BoxHitContract, BoxHitPosition, BoxHitPositionMap } from '@/shared/types/boxHit';
@@ -988,11 +988,15 @@ export class CanvasController {
     if (!this.isStarted) {
       this.ensureGameInitialized(state);
       if (this.game) {
+        this.showCanvas();
         this.updateMultipliersAndSelections(state);
         this.processPriceSeries(state);
         this.updateContractResolutions();
       }
-      this.showPlaceholder();
+      else {
+        this.showPlaceholder();
+      }
+      
       return;
     }
 

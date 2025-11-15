@@ -1,4 +1,5 @@
-import type { Theme } from '../config/theme';
+import type { Theme } from '../../../config/theme';
+import { Renderer } from '../../../core/Renderer';
 
 export interface SquareRenderOptions {
   x: number;
@@ -27,17 +28,9 @@ export interface SquareRenderOptions {
   showUnifiedGrid?: boolean; // Whether unified grid is enabled (skip individual borders)
 }
 
-export class SquareRenderer {
-  private ctx: CanvasRenderingContext2D;
-  private theme: Theme;
-
+export class SquareRenderer extends Renderer {
   constructor(ctx: CanvasRenderingContext2D, theme: Theme) {
-    this.ctx = ctx;
-    this.theme = theme;
-  }
-
-  public setTheme(theme: Theme): void {
-    this.theme = theme;
+    super(ctx, theme);
   }
 
   public render(options: SquareRenderOptions): void {
@@ -62,7 +55,7 @@ export class SquareRenderer {
     const actualHeight = height ?? size ?? 50;
     const labelFontSize = Math.max(10, Math.min(16, actualWidth / 4));
 
-    this.ctx.save();
+    this.saveContext();
 
     // Apply global opacity for fade effect
     this.ctx.globalAlpha = opacity;
