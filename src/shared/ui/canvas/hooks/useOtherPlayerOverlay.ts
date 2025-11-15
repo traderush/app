@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { GridGame } from '@/shared/lib/canvasLogic/games/GridGame';
+import type { GridGame } from '@/shared/lib/canvasLogic/games/grid/GridGame';
 
 type PlayerType = 'leaderboard' | 'watchlist';
 

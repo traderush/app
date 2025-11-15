@@ -1,4 +1,5 @@
-import type { Theme } from '../config/theme'
+import type { Theme } from '../../../config/theme';
+import { Renderer } from '../../../core/Renderer';
 
 export interface Point {
   x: number
@@ -12,17 +13,9 @@ export interface LineRenderOptions {
   dashPattern?: number[]
 }
 
-export class LineRenderer {
-  private ctx: CanvasRenderingContext2D
-  private theme: Theme
-
+export class LineRenderer extends Renderer {
   constructor(ctx: CanvasRenderingContext2D, theme: Theme) {
-    this.ctx = ctx
-    this.theme = theme
-  }
-
-  public setTheme(theme: Theme): void {
-    this.theme = theme
+    super(ctx, theme);
   }
 
   public render(options: LineRenderOptions): void {
@@ -30,11 +23,10 @@ export class LineRenderer {
     
     if (points.length < 2) return
 
-    this.ctx.save()
+    this.saveContext()
 
     // Enable anti-aliasing
-    this.ctx.imageSmoothingEnabled = true
-    this.ctx.imageSmoothingQuality = 'high'
+    this.enableAntiAliasing()
 
     // Set line properties
     this.ctx.strokeStyle = this.theme.line.color
@@ -67,10 +59,10 @@ export class LineRenderer {
     this.drawLine(points, smooth)
 
     if (points.length > 0) {
-      this.ctx.restore() // Restore clipping
+      this.restoreContext() // Restore clipping
     }
 
-    this.ctx.restore()
+    this.restoreContext()
   }
 
   private drawLine(points: Point[], smooth: boolean): void {
@@ -155,7 +147,7 @@ export class LineRenderer {
   private drawGlow(points: Point[], smooth: boolean): void {
     if (!this.theme.line.glow) return
 
-    this.ctx.save()
+    this.saveContext()
     
     // Set glow properties
     this.ctx.shadowColor = this.theme.line.glow.color
@@ -165,22 +157,22 @@ export class LineRenderer {
     
     this.drawLine(points, smooth)
     
-    this.ctx.restore()
+    this.restoreContext()
   }
 
   public renderDot(x: number, y: number, radius: number = 5, color?: string): void {
-    this.ctx.save()
+    this.saveContext()
     
     this.ctx.fillStyle = color || this.theme.line.color
     this.ctx.beginPath()
     this.ctx.arc(x, y, radius, 0, Math.PI * 2)
     this.ctx.fill()
     
-    this.ctx.restore()
+    this.restoreContext()
   }
 
   public renderHorizontalLine(y: number, width: number, alpha: number = 0.3): void {
-    this.ctx.save()
+    this.saveContext()
     
     this.ctx.strokeStyle = this.theme.line.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba')
     this.ctx.lineWidth = 1
@@ -190,6 +182,6 @@ export class LineRenderer {
     this.ctx.lineTo(width, y)
     this.ctx.stroke()
     
-    this.ctx.restore()
+    this.restoreContext()
   }
 }
