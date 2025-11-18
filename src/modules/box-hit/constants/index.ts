@@ -8,6 +8,8 @@ export const ASSET_DATA = {
     price: 100,
     change24h: 2.5,
     volume24h: '45.20B',
+    high24h: 102.5,
+    low24h: 97.5,
   },
   BTC: {
     name: 'Bitcoin',
@@ -16,6 +18,8 @@ export const ASSET_DATA = {
     price: 65_000,
     change24h: 2.5,
     volume24h: '45.20B',
+    high24h: 66_625,
+    low24h: 63_375,
   },
   ETH: {
     name: 'Ethereum',
@@ -24,6 +28,8 @@ export const ASSET_DATA = {
     price: 3420,
     change24h: 1.8,
     volume24h: '25.30B',
+    high24h: 3481.56,
+    low24h: 3362.04,
   },
   SOL: {
     name: 'Solana',
@@ -32,6 +38,8 @@ export const ASSET_DATA = {
     price: 142.5,
     change24h: -0.5,
     volume24h: '8.45B',
+    high24h: 143.21,
+    low24h: 141.79,
   },
 } as const;
 
@@ -45,4 +53,4 @@ export const DEFAULT_TRADE_AMOUNT = 200;
 
 export const TRADING_COLORS = THEME_TRADING_COLORS;
 
-export const QUICK_TRADE_AMOUNTS = [10, 50, 100, 250] as const;
+export const QUICK_TRADE_AMOUNTS = [10, 50, 100, 250, 500] as const;

@@ -1,11 +1,13 @@
 'use client';
 import React from 'react';
-import { LogOut, Volume2 } from 'lucide-react';
+import { LogOut, Speaker, QrCode } from 'lucide-react';
 import clsxUtility from 'clsx';
 import Link from 'next/link';
 import type { WatchedPlayer } from '@/shared/state';
 import Image from 'next/image';
 import Logo from '../../../public/medias/logo.png';
+import { useUIStore } from '@/shared/state';
+import { usePathname } from 'next/navigation';
 
 interface SidebarRailProps {
   isCollapsed?: boolean;
@@ -15,6 +17,8 @@ interface SidebarRailProps {
   howToPlayButtonRef?: React.RefObject<HTMLButtonElement | null>;
   onRewardsOpen?: () => void;
   rewardsButtonRef?: React.RefObject<HTMLButtonElement | null>;
+  onReferralOpen?: () => void;
+  referralButtonRef?: React.RefObject<HTMLButtonElement | null>;
   onWatchlistOpen?: () => void;
   onPlayerClick?: (player: WatchedPlayer) => void;
   watchedPlayers?: WatchedPlayer[];
@@ -29,18 +33,23 @@ const SidebarRail = React.memo(function SidebarRail({
   howToPlayButtonRef,
   onRewardsOpen: _onRewardsOpen,
   rewardsButtonRef: _rewardsButtonRef,
+  onReferralOpen,
+  referralButtonRef,
   onWatchlistOpen: _onWatchlistOpen,
   onPlayerClick: _onPlayerClick,
   watchedPlayers: _watchedPlayers = [],
   onSoundToggle: _onSoundToggle
 }: SidebarRailProps) {
+  const pathname = usePathname();
+  const signatureColor = useUIStore((state) => state.signatureColor);
+  const isBoxHitActive = pathname === '/box-hit';
 
   return (
     <aside className={clsxUtility(
-      "hidden md:block fixed left-0 top-0 h-screen transition-all duration-300",
+      "hidden md:block fixed left-0 top-0 h-screen transition-all duration-300 border-r border-zinc-800/50",
       isCollapsed ? "w-0" : "w-18"
     )}>
-      <div className="h-full w-full items-center transition-all duration-300 flex flex-col justify-between py-1.5 pb-3">
+      <div className="h-full w-full items-center transition-all duration-300 flex flex-col justify-between py-1.5 pb-20">
         <div className='flex flex-col items-center gap-24'>
           {/* Brand */}
           <Link href="/" className="relative aspect-square w-8 mt-1.5 flex items-center">
@@ -54,49 +63,107 @@ const SidebarRail = React.memo(function SidebarRail({
           
           {/* Active Positions placeholder */}
           <div className={clsxUtility(
-            "flex flex-col items-center gap-3 rounded-md transition-all duration-300",
+            "flex flex-col items-center gap-5 rounded-md transition-all duration-300",
             isCollapsed && "opacity-0 scale-95"
           )}>
-            <Link style={{ borderColor: "#b3b3b3" }} className='rounded-sm border border-zinc-800' href="/box-hit">
-              <div className='w-12 h-12 p-1.5 rounded-sm flex items-center justify-center cursor-pointer hover:border-zinc-500 transition-colors'>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 239.52 219.12">
-                  <defs/>
-                  <path fill="#191919" d="M0 0h239.52v219.12H0z"/>
-                  <path fill="#684b45" d="M0 0h67.58v60.73H0zM81.84 0h75.84v60.73H81.84zM171.94 0h67.58v60.73h-67.58zM0 74.83h67.58v69.47H0z"/>
-                  <path fill="#fa5616" d="M81.84 74.83h75.84v69.47H81.84z"/>
-                  <path fill="#684b45" d="M171.94 74.83h67.58v69.47h-67.58zM0 158.39h67.58v60.73H0zM81.84 158.39h75.84v60.73H81.84zM171.94 158.39h67.58v60.73h-67.58z"/>
-                  <path fill="#fff" d="M118.72 122.22c-.4-.94.02-2.03.96-2.44.47-.2.99-.2 1.46 0l59.37 24.37c.95.39 1.4 1.48 1.02 2.44-.22.55-.69.96-1.25 1.11l-22.72 5.92a7.48 7.48 0 0 0-5.34 5.38l-5.86 22.97c-.26 1-1.27 1.6-2.26 1.34-.57-.15-1.03-.56-1.25-1.11l-24.12-59.99Z"/>
+            {[
+              { href: '/box-hit', isLink: true },
+              { href: '/sketch', isLink: true },
+              { href: '/towers', isLink: true },
+              { href: '/ahead', isLink: true },
+              { isLink: false, onClick: onReferralOpen },
+            ].map((game, index) => {
+              const isActive = index === 0 && isBoxHitActive;
+              const iconColor = isActive ? signatureColor : '#626262';
+              
+              // Convert hex to rgba for opacity and lighten by mixing with white
+              const hexToRgbaLightened = (hex: string, opacity: number, whiteMix: number = 0.3) => {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                // Mix with white (255, 255, 255)
+                const lightenedR = Math.round(r + (255 - r) * whiteMix);
+                const lightenedG = Math.round(g + (255 - g) * whiteMix);
+                const lightenedB = Math.round(b + (255 - b) * whiteMix);
+                return `rgba(${lightenedR}, ${lightenedG}, ${lightenedB}, ${opacity})`;
+              };
+              
+              const backgroundColor = isActive 
+                ? hexToRgbaLightened(signatureColor, 0.15)
+                : '#0D0D0D';
+              
+              const boxHitIcon = (
+                <svg width="20" height="20" viewBox="0 0 239.52 219.12" fill="none" style={{ color: iconColor }}>
+                  <path fill="currentColor" d="M 0,0.0910005 67.58,0 V 60.73 H 0 Z M 81.84,0 h 75.84 V 60.73 H 81.84 Z m 90.1,0 h 67.58 V 60.73 H 171.94 Z M 0,74.83 H 67.58 V 144.3 H 0 Z" />
+                  <path fill="none" stroke="currentColor" strokeWidth="6.84343" d="m 81.84,74.83 h 75.84 V 144.3 H 81.84 Z" />
+                  <path fill="currentColor" d="m 171.94,74.83 h 67.58 V 144.3 H 171.94 Z M 0,158.39 h 67.58 v 60.73 H 0 Z m 81.84,0 h 75.84 v 60.73 H 81.84 Z m 90.1,0 h 67.58 v 60.73 h -67.58 z" />
+                  <path fill="currentColor" d="m 105.8831,96.546203 c -0.4,-0.94 0.02,-2.03 0.96,-2.44 0.47,-0.2 0.99,-0.2 1.46,0 l 59.37,24.369997 c 0.95,0.39 1.4,1.48 1.02,2.44 -0.22,0.55 -0.69,0.96 -1.25,1.11 l -22.72,5.92 c -2.62417,0.69184 -4.66776,2.75074 -5.34,5.38 l -5.86,22.97 c -0.26,1 -1.27,1.6 -2.26,1.34 -0.57,-0.15 -1.03,-0.56 -1.25,-1.11 l -24.12,-59.989997 z" />
                 </svg>
-              </div>
-            </Link>
-            {
-              [...Array(3)].map((_, index) => (
-                <Link key={index} href="/box-hit">
-                  <div className='w-12 h-12 rounded-sm flex items-center justify-center cursor-pointer hover:border-zinc-500 transition-colors'>
-                    <div className='w-full h-full bg-neutral-8900 rounded-sm text-neutral-400 border border-zinc-800 text-center flex items-center justify-center text-lg'>?</div>
-                  </div>
-                </Link>
-              ))
-            }
+              );
+              
+              const qrCodeIcon = (
+                <QrCode 
+                  size={20} 
+                  style={{ color: iconColor }}
+                  strokeWidth={1.5}
+                />
+              );
+              
+              const icon = index === 4 ? qrCodeIcon : boxHitIcon;
+              
+              if (game.isLink) {
+                return (
+                  <Link key={index} href={game.href}>
+                    <div 
+                      className='w-11 h-11 rounded-md flex items-center justify-center cursor-pointer transition-colors'
+                      style={{ backgroundColor }}
+                    >
+                      {icon}
+                    </div>
+                  </Link>
+                );
+              }
+              
+              return (
+                <button
+                  key={index}
+                  ref={index === 4 ? referralButtonRef : undefined}
+                  onClick={game.onClick}
+                  className='w-11 h-11 rounded-md flex items-center justify-center cursor-pointer transition-colors'
+                  style={{ backgroundColor }}
+                >
+                  {icon}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className='flex flex-col gap-3'>
+        <div className='flex flex-col gap-5'>
           <button
             onClick={() => {}}
-            className="group w-12 h-12 flex flex-col items-center justify-center gap-2 transition-all duration-100 border rounded-sm p-2 border-zinc-800 hover:border-zinc-500 cursor-pointer"
+            className="group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
+            style={{ backgroundColor: '#0D0D0D' }}
             title="Sound"
           >
-            <Volume2 className='text-gray-500 group-hover:text-zinc-300 transition-all duration-100' size={24} strokeWidth={2} />
+            <Speaker 
+              size={20} 
+              style={{ color: '#626262' }}
+              strokeWidth={1.5}
+            />
           </button>
           <button
             onClick={() => {}}
-            className="group w-12 h-12 flex flex-col items-center justify-center gap-2 transition-all duration-100 border rounded-sm p-2 border-zinc-800 hover:border-zinc-500 cursor-pointer"
-            title="Sound"
+            className="group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
+            style={{ backgroundColor: '#0D0D0D' }}
+            title="Logout"
           >
-            <LogOut className='text-gray-500 group-hover:text-zinc-300 transition-all duration-100' size={26} strokeWidth={2} />
+            <LogOut 
+              size={20} 
+              style={{ color: '#626262' }}
+              strokeWidth={1.5}
+            />
           </button>
-
         </div>
       </div>
     </aside>

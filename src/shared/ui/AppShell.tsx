@@ -16,6 +16,7 @@ type AppModals = {
   howToPlay: ModalController;
   newsUpdates: ModalController;
   rewards: ModalController;
+  referral: ModalController;
   pnLTracker: ModalController;
   customize: ModalController;
   watchlist: ModalController;
@@ -30,6 +31,7 @@ const useAppModals = (): AppModals => ({
   howToPlay: useModal('howToPlay'),
   newsUpdates: useModal('newsUpdates'),
   rewards: useModal('rewards'),
+  referral: useModal('rewards'),
   pnLTracker: useModal('pnLTracker'),
   customize: useModal('customize'),
   watchlist: useModal('watchlist'),
@@ -44,6 +46,7 @@ const useAppModalRefs = () => ({
   howToPlayButtonRef: React.useRef<HTMLButtonElement | null>(null),
   newsUpdatesButtonRef: React.useRef<HTMLButtonElement | null>(null),
   rewardsButtonRef: React.useRef<HTMLButtonElement | null>(null),
+  referralButtonRef: React.useRef<HTMLButtonElement | null>(null),
   pnLTrackerButtonRef: React.useRef<HTMLButtonElement | null>(null),
   customizeButtonRef: React.useRef<HTMLButtonElement | null>(null),
   mobileMenuButtonRef: React.useRef<HTMLButtonElement | null>(null),
@@ -69,6 +72,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     howToPlay,
     newsUpdates,
     rewards,
+    referral,
     pnLTracker,
     customize,
     watchlist,
@@ -83,6 +87,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     howToPlayButtonRef,
     newsUpdatesButtonRef,
     rewardsButtonRef,
+    referralButtonRef,
     pnLTrackerButtonRef,
     customizeButtonRef,
     mobileMenuButtonRef,
@@ -155,6 +160,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           newsUpdatesButtonRef={newsUpdatesButtonRef}
           mobileMenuButtonRef={mobileMenuButtonRef}
           onMobileMenuOpen={mobileMenu.open}
+          onHowToPlayOpen={howToPlay.open}
+          howToPlayButtonRef={howToPlayButtonRef}
         />
       </div>
 
@@ -166,6 +173,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         howToPlayButtonRef={howToPlayButtonRef}
         onRewardsOpen={rewards.open}
         rewardsButtonRef={rewardsButtonRef}
+        onReferralOpen={referral.open}
+        referralButtonRef={referralButtonRef}
         onWatchlistOpen={watchlist.open}
         onPlayerClick={openPlayerTracker}
         watchedPlayers={watchedPlayers}

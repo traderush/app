@@ -96,7 +96,7 @@ const Footer = React.memo(function Footer({
   const fpsClass =
     fps >= 55 ? 'text-trading-positive' : fps >= 30 ? 'text-warning' : 'text-trading-negative';
   const connectionClasses = [
-    'group relative flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition-colors border',
+    'group relative flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors border',
     isWebSocketConnected
       ? 'border-live-border bg-status-liveBg text-live'
       : 'border-status-downBorder bg-status-downBg text-trading-negative',
@@ -113,7 +113,7 @@ const Footer = React.memo(function Footer({
   ].join(' ');
   return (
     <footer className="fixed bottom-3 right-3 z-30">
-      <div className="h-8 flex items-center justify-between p-2 gap-4 text-xs text-zinc-400 w-[400px] bg-black border border-zinc-800 rounded-sm">
+      <div className="h-8 flex items-center justify-between p-2 gap-4 text-xs text-zinc-400 w-[400px] border border-zinc-800 rounded-md" style={{ backgroundColor: '#0D0D0D' }}>
           {/* Customize Button */}
           <button 
             ref={customizeButtonRef}
@@ -182,7 +182,7 @@ const Footer = React.memo(function Footer({
             
             {/* Tooltip with detailed connection info and performance metrics */}
             <div 
-              className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 min-w-[260px] whitespace-nowrap rounded-lg border border-zinc-700/50 bg-status-glass px-3 py-2.5 opacity-0 shadow-2xl backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
+              className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 min-w-[260px] whitespace-nowrap rounded-md border border-zinc-700/50 bg-status-glass px-3 py-2.5 opacity-0 shadow-2xl backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
             >
               <div className="text-xs text-zinc-300 space-y-2">
                 {/* Status Header with inline status */}

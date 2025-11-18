@@ -3,7 +3,7 @@ import Image from 'next/image';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, Percent, BookOpen } from 'lucide-react';
 import clsxUtility from 'clsx';
 import { useUIStore } from '@/shared/state';
 import { useUserStore } from '@/shared/state/userStore';
@@ -24,6 +24,8 @@ interface NavbarProps {
   newsUpdatesButtonRef: React.RefObject<HTMLButtonElement | null>;
   mobileMenuButtonRef: React.RefObject<HTMLButtonElement | null>;
   onMobileMenuOpen: () => void;
+  onHowToPlayOpen: () => void;
+  howToPlayButtonRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const Navbar = React.memo(function Navbar({
@@ -36,6 +38,8 @@ const Navbar = React.memo(function Navbar({
   newsUpdatesButtonRef: _newsUpdatesButtonRef,
   mobileMenuButtonRef: _mobileMenuButtonRef,
   onMobileMenuOpen: _onMobileMenuOpen,
+  onHowToPlayOpen,
+  howToPlayButtonRef,
 }: NavbarProps) {
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
@@ -46,32 +50,49 @@ const Navbar = React.memo(function Navbar({
       <header className="w-full">
         <div className="flex h-14 w-full items-center gap-4 px-4 pl-0">
 
-          <button className='group shrink-0 text-xs bg-[#FFFFFF05] hover:bg-[#FFFFFF10] rounded-sm px-4 py-2 transition-colors cursor-pointer'>
-            <p className='group-hover:bg-[#0445c6] bg-gradient-to-r from-[#0475C687] to-[#0475C6] bg-clip-text text-transparent transition-colors'>Get a 20% Discount on Trading Fees ⋆˙⟡</p>
+          {/* Nav menu items */}
+          <nav className="max-lg:hidden flex items-center gap-4 pl-4">
+            {PRIMARY_NAVIGATION.map((item) => {
+              const active = path.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={clsxUtility(
+                    'text-[13px] font-normal transition-colors hover:text-white',
+                    active ? 'text-white' : 'text-white/20',
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Discount button */}
+          <button className='group shrink-0 text-xs rounded-md px-4 py-2 transition-colors cursor-pointer border-0 flex items-center gap-1.5' style={{ backgroundColor: 'rgba(249, 115, 22, 0.08)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.12)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.08)'}>
+            <Percent size={14} className="text-orange-500" />
+            <p className='group-hover:bg-[#f97316] bg-gradient-to-r from-[#f9731687] to-[#f97316] bg-clip-text text-transparent transition-colors'>Enjoy 0% fees on Trading</p>
           </button>
 
-          <div className="flex w-full justify-end">
-
-            {/* Additional menu items */}
-            <nav className="max-lg:hidden flex items-center gap-4">
-              {PRIMARY_NAVIGATION.map((item) => {
-                const active = path.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={clsxUtility(
-                      'text-[13px] font-normal transition-colors hover:text-white',
-                      active ? 'text-white' : 'text-white/20',
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
+          {/* How to Trade button */}
+          <button 
+            ref={howToPlayButtonRef}
+            onClick={onHowToPlayOpen}
+            className='group shrink-0 text-xs rounded-md px-4 py-2 transition-colors cursor-pointer border flex items-center gap-1.5' 
+            style={{ backgroundColor: 'rgba(236, 72, 153, 0.08)', borderColor: 'rgba(236, 72, 153, 0.5)' }} 
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.12)';
+              e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.7)';
+            }} 
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.5)';
+            }}
+          >
+            <BookOpen size={14} className="text-pink-500" />
+            <p className='group-hover:bg-[#ec4899] bg-gradient-to-r from-[#ec489987] to-[#ec4899] bg-clip-text text-transparent transition-colors'>How to Trade</p>
+          </button>
 
           {/* Spacer */}
           <div className="flex-1" />
@@ -82,7 +103,7 @@ const Navbar = React.memo(function Navbar({
             <button 
               ref={depositButtonRef}
               onClick={onDepositOpen}
-              className="rounded px-2 py-1 text-sm font-medium text-brand-foreground transition-colors"
+              className="rounded-md px-4 py-2 text-sm font-medium text-brand-foreground transition-colors"
               style={{ backgroundColor: signatureColor }}
             >
               Deposit
@@ -148,7 +169,7 @@ const Navbar = React.memo(function Navbar({
                 alt="Profile"
                 width={40}
                 height={40}
-                className="w-10 h-10 rounded object-cover hover:opacity-80 transition-opacity"
+                className="w-10 h-10 rounded-md object-cover hover:opacity-80 transition-opacity"
               />
             </button> 
             {/* Menu button */}
