@@ -155,10 +155,12 @@ function buildMultipliers(
       }
     }
 
+    // Use smoothed columnWidth from anchorState if available
     if (typeof anchorState.columnWidth === 'number' && Number.isFinite(anchorState.columnWidth)) {
       columnWidthPx = anchorState.columnWidth;
     }
 
+    // Update anchor based on current column position
     if (typeof currentColumnStartWorldX === 'number' && Number.isFinite(currentColumnStartWorldX)) {
       columnAnchorX = currentColumnStartWorldX;
       anchorState.anchor = currentColumnStartWorldX;
@@ -178,14 +180,9 @@ function buildMultipliers(
       anchorState.columnIdx = currentColumnIdx;
     }
 
-    if (typeof anchorState.anchor === 'number' && Number.isFinite(anchorState.anchor)) {
-      columnAnchorX = anchorState.anchor;
-    }
-
+    // Ensure anchorState.columnWidth is set for next iteration if not already set
     if (typeof anchorState.columnWidth !== 'number' || !Number.isFinite(anchorState.columnWidth)) {
       anchorState.columnWidth = columnWidthPx;
-    } else {
-      columnWidthPx = anchorState.columnWidth;
     }
   }
   const rowAnchorPrice = Math.floor(basePrice / priceStep) * priceStep;
