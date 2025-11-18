@@ -25,6 +25,10 @@ export class PriceSeriesManager extends Manager {
   private dataOffset: number = 0;
   private msPerPointEstimate: number = 500;
   private readonly config: Required<PriceSeriesManagerConfig>;
+  
+  // Frozen reference point for stable conversions when camera is not following
+  private frozenReferenceWorldX: number | null = null;
+  private frozenReferenceTimestamp: number | null = null;
 
   constructor(config: PriceSeriesManagerConfig) {
     super();
@@ -106,12 +110,44 @@ export class PriceSeriesManager extends Manager {
   }
 
   /**
+   * Freeze reference point (called when camera stops following)
+   * This prevents timestamp-to-worldX conversions from drifting
+   */
+  public freezeReferencePoint(): void {
+    if (this.priceData.length === 0) return;
+    
+    const lastPoint = this.priceData[this.priceData.length - 1];
+    if (!lastPoint?.timestamp) return;
+    
+    this.frozenReferenceWorldX = (this.totalDataPoints - 1) * this.config.pixelsPerPoint;
+    this.frozenReferenceTimestamp = lastPoint.timestamp;
+  }
+
+  /**
+   * Unfreeze reference point (called when camera starts following)
+   */
+  public unfreezeReferencePoint(): void {
+    this.frozenReferenceWorldX = null;
+    this.frozenReferenceTimestamp = null;
+  }
+
+  /**
    * Get conversion helpers for timestamp/world coordinate conversions
    */
   public getConversionHelpers(): PriceSeriesConversionHelpers {
     return {
       getWorldXForTimestamp: (timestamp: number) => {
-        console.log(this.msPerPointEstimate)
+        // Use frozen reference point if available (camera not following)
+        if (
+          this.frozenReferenceWorldX !== null &&
+          this.frozenReferenceTimestamp !== null
+        ) {
+          const deltaMs = timestamp - this.frozenReferenceTimestamp;
+          const offsetPoints = deltaMs / Math.max(1, this.msPerPointEstimate);
+          return this.frozenReferenceWorldX + offsetPoints * this.config.pixelsPerPoint;
+        }
+        
+        // Otherwise use current reference point (camera following)
         return getWorldXForTimestamp(
           timestamp,
           this.priceData,
@@ -121,6 +157,16 @@ export class PriceSeriesManager extends Manager {
         );
       },
       getTimestampForWorldX: (worldX: number) => {
+        // Use frozen reference point if available (camera not following)
+        if (
+          this.frozenReferenceWorldX !== null &&
+          this.frozenReferenceTimestamp !== null
+        ) {
+          const deltaPoints = (worldX - this.frozenReferenceWorldX) / this.config.pixelsPerPoint;
+          return this.frozenReferenceTimestamp + deltaPoints * this.msPerPointEstimate;
+        }
+        
+        // Otherwise use current reference point (camera following)
         return getTimestampForWorldX(
           worldX,
           this.priceData,
@@ -146,6 +192,17 @@ export class PriceSeriesManager extends Manager {
    * Get world X position for a given timestamp
    */
   public getWorldXForTimestamp(timestamp: number): number | null {
+    // Use frozen reference point if available (camera not following)
+    if (
+      this.frozenReferenceWorldX !== null &&
+      this.frozenReferenceTimestamp !== null
+    ) {
+      const deltaMs = timestamp - this.frozenReferenceTimestamp;
+      const offsetPoints = deltaMs / Math.max(1, this.msPerPointEstimate);
+      return this.frozenReferenceWorldX + offsetPoints * this.config.pixelsPerPoint;
+    }
+    
+    // Otherwise use current reference point (camera following)
     return getWorldXForTimestamp(
       timestamp,
       this.priceData,

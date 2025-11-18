@@ -489,6 +489,12 @@ export class GridGame extends Game {
         },
         setCameraFollowing: (value) => {
           this.isFollowingPrice = value;
+          // Freeze/unfreeze reference point based on following state
+          if (value) {
+            this.priceSeriesManager.unfreezeReferencePoint();
+          } else {
+            this.priceSeriesManager.freezeReferencePoint();
+          }
         },
         emitCameraFollowingChanged: (isFollowing) => {
           this.emit('cameraFollowingChanged', { isFollowing });
@@ -771,6 +777,8 @@ export class GridGame extends Game {
   // Method to reset camera to follow price
   public resetCameraToFollowPrice(): void {
     this.isFollowingPrice = true;
+    // Unfreeze reference point when resuming following
+    this.priceSeriesManager.unfreezeReferencePoint();
 
     this.cameraController.resetToFollowPrice(
       this.width,
