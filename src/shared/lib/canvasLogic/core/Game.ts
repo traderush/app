@@ -133,6 +133,10 @@ export abstract class Game extends EventEmitter<GameEvents> {
   }
 
   protected setupCanvas(): void {
+    // Update DPR to handle screen changes or zoom level changes
+    // This ensures the canvas stays sharp when moving between displays with different DPI
+    this.dpr = window.devicePixelRatio || 1;
+
     const computedStyle = window.getComputedStyle(this.container);
 
     const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
