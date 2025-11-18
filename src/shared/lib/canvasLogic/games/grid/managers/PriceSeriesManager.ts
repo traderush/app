@@ -111,6 +111,7 @@ export class PriceSeriesManager extends Manager {
   public getConversionHelpers(): PriceSeriesConversionHelpers {
     return {
       getWorldXForTimestamp: (timestamp: number) => {
+        console.log(this.msPerPointEstimate)
         return getWorldXForTimestamp(
           timestamp,
           this.priceData,

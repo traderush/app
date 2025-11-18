@@ -97,15 +97,15 @@ export function updateMsPerPointEstimate({
     const delta = nextTimestamp - lastTimestamp;
     if (delta > 0 && delta < maxDeltaMs) {
       const updated = currentEstimate * smoothingFactor + delta * (1 - smoothingFactor);
-      return Math.max(minEstimate, updated);
+      return Math.round(Math.max(minEstimate, updated));
     }
-    return Math.max(minEstimate, currentEstimate);
+    return Math.round(Math.max(minEstimate, currentEstimate));
   }
 
   if (typeof nextTimestamp === 'number') {
-    return Math.max(minEstimate, currentEstimate);
+    return Math.round(Math.max(minEstimate, currentEstimate));
   }
 
-  return Math.max(minEstimate, currentEstimate);
+  return Math.round(Math.max(minEstimate, currentEstimate));
 }
 
