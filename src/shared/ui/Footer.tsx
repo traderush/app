@@ -96,10 +96,10 @@ const Footer = React.memo(function Footer({
   const fpsClass =
     fps >= 55 ? 'text-trading-positive' : fps >= 30 ? 'text-warning' : 'text-trading-negative';
   const connectionClasses = [
-    'group relative flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors border',
+    'group relative flex items-center gap-1 rounded px-2 py-0.5 text-xs transition-colors',
     isWebSocketConnected
-      ? 'border-live-border bg-status-liveBg text-live'
-      : 'border-status-downBorder bg-status-downBg text-trading-negative',
+      ? 'bg-[#04C68A]/20 text-[#04C68A]'
+      : 'bg-status-downBg text-trading-negative',
   ].join(' ');
   const indicatorClasses = [
     'h-3 w-3 rounded-full border-2',

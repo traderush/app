@@ -14,8 +14,8 @@ export type NavigationItem = {
 };
 
 export const PRIMARY_NAVIGATION: NavigationItem[] = [
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/explorer', label: 'Explorer' },
-  { href: '/portfolio', label: 'Portfolio' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/refer', label: 'Refer & Earn' },
 ];

@@ -10,7 +10,7 @@ import { useUserStore } from '@/shared/state/userStore';
 import ErrorBoundary from '@/shared/ui/ErrorBoundary';
 import { logger } from '@/shared/utils/logger';
 import Canvas from '@/shared/ui/canvas/Canvas';
-import { Activity, ChevronDown, Clock, Settings, TrendingDown, TrendingUp, User, Users } from 'lucide-react';
+import { Activity, ChevronDown, Clock, Maximize, Settings, TrendingDown, TrendingUp, User, Users } from 'lucide-react';
 import { ASSETS, DEFAULT_TRADE_AMOUNT, TIMEFRAME_OPTIONS } from './constants';
 import type { AssetInfo, AssetKey } from './constants';
 import { useToasts } from './hooks/useToasts';
@@ -92,10 +92,14 @@ export default function ClientView() {
   const toggleFavoriteAsset = useUIStore((state) => state.toggleFavoriteAsset);
   const setAssetDropdownOpen = useUIStore((state) => state.setAssetDropdownOpen);
   const [isTimeframeDropdownOpen, setIsTimeframeDropdownOpen] = useState(false);
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const [isDraggingMultiplier, setIsDraggingMultiplier] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const leftColumnRef = useRef<HTMLDivElement | null>(null);
   const topBarRef = useRef<HTMLDivElement | null>(null);
   const positionsContainerRef = useRef<HTMLDivElement | null>(null);
+  const settingsMenuRef = useRef<HTMLDivElement | null>(null);
+  const multiplierSliderRef = useRef<HTMLDivElement | null>(null);
   const [availableColumnHeight, setAvailableColumnHeight] = useState<number | null>(null);
   const [topBarHeight, setTopBarHeight] = useState<number>(0);
   const [positionsNaturalHeight, setPositionsNaturalHeight] = useState<number>(0);
@@ -110,16 +114,22 @@ export default function ClientView() {
       if (!target.closest('.asset-dropdown')) {
         setAssetDropdownOpen(false);
       }
+      if (!target.closest('.settings-menu')) {
+        setIsSettingsMenuOpen(false);
+      }
+      if (!target.closest('.timeframe-dropdown')) {
+        setIsTimeframeDropdownOpen(false);
+      }
     };
     
-    if (isAssetDropdownOpen) {
+    if (isAssetDropdownOpen || isSettingsMenuOpen || isTimeframeDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isAssetDropdownOpen, setAssetDropdownOpen]);
+  }, [isAssetDropdownOpen, isSettingsMenuOpen, isTimeframeDropdownOpen, setAssetDropdownOpen]);
   
   type CanvasContract = BoxHitContract;
   
@@ -167,6 +177,18 @@ export default function ClientView() {
     [updateGameSettings],
   );
 
+  const handleFullscreenToggle = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        logger.error('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen().catch((err) => {
+        logger.error('Error attempting to exit fullscreen:', err);
+      });
+    }
+  }, []);
+
   const handleMinMultiplierChange = useCallback(
     (value: number) => updateGameSettings({ minMultiplier: value }),
     [updateGameSettings],
@@ -176,6 +198,45 @@ export default function ClientView() {
     (value: number) => updateGameSettings({ timeframe: value }),
     [updateGameSettings],
   );
+
+  // Multiplier slider drag handlers
+  const updateMultiplierFromEvent = useCallback((event: MouseEvent | React.MouseEvent) => {
+    if (!multiplierSliderRef.current) return;
+    const rect = multiplierSliderRef.current.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, x / rect.width));
+    const newValue = 1 + percentage * 14;
+    handleMinMultiplierChange(Math.max(1, Math.min(15, newValue)));
+  }, [handleMinMultiplierChange]);
+
+  const handleMultiplierMouseDown = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setIsDraggingMultiplier(true);
+    updateMultiplierFromEvent(event);
+  }, [updateMultiplierFromEvent]);
+
+  // Handle mouse move and up for dragging
+  useEffect(() => {
+    if (!isDraggingMultiplier) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      updateMultiplierFromEvent(event);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingMultiplier(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseleave', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseleave', handleMouseUp);
+    };
+  }, [isDraggingMultiplier, updateMultiplierFromEvent]);
 
   const handleAssetSelect = useCallback(
     (asset: AssetKey) => {
@@ -409,7 +470,7 @@ export default function ClientView() {
                     onClick={() => setAssetDropdownOpen(!isAssetDropdownOpen)}
                     title="Select asset"
                   >
-                    <div className="flex flex-col">
+                    <div className="flex flex-col gap-0.5">
                       <span className="text-md font-medium text-white leading-none">
                         {selectedAssetInfo.symbol}
                       </span>
@@ -503,8 +564,8 @@ export default function ClientView() {
                   )}
                 </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[24px] font-semibold leading-none text-white min-w-[90px] tabular-nums">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[24px] font-semibold leading-none text-white min-w-[80px] tabular-nums">
                   {(() => {
                     const priceStr = displayPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                     const [integerPart, decimalPart] = priceStr.split('.');
@@ -537,20 +598,22 @@ export default function ClientView() {
                     {displayChange.toFixed(2)}%
                   </span>
                 </div>
-                  <div className="flex items-center gap-4 text-xs text-zinc-400">
-                    <span className="flex items-center gap-1">
-                      <span>24h Vol:</span>
-                      <span className="text-white">{selectedAssetInfo.volume24h}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span>H:</span>
-                      <span className="text-trading-positive">${displayHigh24h}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span>L:</span>
-                      <span className="text-trading-negative">${displayLow24h}</span>
-                    </span>
-                  </div>
+                <div className="flex items-center gap-4 text-[12px] text-zinc-400 ml-3">
+                  <span className="flex items-center gap-1">
+                    <span>24h Vol:</span>
+                    <span className="text-white">{selectedAssetInfo.volume24h}</span>
+                  </span>
+                  <span className="h-3 w-px bg-zinc-700" />
+                  <span className="flex items-center gap-1">
+                    <span>H:</span>
+                    <span className="text-trading-positive">${displayHigh24h}</span>
+                  </span>
+                  <span className="h-3 w-px bg-zinc-700" />
+                  <span className="flex items-center gap-1">
+                    <span>L:</span>
+                    <span className="text-trading-negative">${displayLow24h}</span>
+                  </span>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -651,26 +714,66 @@ export default function ClientView() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleShowOtherPlayersChange(!showOtherPlayers)}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-md bg-surface-900 transition-colors hover:bg-surface-850"
-                  title="Toggle Other Players"
+                  onClick={handleFullscreenToggle}
+                  className="flex h-10 w-10 items-center justify-center rounded-md bg-surface-900 transition-colors hover:bg-surface-850"
+                  title="Toggle Fullscreen"
                 >
-                  <Users size={18} className="text-control-track" />
-                  {!showOtherPlayers && (
-                    <div className="pointer-events-none absolute inset-0">
-                    <span
-                      className="absolute left-1/2 top-1/2 h-[2px] w-8 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-control-track"
-                    />
+                  <Maximize size={18} className="text-control-track" />
+                </button>
+                <div className="relative settings-menu">
+                  <button
+                    type="button"
+                    onClick={() => setIsSettingsMenuOpen((prev) => !prev)}
+                    className="flex h-10 w-10 items-center justify-center rounded-md bg-surface-900 transition-colors hover:bg-surface-850"
+                    title="Settings"
+                  >
+                    <Settings size={18} className="text-control-track" />
+                  </button>
+                  {isSettingsMenuOpen && (
+                    <div
+                      ref={settingsMenuRef}
+                      className="absolute right-0 top-[calc(100%+4px)] z-50 w-64 overflow-hidden rounded-md border border-zinc-800 bg-surface-850 shadow-xl"
+                    >
+                      <div className="p-4 space-y-4">
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-2">
+                            Minimum Multiplier
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <div
+                              ref={multiplierSliderRef}
+                              className="relative h-1 flex-1 cursor-pointer rounded-md bg-zinc-800 select-none"
+                              onMouseDown={handleMultiplierMouseDown}
+                              onClick={(event) => {
+                                if (!isDraggingMultiplier) {
+                                  updateMultiplierFromEvent(event);
+                                }
+                              }}
+                            >
+                              <div
+                                className="absolute left-0 top-0 h-full bg-control-track"
+                                style={{
+                                  width: `${((minMultiplier - 1) / 14) * 100}%`,
+                                }}
+                              />
+                              <div
+                                className="absolute top-1/2 h-3 w-1 -translate-y-1/2 bg-control-track"
+                                style={{
+                                  left: `${((minMultiplier - 1) / 14) * 100}%`,
+                                  marginLeft: '-2px',
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs font-medium text-white w-12 text-right">
+                              {minMultiplier.toFixed(1)}x
+                            </span>
+                          </div>
+                        </div>
+                        {/* Placeholder for future settings */}
+                      </div>
                     </div>
                   )}
-                </button>
-                <button
-                  type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-md bg-surface-900 transition-colors hover:bg-surface-850"
-                  title="Settings"
-                >
-                  <Settings size={18} className="text-control-track" />
-                </button>
+                </div>
               </div>
             </div>
           </div>

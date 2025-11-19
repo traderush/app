@@ -119,8 +119,8 @@ const SidebarRail = React.memo(function SidebarRail({
                       style={{ backgroundColor }}
                     >
                       {icon}
-                    </div>
-                  </Link>
+              </div>
+            </Link>
                 );
               }
               

@@ -3,7 +3,7 @@ import Image from 'next/image';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell, Percent, BookOpen } from 'lucide-react';
+import { Menu, Bell, Percent, BookOpen, Wallet } from 'lucide-react';
 import clsxUtility from 'clsx';
 import { useUIStore } from '@/shared/state';
 import { useUserStore } from '@/shared/state/userStore';
@@ -44,6 +44,7 @@ const Navbar = React.memo(function Navbar({
   const path = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
   const totalBalance = useUserStore((state) => state.totalBalance);
+  const username = useUserStore((state) => state.user?.username || 'User');
 
   return (
     <>
@@ -98,7 +99,7 @@ const Navbar = React.memo(function Navbar({
           <div className="flex-1" />
 
           {/* Right stats */}
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Deposit button */}
             <button 
               ref={depositButtonRef}
@@ -109,27 +110,36 @@ const Navbar = React.memo(function Navbar({
               Deposit
             </button>
 
-            {/* Notifications bell */}
-            <div className="relative">
-              <button 
-                ref={notificationsButtonRef}
-                onClick={onNotificationsOpen}
-                className="relative grid place-items-center w-8 h-8 text-zinc-300 hover:text-white transition-colors cursor-pointer"
-              >
-                <Bell size={18} />
-                {NOTIFICATION_COUNT > 0 && (
-                  <div
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-md"
-                    style={{ backgroundColor: signatureColor }}
-                  >
-                    <span className="text-[10px] font-semibold text-brand-foreground">
-                      {Math.min(NOTIFICATION_COUNT, 99)}
-                    </span>
-                  </div>
-                )}
-              </button>
-              
+            {/* Notifications bell and Portfolio icon */}
+            <div className="flex items-center gap-1">
+              <div className="relative">
+                <button 
+                  ref={notificationsButtonRef}
+                  onClick={onNotificationsOpen}
+                  className="relative grid place-items-center w-8 h-8 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <Bell size={18} />
+                  {NOTIFICATION_COUNT > 0 && (
+                    <div
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-md"
+                      style={{ backgroundColor: signatureColor }}
+                    >
+                      <span className="text-[10px] font-semibold text-brand-foreground">
+                        {Math.min(NOTIFICATION_COUNT, 99)}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              </div>
 
+              {/* Portfolio icon */}
+              <Link 
+                href="/portfolio"
+                className="grid place-items-center w-8 h-8 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title="Portfolio"
+              >
+                <Wallet size={18} />
+              </Link>
             </div>
 
 
@@ -151,13 +161,13 @@ const Navbar = React.memo(function Navbar({
             {/* Vertical separator */}
             <div className="w-px h-5 bg-zinc-700" />
             
-            {/* Portfolio */}
-            <Link href="/portfolio" className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="text-xs font-medium text-zinc-400">Portfolio</div>
+            {/* Balance with username */}
+            <div className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer">
+              <div className="text-xs font-medium text-zinc-400">{username}</div>
               <div className="text-sm font-semibold text-zinc-100">
                 ${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-            </Link>
+            </div>
             
             {/* Profile image */}
             <button 

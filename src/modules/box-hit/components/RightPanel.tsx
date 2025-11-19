@@ -61,12 +61,24 @@ function RightPanel({
     }
   };
 
+  // Convert hex to rgba with lightening (matching sidebar style)
+  const hexToRgbaLightened = (hex: string, opacity: number, whiteMix: number = 0.3) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    // Mix with white (255, 255, 255)
+    const lightenedR = Math.round(r + (255 - r) * whiteMix);
+    const lightenedG = Math.round(g + (255 - g) * whiteMix);
+    const lightenedB = Math.round(b + (255 - b) * whiteMix);
+    return `rgba(${lightenedR}, ${lightenedG}, ${lightenedB}, ${opacity})`;
+  };
+
 
   return (
     <aside className="border border-zinc-800 p-2 pt-3 rounded-md" style={{ backgroundColor: '#0D0D0D' }}>
       <div className='flex flex-col gap-3'>
         {/* Mode selector */}
-        <div className="relative border-b border-zinc-800 px-2">
+        <div className="relative border-b border-zinc-800 -mx-2 px-4">
           <div className="flex items-center gap-6">
             <button
               type="button"
@@ -85,7 +97,7 @@ function RightPanel({
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 bg-trading-negative/10 px-3 py-2">
+        <div className="flex items-center justify-center gap-2 bg-trading-negative/10 px-3 py-2 -mx-2">
           <div className="flex h-4 w-4 items-center justify-center rounded-full bg-trading-negative/20">
             <span className="text-xs font-bold text-trading-negative">i</span>
           </div>
@@ -158,30 +170,37 @@ function RightPanel({
             
             {/* Bottom row with quick amount buttons - each in its own bubble */}
             <div className="flex items-center gap-2">
-              {QUICK_TRADE_AMOUNTS.map((amount, index) => (
-                <button
-                  key={amount}
-                  type="button"
-                  onClick={() => handleTradeAmountClick(amount)}
-                  onKeyDown={(event) => handleQuickAmountKeyDown(event, index)}
-                  onFocus={() => setActiveCell(index)}
-                  onBlur={() => setActiveCell(null)}
-                        className={[
-                          'flex flex-1 h-7 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors',
-                          tradeAmount === amount
-                            ? 'bg-[#171717] text-zinc-300'
-                            : 'bg-[#171717] text-zinc-500 hover:text-zinc-300',
-                          activeCell === index ? 'ring-1 ring-zinc-500' : '',
-                        ].join(' ')}
-                  tabIndex={0}
-                >
-                  ${amount}
-                </button>
-              ))}
+              {QUICK_TRADE_AMOUNTS.map((amount, index) => {
+                const isSelected = tradeAmount === amount;
+                const backgroundColor = isSelected
+                  ? hexToRgbaLightened(signatureColor, 0.15)
+                  : '#171717';
+                
+                return (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => handleTradeAmountClick(amount)}
+                    onKeyDown={(event) => handleQuickAmountKeyDown(event, index)}
+                    onFocus={() => setActiveCell(index)}
+                    onBlur={() => setActiveCell(null)}
+                    className={clsx(
+                      'flex flex-1 h-7 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors focus:outline-none focus:ring-0',
+                      isSelected
+                        ? 'text-zinc-300'
+                        : 'text-zinc-500 hover:text-zinc-300',
+                    )}
+                    style={{ backgroundColor }}
+                    tabIndex={0}
+                  >
+                    ${amount}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="mb-4 flex">
+          <div className="mb-4 flex px-2">
             <div className="flex-1">
               <div className="text-xs text-white">Boxes Selected</div>
               <div className="font-medium">
@@ -202,7 +221,7 @@ function RightPanel({
                     ? Math.round(
                         tradeAmount *
                           selectedMultipliers.reduce((sum, multiplier) => sum + multiplier, 0),
-                      )
+                      ).toLocaleString('en-US')
                     : '0'}
                 </span>
                 <span className="ml-1 text-xs text-zinc-400" style={{ fontWeight: 400 }}>
