@@ -193,6 +193,8 @@ function buildMultipliers(
   game?.setGridScale?.(columnWidthPx, priceStep);
   game?.setGridOrigin?.(columnAnchorX, rowAnchorPrice);
 
+  let priceScale = game?.getPriceScale() ?? null;
+
   contracts.forEach((contract) => {
     const timeUntilStart = contract.startTime - nowTs;
     const timeSinceEnd = nowTs - contract.endTime;
@@ -220,7 +222,7 @@ function buildMultipliers(
     const alignedLower = Math.floor(contract.lowerStrike / priceStep) * priceStep;
     const priceSpan = Math.max(priceStep, contract.upperStrike - contract.lowerStrike);
     const heightSteps = Math.max(1, Math.round(priceSpan / priceStep));
-    const height = heightSteps * priceStep;
+    let height = heightSteps * priceStep;
     const durationColumns = Math.max(1, Math.round((contract.endTime - contract.startTime) / timeStep));
     const endWorldX = typeof contractEndWorldX === 'number' && Number.isFinite(contractEndWorldX)
       ? contractEndWorldX
@@ -230,6 +232,15 @@ function buildMultipliers(
       : durationColumns * columnWidthPx;
     if (!Number.isFinite(width) || width <= 0) {
       width = durationColumns * columnWidthPx;
+    }
+
+    // Adjust height to make box square on screen
+    // screenWidth = width (1:1 mapping for X axis)
+    // screenHeight = height * priceScale
+    // For square: width = height * priceScale, so: height = width / priceScale
+    if (priceScale !== null && priceScale > 0) {
+      // Make box height match width when rendered (square on screen)
+      height = width / priceScale;
     }
 
     const position = positionsByContract.get(contract.contractId);

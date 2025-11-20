@@ -50,7 +50,8 @@ export class WorldCoordinateSystem {
   updateViewport(viewportHeight: number, visiblePriceRange: number): void {
     this.viewportHeight = viewportHeight
     this.visiblePriceRange = visiblePriceRange
-    this.priceScale = viewportHeight / visiblePriceRange
+    const fixedReferenceViewportHeight = 1145; // Fixed reference height
+    this.priceScale = fixedReferenceViewportHeight / visiblePriceRange
   }
   
   setPixelsPerPoint(pixelsPerPoint: number): void {
@@ -99,5 +100,12 @@ export class WorldCoordinateSystem {
     const screen = this.worldToScreen(worldX, worldY)
     return screen.x >= -margin && screen.x <= this.canvasWidth + margin &&
            screen.y >= -margin && screen.y <= this.canvasHeight + margin
+  }
+
+  /**
+   * Get the current priceScale used for rendering
+   */
+  public getPriceScale(): number {
+    return this.priceScale
   }
 }

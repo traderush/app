@@ -799,4 +799,14 @@ export class GridGame extends Game {
     return this.isFollowingPrice;
   }
 
+  // Method to get visible price range
+  public getVisiblePriceRange(): number {
+    return this.viewportManager.getVisiblePriceRange();
+  }
+
+  // Method to get current priceScale from WorldCoordinateSystem
+  public getPriceScale(): number {
+    return this.world.getPriceScale();
+  }
+
 }
