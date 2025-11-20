@@ -28,7 +28,7 @@ type TouchPayload = {
   event: TouchEvent;
 };
 
-interface BaseGameEvents {
+interface GameEvents {
   [event: string]: unknown;
   resize: { width: number; height: number };
   start: void;
@@ -50,7 +50,7 @@ interface BaseGameEvents {
   selectionChanged: Record<string, never>;
 }
 
-export abstract class BaseGame extends EventEmitter<BaseGameEvents> {
+export abstract class Game extends EventEmitter<GameEvents> {
   protected container: HTMLElement;
   public canvas: HTMLCanvasElement; // Make canvas public for debugging
   protected ctx: CanvasRenderingContext2D;
@@ -133,6 +133,10 @@ export abstract class BaseGame extends EventEmitter<BaseGameEvents> {
   }
 
   protected setupCanvas(): void {
+    // Update DPR to handle screen changes or zoom level changes
+    // This ensures the canvas stays sharp when moving between displays with different DPI
+    this.dpr = window.devicePixelRatio || 1;
+
     const computedStyle = window.getComputedStyle(this.container);
 
     const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
@@ -281,6 +285,14 @@ export abstract class BaseGame extends EventEmitter<BaseGameEvents> {
     this.emit('themeChange', theme);
   }
 
+  public getWidth(): number {
+    return this.width;
+  }
+
+  public getHeight(): number {
+    return this.height;
+  }
+
   public destroy(): void {
     // Prevent multiple destroy calls
     if (this.destroyed) {
@@ -380,3 +392,4 @@ export abstract class BaseGame extends EventEmitter<BaseGameEvents> {
     this.emit('touchEnd', { event: e });
   }
 }
+

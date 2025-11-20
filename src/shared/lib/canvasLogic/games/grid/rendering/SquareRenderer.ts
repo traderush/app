@@ -1,4 +1,5 @@
-import type { Theme } from '../config/theme';
+import type { Theme } from '../../../config/theme';
+import { Renderer } from '../../../core/Renderer';
 
 export interface SquareRenderOptions {
   x: number;
@@ -27,17 +28,9 @@ export interface SquareRenderOptions {
   showUnifiedGrid?: boolean; // Whether unified grid is enabled (skip individual borders)
 }
 
-export class SquareRenderer {
-  private ctx: CanvasRenderingContext2D;
-  private theme: Theme;
-
+export class SquareRenderer extends Renderer {
   constructor(ctx: CanvasRenderingContext2D, theme: Theme) {
-    this.ctx = ctx;
-    this.theme = theme;
-  }
-
-  public setTheme(theme: Theme): void {
-    this.theme = theme;
+    super(ctx, theme);
   }
 
   public render(options: SquareRenderOptions): void {
@@ -60,9 +53,9 @@ export class SquareRenderer {
     // Determine actual dimensions
     const actualWidth = width ?? size ?? 50;
     const actualHeight = height ?? size ?? 50;
-    const labelFontSize = Math.max(8, Math.min(12, actualWidth / 5));
+    const labelFontSize = Math.max(10, Math.min(16, actualWidth / 4));
 
-    this.ctx.save();
+    this.saveContext();
 
     // Apply global opacity for fade effect
     this.ctx.globalAlpha = opacity;
@@ -241,11 +234,10 @@ export class SquareRenderer {
 
       this.ctx.fillStyle = textColor;
       this.ctx.font = `${labelFontSize}px sans-serif`;
-      this.ctx.textAlign = 'right';
-      this.ctx.textBaseline = 'top';
-      const inset = Math.min(8, Math.max(4, actualWidth * 0.12));
-      const textX = x + actualWidth - inset;
-      const textY = y + inset;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      const textX = x + actualWidth / 2;
+      const textY = y + actualHeight / 2;
       this.ctx.fillText(text, textX, textY);
     }
 

@@ -99,7 +99,6 @@ export default function ClientView() {
   const [availableColumnHeight, setAvailableColumnHeight] = useState<number | null>(null);
   const [topBarHeight, setTopBarHeight] = useState<number>(0);
   const [positionsNaturalHeight, setPositionsNaturalHeight] = useState<number>(0);
-  const [isPositionsCollapsed, setIsPositionsCollapsed] = useState(false);
   const [isPositionsOverlayOpen, setIsPositionsOverlayOpen] = useState(false);
   const [positionsOverlayView, setPositionsOverlayView] = useState<'positions' | 'history'>('positions');
   
@@ -263,45 +262,45 @@ export default function ClientView() {
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('ResizeObserver' in window)) {
-      return;
-    }
-    const element = positionsContainerRef.current;
-    if (!element) {
-      return;
-    }
-    const observer = new window.ResizeObserver((entries) => {
-      const [entry] = entries;
-      if (entry && entry.contentRect.height > 0) {
-        setPositionsNaturalHeight(entry.contentRect.height);
-      }
-    });
-    observer.observe(element);
-    const initialHeight = element.offsetHeight;
-    if (initialHeight > 0) {
-      setPositionsNaturalHeight(initialHeight);
-    }
-    return () => {
-      observer.disconnect();
-    };
-  }, [isPositionsCollapsed]);
+  // useEffect(() => {
+  //   if (typeof window === 'undefined' || !('ResizeObserver' in window)) {
+  //     return;
+  //   }
+  //   const element = positionsContainerRef.current;
+  //   if (!element) {
+  //     return;
+  //   }
+  //   const observer = new window.ResizeObserver((entries) => {
+  //     const [entry] = entries;
+  //     if (entry && entry.contentRect.height > 0) {
+  //       setPositionsNaturalHeight(entry.contentRect.height);
+  //     }
+  //   });
+  //   observer.observe(element);
+  //   const initialHeight = element.offsetHeight;
+  //   if (initialHeight > 0) {
+  //     setPositionsNaturalHeight(initialHeight);
+  //   }
+  //   return () => {
+  //     observer.disconnect();
+  //   };
+  // }, [isPositionsCollapsed]);
 
-  useEffect(() => {
-    if (availableColumnHeight == null) {
-      return;
-    }
-    const contentHeight = availableColumnHeight - topBarHeight;
-    if (contentHeight <= 0) {
-      return;
-    }
-    const requiredHeight = MIN_CANVAS_HEIGHT + positionsNaturalHeight;
-    const shouldCollapse = requiredHeight > contentHeight;
-    setIsPositionsCollapsed(shouldCollapse);
-    if (!shouldCollapse && isPositionsOverlayOpen) {
-      setIsPositionsOverlayOpen(false);
-    }
-  }, [availableColumnHeight, topBarHeight, positionsNaturalHeight, isPositionsOverlayOpen]);
+  // useEffect(() => {
+  //   if (availableColumnHeight == null) {
+  //     return;
+  //   }
+  //   const contentHeight = availableColumnHeight - topBarHeight;
+  //   if (contentHeight <= 0) {
+  //     return;
+  //   }
+  //   const requiredHeight = MIN_CANVAS_HEIGHT + positionsNaturalHeight;
+  //   const shouldCollapse = requiredHeight > contentHeight;
+  //   setIsPositionsCollapsed(true);
+  //   if (!shouldCollapse && isPositionsOverlayOpen) {
+  //     setIsPositionsOverlayOpen(false);
+  //   }
+  // }, [availableColumnHeight, topBarHeight, positionsNaturalHeight, isPositionsOverlayOpen]);
 
   useEffect(() => {
     if (!isPositionsOverlayOpen) {
@@ -649,7 +648,7 @@ export default function ClientView() {
             >
               {/* Show Canvas component controlled by Start Trading button */}
               <div className="relative flex-1">
-                <div className="relative h-full min-h-[520px] w-full overflow-hidden bg-surface-950">
+                <div className="relative h-full min-h-[320px] w-full overflow-hidden bg-surface-950">
                   <Canvas
                     externalControl={true}
                     externalIsStarted={isCanvasStarted}
@@ -666,9 +665,7 @@ export default function ClientView() {
                 </div>
               </div>
               {/* Small screens Positions Overlay */}
-              {
-              isPositionsCollapsed && (
-                <div className='flex h-[30px] w-full'>
+              <div className='flex h-[30px] w-full'>
                     <button
                       type="button"
                       onClick={() => setIsPositionsOverlayOpen(true)}
@@ -701,17 +698,7 @@ export default function ClientView() {
                     </div>
                     </div>
                 </div>
-              )}
             </ErrorBoundary>
-            {/* Large screens Positions Table */}
-            {!isPositionsCollapsed && (
-              <div
-                ref={positionsContainerRef}
-                className="flex-shrink-0 border-t border-zinc-800/80 bg-background"
-              >
-                {renderPositionsTable()}
-              </div>
-            )}
           </div>
         </div>
         

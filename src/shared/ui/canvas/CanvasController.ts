@@ -1,4 +1,4 @@
-import { GridGame } from '@/shared/lib/canvasLogic/games/GridGame';
+import { GridGame } from '@/shared/lib/canvasLogic/games/grid/GridGame';
 import { defaultTheme } from '@/shared/lib/canvasLogic/config/theme';
 import { getTimeframeConfig, getAllTimeframes, TimeFrame } from '@/shared/types/timeframe';
 import type { BoxHitContract, BoxHitPosition, BoxHitPositionMap } from '@/shared/types/boxHit';
@@ -155,10 +155,12 @@ function buildMultipliers(
       }
     }
 
+    // Use smoothed columnWidth from anchorState if available
     if (typeof anchorState.columnWidth === 'number' && Number.isFinite(anchorState.columnWidth)) {
       columnWidthPx = anchorState.columnWidth;
     }
 
+    // Update anchor based on current column position
     if (typeof currentColumnStartWorldX === 'number' && Number.isFinite(currentColumnStartWorldX)) {
       columnAnchorX = currentColumnStartWorldX;
       anchorState.anchor = currentColumnStartWorldX;
@@ -178,14 +180,9 @@ function buildMultipliers(
       anchorState.columnIdx = currentColumnIdx;
     }
 
-    if (typeof anchorState.anchor === 'number' && Number.isFinite(anchorState.anchor)) {
-      columnAnchorX = anchorState.anchor;
-    }
-
+    // Ensure anchorState.columnWidth is set for next iteration if not already set
     if (typeof anchorState.columnWidth !== 'number' || !Number.isFinite(anchorState.columnWidth)) {
       anchorState.columnWidth = columnWidthPx;
-    } else {
-      columnWidthPx = anchorState.columnWidth;
     }
   }
   const rowAnchorPrice = Math.floor(basePrice / priceStep) * priceStep;
@@ -988,11 +985,15 @@ export class CanvasController {
     if (!this.isStarted) {
       this.ensureGameInitialized(state);
       if (this.game) {
+        this.showCanvas();
         this.updateMultipliersAndSelections(state);
         this.processPriceSeries(state);
         this.updateContractResolutions();
       }
-      this.showPlaceholder();
+      else {
+        this.showPlaceholder();
+      }
+      
       return;
     }
 
