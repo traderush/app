@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { LogOut, Speaker, QrCode } from 'lucide-react';
+import { Settings, Volume2, Share2 } from 'lucide-react';
 import clsxUtility from 'clsx';
 import Link from 'next/link';
 import type { WatchedPlayer } from '@/shared/state';
@@ -101,15 +101,16 @@ const SidebarRail = React.memo(function SidebarRail({
                 </svg>
               );
               
-              const qrCodeIcon = (
-                <QrCode 
-                  size={20} 
+              const pnlText = (
+                <span 
                   style={{ color: iconColor }}
-                  strokeWidth={1.5}
-                />
+                  className="text-xs font-medium"
+                >
+                  PnL
+                </span>
               );
               
-              const icon = index === 4 ? qrCodeIcon : boxHitIcon;
+              const icon = index === 4 ? pnlText : boxHitIcon;
               
               if (game.isLink) {
                 return (
@@ -141,24 +142,25 @@ const SidebarRail = React.memo(function SidebarRail({
 
         <div className='flex flex-col gap-5'>
           <button
-            onClick={() => {}}
+            onClick={_onSoundToggle}
             className="group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
             style={{ backgroundColor: '#0D0D0D' }}
             title="Sound"
           >
-            <Speaker 
+            <Volume2 
               size={20} 
               style={{ color: '#626262' }}
               strokeWidth={1.5}
             />
           </button>
           <button
-            onClick={() => {}}
+            onClick={_onSettingsOpen}
+            ref={_settingsButtonRef}
             className="group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
             style={{ backgroundColor: '#0D0D0D' }}
-            title="Logout"
+            title="Settings"
           >
-            <LogOut 
+            <Settings 
               size={20} 
               style={{ color: '#626262' }}
               strokeWidth={1.5}

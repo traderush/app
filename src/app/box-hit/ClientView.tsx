@@ -10,6 +10,7 @@ import { useUserStore } from '@/shared/state/userStore';
 import ErrorBoundary from '@/shared/ui/ErrorBoundary';
 import { logger } from '@/shared/utils/logger';
 import Canvas from '@/shared/ui/canvas/Canvas';
+import { Switch } from '@/shared/ui/ui/switch';
 import { Activity, ChevronDown, Clock, Maximize, Settings, TrendingDown, TrendingUp, User, Users } from 'lucide-react';
 import { ASSETS, DEFAULT_TRADE_AMOUNT, TIMEFRAME_OPTIONS } from './constants';
 import type { AssetInfo, AssetKey } from './constants';
@@ -83,6 +84,9 @@ export default function ClientView() {
   const minMultiplier = useGameStore((state) => state.gameSettings.minMultiplier);
   const showOtherPlayers = useGameStore((state) => state.gameSettings.showOtherPlayers);
   const showProbabilities = useGameStore((state) => state.gameSettings.showProbabilities);
+  const customAnimations = useGameStore((state) => state.gameSettings.customAnimations);
+  const showMultipliers = useGameStore((state) => state.gameSettings.showMultipliers);
+  const showFlowingPrice = useGameStore((state) => state.gameSettings.showFlowingPrice);
   const timeframe = useGameStore((state) => state.gameSettings.timeframe);
   const selectedAsset = useGameStore((state) => state.gameSettings.selectedAsset);
   
@@ -174,6 +178,21 @@ export default function ClientView() {
 
   const handleShowOtherPlayersChange = useCallback(
     (value: boolean) => updateGameSettings({ showOtherPlayers: value }),
+    [updateGameSettings],
+  );
+
+  const handleCustomAnimationsChange = useCallback(
+    (value: boolean) => updateGameSettings({ customAnimations: value }),
+    [updateGameSettings],
+  );
+
+  const handleShowMultipliersChange = useCallback(
+    (value: boolean) => updateGameSettings({ showMultipliers: value }),
+    [updateGameSettings],
+  );
+
+  const handleShowFlowingPriceChange = useCallback(
+    (value: boolean) => updateGameSettings({ showFlowingPrice: value }),
     [updateGameSettings],
   );
 
@@ -734,7 +753,37 @@ export default function ClientView() {
                       ref={settingsMenuRef}
                       className="absolute right-0 top-[calc(100%+4px)] z-50 w-64 overflow-hidden rounded-md border border-zinc-800 bg-surface-850 shadow-xl"
                     >
-                      <div className="p-4 space-y-4">
+                      <div className="p-3 space-y-4">
+                        <div className="text-xs font-medium text-white px-1" style={{ fontSize: '12px' }}>
+                          Trading Settings
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400">
+                            Custom Animations
+                          </span>
+                          <Switch
+                            checked={customAnimations}
+                            onCheckedChange={handleCustomAnimationsChange}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400">
+                            Show Multipliers
+                          </span>
+                          <Switch
+                            checked={showMultipliers}
+                            onCheckedChange={handleShowMultipliersChange}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400">
+                            Show Flowing Price
+                          </span>
+                          <Switch
+                            checked={showFlowingPrice}
+                            onCheckedChange={handleShowFlowingPriceChange}
+                          />
+                        </div>
                         <div>
                           <label className="block text-xs font-medium text-zinc-400 mb-2">
                             Minimum Multiplier
@@ -769,7 +818,6 @@ export default function ClientView() {
                             </span>
                           </div>
                         </div>
-                        {/* Placeholder for future settings */}
                       </div>
                     </div>
                   )}

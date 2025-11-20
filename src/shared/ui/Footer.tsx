@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { HelpCircle, Book } from 'lucide-react';
 
 type PerformanceWithMemory = Performance & {
   memory?: {
@@ -129,14 +129,14 @@ const Footer = React.memo(function Footer({
           {/* Separator */}
           <div className="w-px h-4 bg-white/20"></div>
         
-          {/* Settings Button */}
+          {/* Help Button */}
           <button 
             ref={settingsButtonRef}
             onClick={onSettingsOpen}
             className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
           >
-            <Settings size={14} strokeWidth={1.4} />
-            <span>Settings</span>
+            <HelpCircle size={14} strokeWidth={1.4} />
+            <span>Help</span>
           </button>
 
           {/* Separator */}
@@ -163,17 +163,14 @@ const Footer = React.memo(function Footer({
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
             </svg>
           </a>
-          {/* <a 
+          <a 
             href="https://docs.traderush.com" 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
-            </svg>
-            <span>Docs</span>
-          </a> */}
+            <Book size={14} strokeWidth={1.4} />
+          </a>
 
            {/* Connection Status - Dynamic styling based on connection */}
            <div className={connectionClasses}>
