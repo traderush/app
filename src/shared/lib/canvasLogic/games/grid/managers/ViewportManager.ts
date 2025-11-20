@@ -27,6 +27,7 @@ export interface ViewportUpdateResult {
 export class ViewportManager extends Manager {
   private visiblePriceRange: number = 10;
   private readonly config: Required<ViewportManagerConfig>;
+  private verticalScale: number = 1;
 
   constructor(config: ViewportManagerConfig) {
     super();
@@ -56,7 +57,7 @@ export class ViewportManager extends Manager {
     const viewportHeight = viewportBottom - viewportTop;
 
     // Calculate visible price range
-    this.visiblePriceRange = computeVisiblePriceRange({
+    const rawPriceRange = computeVisiblePriceRange({
       backendMultipliers,
       priceData,
       gameType: this.config.gameType,
@@ -69,6 +70,12 @@ export class ViewportManager extends Manager {
       maxVisibleRange: this.config.maxVisibleRange,
     });
 
+    const scale = Math.max(this.verticalScale, 0.0001);
+    const scaledRange = rawPriceRange / scale;
+    const minRange = this.config.minVisibleRange;
+    const maxRange = this.config.maxVisibleRange;
+    this.visiblePriceRange = Math.max(minRange, Math.min(scaledRange, maxRange));
+
     // Update world viewport with smoothed range
     world.updateViewport(viewportHeight, this.visiblePriceRange);
 
@@ -76,6 +83,15 @@ export class ViewportManager extends Manager {
       viewportHeight,
       visiblePriceRange: this.visiblePriceRange,
     };
+  }
+
+  /**
+   * Set vertical scale used to keep boxes square with horizontal scaling
+   */
+  public setVerticalScale(scale: number): void {
+    if (Number.isFinite(scale) && scale > 0) {
+      this.verticalScale = scale;
+    }
   }
 
   /**

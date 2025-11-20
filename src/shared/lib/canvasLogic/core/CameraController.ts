@@ -7,6 +7,7 @@ export interface CameraControllerConfig {
   cameraOffsetRatio: number;
   width: number;
   visiblePriceRange: number;
+  horizontalScale: number;
 }
 
 export interface FollowPriceUpdateOptions {
@@ -61,7 +62,8 @@ export class CameraController {
     const lineEndWorldY = latestPrice;
 
     // Calculate camera position with offset (to position the line nicely on screen)
-    const targetOffsetX = config.width * config.cameraOffsetRatio;
+    const horizontalScale = Math.max(config.horizontalScale, 0.0001);
+    const targetOffsetX = (config.width * config.cameraOffsetRatio) / horizontalScale;
     const newTargetX = lineEndWorldX - targetOffsetX;
     
     // Snap camera to the price line position
@@ -116,6 +118,7 @@ export class CameraController {
       pixelsPerPoint: number;
       cameraOffsetRatio: number;
       visiblePriceRange: number;
+      horizontalScale: number;
     }
   ): void {
     if (priceData.length > 0) {
@@ -128,7 +131,8 @@ export class CameraController {
       const dataPoints = Math.max(1, totalDataPoints);
       const pixelsPerPoint = config.pixelsPerPoint;
       const cameraOffsetRatio = config.cameraOffsetRatio ?? 0;
-      const targetOffsetX = width * cameraOffsetRatio;
+      const horizontalScale = Math.max(config.horizontalScale, 0.0001);
+      const targetOffsetX = (width * cameraOffsetRatio) / horizontalScale;
       const lineEndWorldX = (dataPoints - 1) * pixelsPerPoint;
       const targetX = Math.max(0, lineEndWorldX - targetOffsetX);
 
@@ -180,7 +184,8 @@ export class CameraController {
 
     // Only update camera targets if following price
     if (isFollowingPrice) {
-      const targetOffsetX = config.width * config.cameraOffsetRatio;
+      const horizontalScale = Math.max(config.horizontalScale, 0.0001);
+      const targetOffsetX = (config.width * config.cameraOffsetRatio) / horizontalScale;
       const newTargetX = currentWorldX - targetOffsetX;
       this.camera.targetX = Math.max(0, newTargetX);
 

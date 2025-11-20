@@ -42,6 +42,8 @@ export type {
   BackendMultiplierMap,
 } from './types';
 
+const BOX_SCALE = 1; // Adjust < 1 to zoom out (show more boxes), > 1 to zoom in
+
 export class GridGame extends Game {
   private frameCount: number = 0;
   private camera: Camera = {
@@ -140,6 +142,7 @@ export class GridGame extends Game {
   protected boxClickabilityCache: Map<string, boolean> = new Map();
 
   protected config!: Required<GridGameConfig>;
+  private readonly boxScale: number = BOX_SCALE;
 
   constructor(container: HTMLElement, config?: GridGameConfig) {
     super(container, config);
@@ -206,6 +209,7 @@ export class GridGame extends Game {
   private initializeWorld(): void {
     this.world = new WorldCoordinateSystem(this.camera);
     this.world.setPixelsPerPoint(this.config.pixelsPerPoint);
+    this.world.setHorizontalScale(this.boxScale);
     this.world.updateCanvasSize(this.width, this.height);
   }
 
@@ -227,6 +231,7 @@ export class GridGame extends Game {
       gameType: this.config.gameType,
       ...defaultViewportManagerConfig,
     });
+    this.viewportManager.setVerticalScale(this.boxScale);
     
     // Initialize grid state manager
     this.gridStateManager = new GridStateManager();
@@ -313,6 +318,7 @@ export class GridGame extends Game {
         cameraOffsetRatio: this.config.cameraOffsetRatio,
         width: this.width,
         visiblePriceRange: this.viewportManager.getVisiblePriceRange(),
+        horizontalScale: this.world.getHorizontalScale(),
       })
     );
   }
@@ -788,6 +794,7 @@ export class GridGame extends Game {
         pixelsPerPoint: this.config.pixelsPerPoint,
         cameraOffsetRatio: this.config.cameraOffsetRatio,
         visiblePriceRange: this.viewportManager.getVisiblePriceRange(),
+        horizontalScale: this.world.getHorizontalScale(),
       }
     );
 
