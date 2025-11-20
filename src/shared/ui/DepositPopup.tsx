@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { X, Copy, Info, ArrowDown, Check } from 'lucide-react';
+import { X, Copy, Check, AlertCircle } from 'lucide-react';
+import { useUIStore } from '@/shared/state';
 
 interface DepositPopupProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const signatureColor = useUIStore((state) => state.signatureColor);
+  const depositAddress = '4KtmTauUtwzTwy2U6v966xMNz961XP9iqk8WfFtpnKBe';
 
   // Handle escape key
   useEffect(() => {
@@ -54,11 +57,11 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
 
   const handleCopyAddress = async () => {
     try {
-      await navigator.clipboard.writeText('4KtmTauUtwzTwy2U6v966xMNz961XP9iqk8WfFtpnKBe');
+      await navigator.clipboard.writeText(depositAddress);
       setIsCopied(true);
       setTimeout(() => {
         setIsCopied(false);
-      }, 2000); // Reset after 2 seconds
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy: ', err);
     }
@@ -80,7 +83,7 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
 
   return (
     <>
-            {/* Overlay */}
+      {/* Overlay */}
       <div 
         className={`fixed inset-0 bg-black/60 z-[1000] transition-all duration-300 ease-out ${
           isOpen ? 'opacity-60' : 'opacity-0'
@@ -102,7 +105,7 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
         >
           {/* Header */}
           <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
-            <h3 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Deposit</h3>
+            <h2 className="text-zinc-100" style={{fontSize: '14px', fontWeight: 500}}>Deposit</h2>
             <button
               onClick={onClose}
               aria-label="Close deposit"
@@ -113,78 +116,74 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
           </div>
           
           {/* Content */}
-          <div className="p-4 space-y-4">
-            {/* Deposit Token Section */}
-            <div className="border border-zinc-700/50 rounded p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Token</span>
-                <button className="flex items-center gap-2 px-2 py-1 rounded border border-zinc-600 bg-zinc-800/50 hover:bg-zinc-700/50 hover:border-zinc-500 transition-colors">
-                  <span className="relative w-4 h-4">
-                    <Image
-                      src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png"
-                      alt="SOL"
-                      fill
-                      className="object-contain"
-                      sizes="16px"
-                    />
-                  </span>
-                  <span className="text-xs text-white">SOL</span>
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 uppercase tracking-wide">Current Balance</span>
-                <span className="text-xs text-white">0.0000 SOL</span>
+          <div className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
+            {/* Network & Balance */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Network</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-zinc-800 bg-surface-900">
+                <span className="relative w-4 h-4">
+                  <Image
+                    src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png"
+                    alt="SOL"
+                    fill
+                    className="object-contain"
+                    sizes="16px"
+                  />
+                </span>
+                <span className="text-xs text-white">Solana</span>
               </div>
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Balance</span>
+              <span className="text-xs text-white">0.0000 SOL</span>
+            </div>
 
-            {/* Deposit Address Section */}
-            <div className="border border-zinc-700/50 rounded p-3 space-y-3">
+            {/* QR Code */}
+            <div className="space-y-2">
               <span className="text-xs text-zinc-400 uppercase tracking-wide">Deposit Address</span>
-              
-              {/* QR Code */}
-              <div className="flex justify-center mt-4">
-                <div className="w-32 h-32 bg-white rounded flex items-center justify-center">
+              <div className="flex justify-center">
+                <div className="w-32 h-32 bg-white rounded flex items-center justify-center border border-zinc-800">
                   <div className="text-black text-xs">QR Code</div>
                 </div>
               </div>
-              
-              {/* Address Box */}
-              <div className="bg-zinc-700/50 rounded p-3 text-center">
-                <div className="text-xs text-white font-mono break-all">
-                  4KtmTauUtwzTwy2U6v966xMNz961XP9iqk8WfFtpnKBe
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <div className="bg-surface-900 border border-zinc-800 rounded p-3">
+                <div className="text-xs text-white font-mono break-all leading-relaxed mb-2">
+                  {depositAddress}
                 </div>
-                <div className="flex justify-center mt-2">
-                  <button
-                    onClick={handleCopyAddress}
-                    className={`flex items-center justify-center gap-1 text-xs transition-colors ${
-                      isCopied 
-                        ? 'text-green-500' 
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {isCopied ? <Check size={12} /> : <Copy size={12} />}
-                    {isCopied ? 'Copied!' : 'Click to copy'}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="text-xs text-zinc-400 text-center">
-                Scan QR code or copy address to deposit SOL
+                <button
+                  onClick={handleCopyAddress}
+                  className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border text-xs transition-colors ${
+                    isCopied 
+                      ? 'text-zinc-300 border-zinc-700 bg-zinc-900/50' 
+                      : 'text-zinc-400 border-zinc-800 bg-surface-850 hover:bg-surface-800 hover:text-white'
+                  }`}
+                >
+                  {isCopied ? (
+                    <>
+                      <Check size={12} />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={12} />
+                      <span>Copy Address</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* Warning Section */}
-            <div className="space-y-2">
-              <div className="flex items-start gap-2 border border-zinc-700/50 rounded p-3">
-                <Info size={14} className="text-white mt-0.5 flex-shrink-0" />
-                <span className="text-xs text-white">Only send SOL to this address.</span>
-              </div>
-              
-              <div className="flex items-start gap-2 border border-zinc-700/50 rounded p-3">
-                <ArrowDown size={14} className="text-white mt-0.5 flex-shrink-0" />
-                <span className="text-xs text-white">
-                  This address can only receive SOL on the Solana network. Don&apos;t send SOL on any other network or it may be lost.
-                </span>
+            {/* Warning */}
+            <div className="pt-2 border-t border-zinc-800">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={12} className="text-zinc-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Only send SOL on the Solana network to this address. Sending from other networks will result in permanent loss of funds.
+                </p>
               </div>
             </div>
           </div>

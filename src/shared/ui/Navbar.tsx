@@ -3,7 +3,7 @@ import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell, Percent, BookOpen, Wallet, Send, UserPlus, Copy, ChevronDown } from 'lucide-react';
+import { Menu, Bell, Percent, BookOpen, Wallet, Send, UserPlus, Copy, ChevronDown, Gift } from 'lucide-react';
 import clsxUtility from 'clsx';
 import { useUIStore } from '@/shared/state';
 import { useUserStore } from '@/shared/state/userStore';
@@ -45,12 +45,17 @@ const Navbar = React.memo(function Navbar({
   const signatureColor = useUIStore((state) => state.signatureColor);
   const totalBalance = useUserStore((state) => state.totalBalance);
   const username = useUserStore((state) => state.user?.username || 'User');
-  const refcode = 'ABC123'; // TODO: Get from user store or API
+  const refcode = 'USER123'; // TODO: Get from user store or API
   const [isRefPopoverOpen, setIsRefPopoverOpen] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const handleCopyRefcode = () => {
-    navigator.clipboard.writeText(refcode).catch(() => {
+    const referralText = `r/${refcode}`;
+    navigator.clipboard.writeText(referralText).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }).catch(() => {
       // Fallback if clipboard API fails
       console.error('Failed to copy refcode');
     });
@@ -79,7 +84,6 @@ const Navbar = React.memo(function Navbar({
           <nav className="max-lg:hidden flex items-center gap-0 pl-4">
             {PRIMARY_NAVIGATION.map((item, index) => {
               const active = path.startsWith(item.href);
-              const Icon = item.icon;
               return (
                 <React.Fragment key={item.href}>
                   {index > 0 && (
@@ -88,7 +92,7 @@ const Navbar = React.memo(function Navbar({
                   <Link
                     href={item.href}
                     className={clsxUtility(
-                      'flex items-center gap-1.5 px-2 text-[13px] font-normal transition-colors',
+                      'flex items-center gap-1.5 px-2 text-[14px] font-normal transition-colors',
                       active ? 'text-white' : 'text-white/40 hover:text-white/60',
                     )}
                     style={{ 
@@ -96,19 +100,13 @@ const Navbar = React.memo(function Navbar({
                       lineHeight: '16px'
                     }}
                   >
-                    <Icon 
-                      size={16} 
-                      className={clsxUtility(
-                        active ? '' : 'text-white/40'
-                      )}
-                    />
                     <span style={{ lineHeight: '16px' }}>{item.label}</span>
                     {item.badge && (
-                      <span 
+                      <span
                         className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                        style={{ 
+                        style={{
                           backgroundColor: `${signatureColor}20`,
-                          color: signatureColor 
+                          color: signatureColor
                         }}
                       >
                         #{item.badge}
@@ -121,7 +119,7 @@ const Navbar = React.memo(function Navbar({
           </nav>
 
           {/* Discount button */}
-          <button className='group shrink-0 text-[13px] rounded-md px-4 py-2 transition-colors cursor-pointer border-0 flex items-center gap-1.5' style={{ backgroundColor: 'rgba(249, 115, 22, 0.08)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.12)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.08)'}>
+          <button className='group shrink-0 text-[14px] rounded-md px-4 py-2 transition-colors cursor-pointer border-0 flex items-center gap-1.5' style={{ backgroundColor: 'rgba(249, 115, 22, 0.08)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.12)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.08)'}>
             <Percent size={16} className="text-orange-500" />
             <p className='group-hover:bg-[#f97316] bg-gradient-to-r from-[#f9731687] to-[#f97316] bg-clip-text text-transparent transition-colors'>Enjoy 0% fees on Trading</p>
           </button>
@@ -130,7 +128,7 @@ const Navbar = React.memo(function Navbar({
           <button 
             ref={howToPlayButtonRef}
             onClick={onHowToPlayOpen}
-            className='group shrink-0 text-[13px] rounded-md px-4 py-2 transition-colors cursor-pointer border flex items-center gap-1.5' 
+            className='group shrink-0 text-[14px] rounded-md px-4 py-2 transition-colors cursor-pointer border flex items-center gap-1.5' 
             style={{ backgroundColor: 'rgba(236, 72, 153, 0.08)', borderColor: 'rgba(236, 72, 153, 0.5)' }} 
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.12)';
@@ -162,15 +160,32 @@ const Navbar = React.memo(function Navbar({
               {isRefPopoverOpen && (
                 <div className="absolute top-full left-0 mt-2 w-64 p-3 rounded-md border border-zinc-800 bg-surface-850 shadow-xl z-50">
                   <div className="text-xs text-zinc-400 mb-2">Your referral code</div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <code className="text-sm text-white font-mono">{refcode}</code>
-                    <button onClick={handleCopyRefcode}>
-                      <Copy size={14} className="text-zinc-400 hover:text-white" />
-                    </button>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-md border border-zinc-800 bg-surface-900">
+                        <span className="text-xs text-zinc-400">r/</span>
+                        <code className="text-sm text-white font-mono">{refcode}</code>
+                      </div>
+                      <button 
+                        onClick={handleCopyRefcode}
+                        className="relative"
+                        title="Copy referral code"
+                      >
+                        <Copy size={14} className={copySuccess ? 'text-zinc-300' : 'text-zinc-400 hover:text-white transition-colors'} />
+                        {copySuccess && (
+                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-zinc-300 bg-zinc-900 px-2 py-1 rounded border border-zinc-700">
+                            Copied!
+                          </span>
+                        )}
+                      </button>
+                      <div className="text-xs font-medium px-2 py-1 rounded" style={{ background: `linear-gradient(to right, ${signatureColor}25, ${signatureColor}10)` }}>
+                        <span className="text-xs font-medium" style={{ background: `linear-gradient(to right, ${signatureColor}, ${signatureColor}cc)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                          Earn rewards
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-zinc-500">Share this code with friends</div>
                   </div>
-                  <div className="text-xs text-zinc-500">Share this code with friends</div>
-                </div>
-              )}
+                )}
             </div>
 
             {/* Deposit button */}

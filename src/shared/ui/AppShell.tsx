@@ -6,6 +6,7 @@ import SidebarRail from './SidebarRail';
 import Footer from './Footer';
 import AppShellModals from './AppShellModals';
 import { useUIStore, usePlayerStore, useModal, type WatchedPlayer } from '@/shared/state';
+import { useGameStore } from '@/shared/state/gameStore';
 
 type ModalController = ReturnType<typeof useModal>;
 
@@ -13,6 +14,7 @@ type AppModals = {
   deposit: ModalController;
   notifications: ModalController;
   settings: ModalController;
+  help: ModalController;
   howToPlay: ModalController;
   newsUpdates: ModalController;
   rewards: ModalController;
@@ -28,6 +30,7 @@ const useAppModals = (): AppModals => ({
   deposit: useModal('deposit'),
   notifications: useModal('notifications'),
   settings: useModal('settings'),
+  help: useModal('help'),
   howToPlay: useModal('howToPlay'),
   newsUpdates: useModal('newsUpdates'),
   rewards: useModal('rewards'),
@@ -43,6 +46,7 @@ const useAppModalRefs = () => ({
   depositButtonRef: React.useRef<HTMLButtonElement | null>(null),
   notificationsButtonRef: React.useRef<HTMLButtonElement | null>(null),
   settingsButtonRef: React.useRef<HTMLButtonElement | null>(null),
+  helpButtonRef: React.useRef<HTMLButtonElement | null>(null),
   howToPlayButtonRef: React.useRef<HTMLButtonElement | null>(null),
   newsUpdatesButtonRef: React.useRef<HTMLButtonElement | null>(null),
   rewardsButtonRef: React.useRef<HTMLButtonElement | null>(null),
@@ -69,6 +73,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     deposit,
     notifications,
     settings,
+    help,
     howToPlay,
     newsUpdates,
     rewards,
@@ -84,6 +89,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     depositButtonRef,
     notificationsButtonRef,
     settingsButtonRef,
+    helpButtonRef,
     howToPlayButtonRef,
     newsUpdatesButtonRef,
     rewardsButtonRef,
@@ -130,9 +136,13 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
   );
 
   const handleSoundToggle = useCallback(() => {
+    // Toggle in UI store (for SoundManager)
     if (typeof window !== 'undefined') {
       (window as typeof window & { toggleSound?: () => void }).toggleSound?.();
     }
+    // Also toggle in game store (for sidebar display)
+    const currentSoundEnabled = useGameStore.getState().gameSettings.soundEnabled;
+    useGameStore.getState().updateGameSettings({ soundEnabled: !currentSoundEnabled });
   }, []);
 
   const handlePnLTrackerToggle = useCallback(() => {
@@ -198,8 +208,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         customizeButtonRef={customizeButtonRef}
         isWebSocketConnected={isWebSocketConnected}
         isBackendConnected={isBackendConnected}
-        onSettingsOpen={settings.open}
-        settingsButtonRef={settingsButtonRef}
+        onSettingsOpen={help.open}
+        settingsButtonRef={helpButtonRef}
       />
 
       <AppShellModals
@@ -207,6 +217,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         modalRefs={{
           notificationsButtonRef,
           settingsButtonRef,
+          helpButtonRef,
           howToPlayButtonRef,
           newsUpdatesButtonRef,
           rewardsButtonRef,
@@ -217,6 +228,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           deposit,
           notifications,
           settings,
+          help,
           howToPlay,
           newsUpdates,
           rewards,

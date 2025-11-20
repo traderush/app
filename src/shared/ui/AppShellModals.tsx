@@ -8,6 +8,7 @@ import type { PnLCustomization } from '@/shared/state/uiStore';
 const LazyDepositPopup = React.lazy(() => import('./DepositPopup'));
 const LazyNotificationsModal = React.lazy(() => import('./NotificationsModal'));
 const LazySettingsPopup = React.lazy(() => import('./SettingsPopup'));
+const LazyHelpPopup = React.lazy(() => import('./HelpPopup'));
 const LazyHowToPlayPopup = React.lazy(() => import('./HowToPlayPopup'));
 const LazyNewsUpdatesPopup = React.lazy(() => import('./NewsUpdatesPopup'));
 const LazyRewardsPopup = React.lazy(() => import('./RewardsPopup'));
@@ -29,6 +30,7 @@ type ModalKey =
   | 'deposit'
   | 'notifications'
   | 'settings'
+  | 'help'
   | 'howToPlay'
   | 'newsUpdates'
   | 'rewards'
@@ -43,6 +45,7 @@ interface AppShellModalsProps {
   modalRefs: {
     notificationsButtonRef: React.RefObject<HTMLButtonElement | null>;
     settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
+    helpButtonRef: React.RefObject<HTMLButtonElement | null>;
     howToPlayButtonRef: React.RefObject<HTMLButtonElement | null>;
     newsUpdatesButtonRef: React.RefObject<HTMLButtonElement | null>;
     rewardsButtonRef: React.RefObject<HTMLButtonElement | null>;
@@ -227,6 +230,11 @@ const MODAL_DEFINITIONS: ModalDefinition[] = [
     key: 'settings',
     Component: LazySettingsPopup,
     getProps: (ctx) => ({ triggerRef: ctx.modalRefs.settingsButtonRef }),
+  },
+  {
+    key: 'help',
+    Component: LazyHelpPopup,
+    getProps: (ctx) => ({ triggerRef: ctx.modalRefs.helpButtonRef }),
   },
   {
     key: 'howToPlay',

@@ -46,6 +46,7 @@ export default function Modal({ title, isOpen, onClose, triggerRef, children, cl
             'fixed inset-0 bg-black/60 z-[1000]',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=open]:opacity-60 data-[state=closed]:opacity-0',
             'transition-opacity duration-300 ease-out',
             className
           )}

@@ -42,6 +42,7 @@ const SidebarRail = React.memo(function SidebarRail({
 }: SidebarRailProps) {
   const pathname = usePathname();
   const signatureColor = useUIStore((state) => state.signatureColor);
+  const soundEnabled = useUIStore((state) => state.settings.soundEnabled);
   const isBoxHitActive = pathname === '/box-hit';
 
   return (
@@ -143,7 +144,7 @@ const SidebarRail = React.memo(function SidebarRail({
         <div className='flex flex-col gap-5'>
           <button
             onClick={_onSoundToggle}
-            className="group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
+            className="relative group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
             style={{ backgroundColor: '#0D0D0D' }}
             title="Sound"
           >
@@ -152,6 +153,13 @@ const SidebarRail = React.memo(function SidebarRail({
               style={{ color: '#626262' }}
               strokeWidth={1.5}
             />
+            {!soundEnabled && (
+              <div className="pointer-events-none absolute inset-0">
+                <span
+                  className="absolute left-1/2 top-1/2 h-[2px] w-8 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-zinc-500"
+                />
+              </div>
+            )}
           </button>
           <button
             onClick={_onSettingsOpen}
