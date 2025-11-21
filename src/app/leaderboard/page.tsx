@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Grid3x3, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '@/shared/ui/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/ui/select';
 import { cn } from '@/shared/lib/utils';
 import { PROFILE_AVATAR } from '@/shared/ui/constants/navigation';
+import { usePlayerStore, type WatchedPlayer } from '@/shared/state';
 
 // Mock data for traders
 const mockTraders = [
@@ -140,6 +141,25 @@ export default function LeaderboardPage() {
   const [currency, setCurrency] = useState<'sol' | 'usd'>('sol');
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  const setSelectedPlayer = usePlayerStore((state) => state.setSelectedPlayer);
+  const setIsPlayerTrackerOpen = usePlayerStore((state) => state.setIsPlayerTrackerOpen);
+  
+  const handlePlayerClick = useCallback((trader: typeof mockTraders[0]) => {
+    const player: WatchedPlayer = {
+      id: `trader_${trader.id}`,
+      name: trader.name,
+      address: `0x${trader.id.toString().padStart(8, '0')}...${trader.id.toString().padStart(4, '0')}`,
+      avatar: PROFILE_AVATAR,
+      game: 'Box Hit',
+      isOnline: true,
+      winRate: trader.winRate / 100,
+      totalTrades: trader.trades.total,
+      totalWins: trader.trades.won,
+    };
+    setSelectedPlayer(player);
+    setIsPlayerTrackerOpen(true);
+  }, [setSelectedPlayer, setIsPlayerTrackerOpen]);
 
   const filteredTraders = useMemo(() => {
     let filtered = mockTraders;
@@ -217,7 +237,7 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px-32px)] bg-background text-zinc-100">
+    <div className="flex flex-col h-[calc(100vh-56px-32px)] text-zinc-100" style={{ backgroundColor: '#000000' }}>
       {/* Top Navigation Bar */}
       <div className="border-b border-zinc-800/80 bg-zinc-950/60">
         <div className="flex items-center justify-between px-6 py-3">
@@ -320,7 +340,10 @@ export default function LeaderboardPage() {
             {topTraders[0] && (
               <div className="w-fit min-w-[500px] bg-zinc-900/50 border border-zinc-800/80 rounded-lg p-4">
               <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => handlePlayerClick(topTraders[0])}
+                >
                   <div className="w-10 h-10 rounded-md bg-zinc-800 overflow-hidden flex items-center justify-center">
                     <img src={PROFILE_AVATAR} alt={topTraders[0].name} className="w-full h-full object-cover" />
                   </div>
@@ -412,7 +435,10 @@ export default function LeaderboardPage() {
               {topTraders[1] && (
                 <div className="w-fit min-w-[500px] bg-zinc-900/50 border border-zinc-800/80 rounded-lg p-4">
               <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => handlePlayerClick(topTraders[1])}
+                >
                   <div className="w-10 h-10 rounded-md bg-zinc-800 overflow-hidden flex items-center justify-center">
                     <img src={PROFILE_AVATAR} alt={topTraders[1].name} className="w-full h-full object-cover" />
                   </div>
@@ -502,7 +528,10 @@ export default function LeaderboardPage() {
             {topTraders[2] && (
               <div className="w-fit min-w-[500px] bg-zinc-900/50 border border-zinc-800/80 rounded-lg p-4">
               <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => handlePlayerClick(topTraders[2])}
+                >
                   <div className="w-10 h-10 rounded-md bg-zinc-800 overflow-hidden flex items-center justify-center">
                     <img src={PROFILE_AVATAR} alt={topTraders[2].name} className="w-full h-full object-cover" />
                   </div>
@@ -721,7 +750,10 @@ export default function LeaderboardPage() {
                 >
                   <td className="px-4 py-3 text-zinc-300">{index + 1}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                    <div 
+                      className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => handlePlayerClick(trader)}
+                    >
                       <div className="w-8 h-8 rounded-md bg-zinc-800 overflow-hidden flex items-center justify-center">
                         <img src={PROFILE_AVATAR} alt={trader.name} className="w-full h-full object-cover" />
                       </div>

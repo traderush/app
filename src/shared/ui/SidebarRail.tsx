@@ -25,6 +25,104 @@ interface SidebarRailProps {
   onSoundToggle?: () => void;
 }
 
+interface GameIconProps {
+  isActive: boolean;
+  iconColor: string;
+  hoverIconColor: string;
+  backgroundColor: string;
+  hoverBackgroundColor: string;
+  icon: React.ReactNode;
+  signatureColor: string;
+}
+
+interface BottomIconButtonProps {
+  onClick?: () => void;
+  icon: React.ReactNode;
+  signatureColor: string;
+  title?: string;
+  hasStrikethrough?: boolean;
+}
+
+const BottomIconButton = React.forwardRef<HTMLButtonElement, BottomIconButtonProps>(
+  function BottomIconButton({ onClick, icon, signatureColor, title, hasStrikethrough = false }, ref) {
+    const [isHovered, setIsHovered] = React.useState(false);
+    
+    // Convert hex to rgba for opacity and lighten by mixing with white
+    const hexToRgbaLightened = (hex: string, opacity: number, whiteMix: number = 0.3) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      // Mix with white (255, 255, 255)
+      const lightenedR = Math.round(r + (255 - r) * whiteMix);
+      const lightenedG = Math.round(g + (255 - g) * whiteMix);
+      const lightenedB = Math.round(b + (255 - b) * whiteMix);
+      return `rgba(${lightenedR}, ${lightenedG}, ${lightenedB}, ${opacity})`;
+    };
+    
+    const backgroundColor = isHovered 
+      ? hexToRgbaLightened(signatureColor, 0.1)
+      : '#0D0D0D';
+    const iconColor = isHovered ? signatureColor : '#626262';
+    const strikethroughColor = isHovered ? signatureColor : '#71717a';
+    
+    return (
+      <button
+        ref={ref}
+        onClick={onClick}
+        className="relative group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-200 rounded-md cursor-pointer"
+        style={{ 
+          backgroundColor,
+          transition: 'background-color 0.2s'
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        title={title}
+      >
+        <div style={{ color: iconColor, transition: 'color 0.2s' }}>
+          {icon}
+        </div>
+        {hasStrikethrough && (
+          <div className="pointer-events-none absolute inset-0">
+            <span
+              className="absolute left-1/2 top-1/2 h-[2px] w-8 -translate-x-1/2 -translate-y-1/2 rotate-45 transition-colors duration-200"
+              style={{ backgroundColor: strikethroughColor }}
+            />
+          </div>
+        )}
+      </button>
+    );
+  }
+);
+
+const GameIconButton = React.memo(function GameIconButton({
+  isActive,
+  iconColor,
+  hoverIconColor,
+  backgroundColor,
+  hoverBackgroundColor,
+  icon
+}: GameIconProps) {
+  const [isHovered, setIsHovered] = React.useState(false);
+  const currentIconColor = isHovered && !isActive ? hoverIconColor : iconColor;
+  const currentBackgroundColor = isHovered && !isActive ? hoverBackgroundColor : backgroundColor;
+  
+  return (
+    <div
+      className='w-11 h-11 rounded-md flex items-center justify-center cursor-pointer transition-all duration-200'
+      style={{ 
+        backgroundColor: currentBackgroundColor,
+        transition: 'background-color 0.2s'
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div style={{ color: currentIconColor, transition: 'color 0.2s' }}>
+        {icon}
+      </div>
+    </div>
+  );
+});
+
 const SidebarRail = React.memo(function SidebarRail({ 
   isCollapsed = false, 
   onSettingsOpen: _onSettingsOpen, 
@@ -67,17 +165,8 @@ const SidebarRail = React.memo(function SidebarRail({
             "flex flex-col items-center gap-5 rounded-md transition-all duration-300",
             isCollapsed && "opacity-0 scale-95"
           )}>
-            {[
-              { href: '/box-hit', isLink: true },
-              { href: '/sketch', isLink: true },
-              { href: '/towers', isLink: true },
-              { href: '/ahead', isLink: true },
-              { isLink: false, onClick: onReferralOpen },
-            ].map((game, index) => {
-              const isActive = index === 0 && isBoxHitActive;
-              const iconColor = isActive ? signatureColor : '#626262';
-              
-              // Convert hex to rgba for opacity and lighten by mixing with white
+            {/* Convert hex to rgba for opacity and lighten by mixing with white */}
+            {(() => {
               const hexToRgbaLightened = (hex: string, opacity: number, whiteMix: number = 0.3) => {
                 const r = parseInt(hex.slice(1, 3), 16);
                 const g = parseInt(hex.slice(3, 5), 16);
@@ -89,12 +178,26 @@ const SidebarRail = React.memo(function SidebarRail({
                 return `rgba(${lightenedR}, ${lightenedG}, ${lightenedB}, ${opacity})`;
               };
               
+              return (
+                <>
+                  {[
+              { href: '/box-hit', isLink: true },
+              { href: '/sketch', isLink: true },
+              { href: '/towers', isLink: true },
+              { href: '/ahead', isLink: true },
+            ].map((game, index) => {
+              const isActive = index === 0 && isBoxHitActive;
+              const iconColor = isActive ? signatureColor : '#626262';
+              
               const backgroundColor = isActive 
                 ? hexToRgbaLightened(signatureColor, 0.15)
                 : '#0D0D0D';
               
+              const hoverIconColor = signatureColor;
+              const hoverBackgroundColor = hexToRgbaLightened(signatureColor, 0.1);
+              
               const boxHitIcon = (
-                <svg width="20" height="20" viewBox="0 0 239.52 219.12" fill="none" style={{ color: iconColor }}>
+                <svg width="20" height="20" viewBox="0 0 239.52 219.12" fill="none">
                   <path fill="currentColor" d="M 0,0.0910005 67.58,0 V 60.73 H 0 Z M 81.84,0 h 75.84 V 60.73 H 81.84 Z m 90.1,0 h 67.58 V 60.73 H 171.94 Z M 0,74.83 H 67.58 V 144.3 H 0 Z" />
                   <path fill="none" stroke="currentColor" strokeWidth="6.84343" d="m 81.84,74.83 h 75.84 V 144.3 H 81.84 Z" />
                   <path fill="currentColor" d="m 171.94,74.83 h 67.58 V 144.3 H 171.94 Z M 0,158.39 h 67.58 v 60.73 H 0 Z m 81.84,0 h 75.84 v 60.73 H 81.84 Z m 90.1,0 h 67.58 v 60.73 h -67.58 z" />
@@ -102,78 +205,62 @@ const SidebarRail = React.memo(function SidebarRail({
                 </svg>
               );
               
-              const pnlText = (
-                <span 
-                  style={{ color: iconColor }}
-                  className="text-xs font-medium"
-                >
-                  PnL
-                </span>
-              );
-              
-              const icon = index === 4 ? pnlText : boxHitIcon;
-              
-              if (game.isLink) {
-                return (
-                  <Link key={index} href={game.href}>
-                    <div 
-                      className='w-11 h-11 rounded-md flex items-center justify-center cursor-pointer transition-colors'
-                      style={{ backgroundColor }}
-                    >
-                      {icon}
-              </div>
-            </Link>
-                );
-              }
-              
               return (
-                <button
-                  key={index}
-                  ref={index === 4 ? referralButtonRef : undefined}
-                  onClick={game.onClick}
-                  className='w-11 h-11 rounded-md flex items-center justify-center cursor-pointer transition-colors'
-                  style={{ backgroundColor }}
-                >
-                  {icon}
-                </button>
+                <Link key={index} href={game.href}>
+                  <GameIconButton
+                    isActive={isActive}
+                    iconColor={iconColor}
+                    hoverIconColor={hoverIconColor}
+                    backgroundColor={backgroundColor}
+                    hoverBackgroundColor={hoverBackgroundColor}
+                    icon={boxHitIcon}
+                    signatureColor={signatureColor}
+                  />
+                </Link>
               );
             })}
+            
+            {/* PnL Button */}
+            <button
+              ref={referralButtonRef}
+              onClick={onReferralOpen}
+              className="border-0 bg-transparent p-0"
+            >
+              <GameIconButton
+                isActive={false}
+                iconColor="#626262"
+                hoverIconColor={signatureColor}
+                backgroundColor="#0D0D0D"
+                hoverBackgroundColor={hexToRgbaLightened(signatureColor, 0.1)}
+                icon={
+                  <span className="text-xs font-medium">
+                    PnL
+                  </span>
+                }
+                signatureColor={signatureColor}
+              />
+            </button>
+                </>
+              );
+            })()}
           </div>
         </div>
 
         <div className='flex flex-col gap-5'>
-          <button
+          <BottomIconButton
             onClick={_onSoundToggle}
-            className="relative group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
-            style={{ backgroundColor: '#0D0D0D' }}
+            icon={<Volume2 size={20} strokeWidth={1.5} />}
+            signatureColor={signatureColor}
             title="Sound"
-          >
-            <Volume2 
-              size={20} 
-              style={{ color: '#626262' }}
-              strokeWidth={1.5}
-            />
-            {!soundEnabled && (
-              <div className="pointer-events-none absolute inset-0">
-                <span
-                  className="absolute left-1/2 top-1/2 h-[2px] w-8 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-zinc-500"
-                />
-              </div>
-            )}
-          </button>
-          <button
+            hasStrikethrough={!soundEnabled}
+          />
+          <BottomIconButton
             onClick={_onSettingsOpen}
             ref={_settingsButtonRef}
-            className="group w-11 h-11 flex flex-col items-center justify-center gap-2 transition-all duration-100 rounded-md cursor-pointer"
-            style={{ backgroundColor: '#0D0D0D' }}
+            icon={<Settings size={20} strokeWidth={1.5} />}
+            signatureColor={signatureColor}
             title="Settings"
-          >
-            <Settings 
-              size={20} 
-              style={{ color: '#626262' }}
-              strokeWidth={1.5}
-            />
-          </button>
+          />
         </div>
       </div>
     </aside>

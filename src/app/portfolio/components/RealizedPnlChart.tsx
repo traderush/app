@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { AreaSeries } from 'lightweight-charts';
+import { useUIStore } from '@/shared/state';
 
 // Generate demo PNL data - cumulative realized PNL over time
 const generateDemoData = (): Array<{ time: UTCTimestamp; value: number }> => {
@@ -31,6 +32,8 @@ export default function RealizedPnlChart() {
   const areaRef = useRef<ISeriesApi<'Area'> | null>(null);
   const [hoverValue, setHoverValue] = useState<number | null>(null);
   const [hoverTime, setHoverTime] = useState<string | null>(null);
+  const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+  const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
 
   useEffect(() => {
     if (!el.current) return;
@@ -71,15 +74,36 @@ export default function RealizedPnlChart() {
                 textColor: '#a1a1aa',
               },
               grid: {
-                horzLines: { color: 'rgba(255,255,255,0.1)' },
-                vertLines: { color: 'rgba(255,255,255,0.04)' },
+                horzLines: { 
+                  color: 'rgba(255,255,255,0.1)',
+                  visible: true,
+                },
+                vertLines: { 
+                  color: 'rgba(255,255,255,0.04)',
+                  visible: true,
+                },
               },
               rightPriceScale: {
-                borderVisible: false,
-                scaleMargins: { top: 0.1, bottom: 0.1 },
+                borderVisible: true,
+                borderColor: 'rgba(255,255,255,0.2)',
+                scaleMargins: { top: 0.1, bottom: 0.2 },
+                visible: true,
+                entireTextOnly: false,
+                autoScale: true,
               },
               timeScale: {
-                borderVisible: false,
+                borderVisible: true,
+                borderColor: 'rgba(255,255,255,0.2)',
+                timeVisible: true,
+                secondsVisible: false,
+                visible: true,
+                rightOffset: 0,
+                barSpacing: 0,
+                fixLeftEdge: false,
+                fixRightEdge: false,
+              },
+              leftPriceScale: {
+                visible: false,
               },
               crosshair: {
                 mode: 1,
@@ -99,12 +123,23 @@ export default function RealizedPnlChart() {
 
           chartRef.current = chart;
 
-          // Create area series with trading-negative color
+          // Helper to convert hex to rgba
+          const hexToRgba = (hex: string, opacity: number) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+          };
+
+          // Determine which color to use based on the data (use negative for now, will update dynamically)
+          const chartColor = tradingNegativeColor;
+          
+          // Create area series with trading colors
           // In lightweight-charts v5, use addSeries with AreaSeries type definition
           areaRef.current = chart.addSeries(AreaSeries, {
-            lineColor: '#ec397a',
-            topColor: 'rgba(236, 57, 122, 0.2)',
-            bottomColor: 'rgba(236, 57, 122, 0)',
+            lineColor: chartColor,
+            topColor: hexToRgba(chartColor, 0.2),
+            bottomColor: hexToRgba(chartColor, 0),
             lineWidth: 2,
             priceFormat: {
               type: 'price',
@@ -171,7 +206,7 @@ export default function RealizedPnlChart() {
 
   return (
     <div className="relative w-full h-full">
-      <div ref={el} className="w-full h-full min-h-[256px]" />
+      <div ref={el} className="w-full h-full" />
       {hoverValue !== null && hoverTime && (
         <div className="absolute top-2 left-2 bg-zinc-900/90 border border-zinc-700 rounded px-2 py-1 text-xs z-10">
           <div className="text-zinc-400">{hoverTime}</div>
@@ -181,6 +216,10 @@ export default function RealizedPnlChart() {
           </div>
         </div>
       )}
+      {/* TradingView branding */}
+      <div className="absolute bottom-1 right-2 text-[10px] text-zinc-500/70 z-10 pointer-events-none">
+        TradingView
+      </div>
     </div>
   );
 }

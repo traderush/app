@@ -117,7 +117,7 @@ export default function PortfolioPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px-32px)] bg-background text-zinc-100">
+    <div className="flex flex-col h-[calc(100vh-56px-32px)] text-zinc-100" style={{ backgroundColor: '#000000' }}>
       {/* Top Navigation Bar */}
       <div className="border-b border-zinc-800/80 bg-zinc-950/60">
         <div className="flex items-center justify-between px-6 py-3">

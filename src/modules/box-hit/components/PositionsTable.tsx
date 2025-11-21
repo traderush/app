@@ -162,7 +162,7 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice, clo
       <td className="font-medium" style={{ color: signatureColor }}>
         {position.multiplier.toFixed(1)}x
       </td>
-      <td className="text-trading-positive">{position.equity}</td>
+      <td className={getEquityClass(position.equity)}>{position.equity}</td>
       <td className={getProbabilityClass(position.hit)}>{position.hit}</td>
       <td>
         <ProgressBar progress={position.prog} />

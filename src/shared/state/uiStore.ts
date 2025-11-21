@@ -71,6 +71,10 @@ interface UIState {
   // Signature Color (user's custom color)
   signatureColor: string;
 
+  // Trading Colors
+  tradingPositiveColor: string;
+  tradingNegativeColor: string;
+
   // PnL customization
   pnLCustomization: PnLCustomization;
   
@@ -107,6 +111,12 @@ interface UIState {
   // Actions - Signature Color
   setSignatureColor: (color: string) => void;
   resetSignatureColor: () => void;
+  
+  // Actions - Trading Colors
+  setTradingPositiveColor: (color: string) => void;
+  setTradingNegativeColor: (color: string) => void;
+  resetTradingColors: () => void;
+  
   updatePnLCustomization: (updates: Partial<PnLCustomization>) => void;
   resetPnLCustomization: () => void;
   
@@ -139,8 +149,8 @@ const defaultPnLCustomization: PnLCustomization = {
   backgroundOpacity: 100,
   backgroundBlur: 0,
   generalTextColor: '#ffffff',
-  balanceTextColor: '#ec397a',
-  pnlTextColor: '#2fe3ac',
+  balanceTextColor: '#ff5a5f',
+  pnlTextColor: '#2ecc71',
 };
 
 const initialTheme: UITheme = {
@@ -191,6 +201,8 @@ export const useUIStore = create<UIState>()(
       layout: initialLayout,
       settings: initialSettings,
       signatureColor: '#FA5616', // Default signature color (orange)
+      tradingPositiveColor: '#2ecc71', // Default trading positive (green)
+      tradingNegativeColor: '#ff5a5f', // Default trading negative (red)
       pnLCustomization: defaultPnLCustomization,
       favoriteAssets: new Set(['BTC']), // BTC is favorited by default
       isAssetDropdownOpen: false,
@@ -298,6 +310,19 @@ export const useUIStore = create<UIState>()(
       resetSignatureColor: () =>
         set({ signatureColor: '#FA5616' }),
 
+      // Trading Colors Actions
+      setTradingPositiveColor: (color) =>
+        set({ tradingPositiveColor: color }),
+
+      setTradingNegativeColor: (color) =>
+        set({ tradingNegativeColor: color }),
+
+      resetTradingColors: () =>
+        set({ 
+          tradingPositiveColor: '#2ecc71',
+          tradingNegativeColor: '#ff5a5f',
+        }),
+
       updatePnLCustomization: (updates) =>
         set((state) => ({
           pnLCustomization: { ...state.pnLCustomization, ...updates },
@@ -398,6 +423,8 @@ export const useUIStore = create<UIState>()(
         layout: state.layout,
         settings: state.settings,
         signatureColor: state.signatureColor,
+        tradingPositiveColor: state.tradingPositiveColor,
+        tradingNegativeColor: state.tradingNegativeColor,
         pnLCustomization: state.pnLCustomization,
         favoriteAssets: Array.from(state.favoriteAssets),
       }),
@@ -415,6 +442,8 @@ export const useUIStore = create<UIState>()(
           ),
           pnLCustomization:
             persisted.pnLCustomization ?? currentState.pnLCustomization,
+          tradingPositiveColor: persisted.tradingPositiveColor ?? currentState.tradingPositiveColor,
+          tradingNegativeColor: persisted.tradingNegativeColor ?? currentState.tradingNegativeColor,
         };
       },
     }

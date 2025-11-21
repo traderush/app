@@ -48,7 +48,40 @@ const Navbar = React.memo(function Navbar({
   const refcode = 'USER123'; // TODO: Get from user store or API
   const [isRefPopoverOpen, setIsRefPopoverOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const hexToRgbaLightened = (hex: string, opacity: number, whiteMix: number = 0.3) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    // Mix with white (255, 255, 255)
+    const lightenedR = Math.round(r + (255 - r) * whiteMix);
+    const lightenedG = Math.round(g + (255 - g) * whiteMix);
+    const lightenedB = Math.round(b + (255 - b) * whiteMix);
+    return `rgba(${lightenedR}, ${lightenedG}, ${lightenedB}, ${opacity})`;
+  };
+
+  const hexToRgba = (hex: string, opacity: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  };
+
+  // Handle scroll detection
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Check initial state
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const handleCopyRefcode = () => {
     const referralText = `r/${refcode}`;
@@ -77,7 +110,18 @@ const Navbar = React.memo(function Navbar({
 
   return (
     <>
-      <header className="w-full">
+      <header 
+        className={clsxUtility(
+          "w-full transition-all duration-300 ease-out",
+          isScrolled ? "border-b border-zinc-800/50" : "border-b border-transparent"
+        )} 
+        style={{ 
+          backgroundColor: isScrolled ? '#000000' : 'transparent',
+          ...(isScrolled ? { 
+            boxShadow: `0 12px 48px -12px ${hexToRgba(signatureColor, 0.1)}, 0 6px 24px -6px ${hexToRgba(signatureColor, 0.06)}` 
+          } : {})
+        }}
+      >
         <div className="flex h-14 w-full items-center gap-4 px-4 pl-0">
 
           {/* Nav menu items */}
@@ -124,24 +168,26 @@ const Navbar = React.memo(function Navbar({
             <p className='group-hover:bg-[#f97316] bg-gradient-to-r from-[#f9731687] to-[#f97316] bg-clip-text text-transparent transition-colors'>Enjoy 0% fees on Trading</p>
           </button>
 
-          {/* How to Trade button */}
-          <button 
-            ref={howToPlayButtonRef}
-            onClick={onHowToPlayOpen}
-            className='group shrink-0 text-[14px] rounded-md px-4 py-2 transition-colors cursor-pointer border flex items-center gap-1.5' 
-            style={{ backgroundColor: 'rgba(236, 72, 153, 0.08)', borderColor: 'rgba(236, 72, 153, 0.5)' }} 
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.12)';
-              e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.7)';
-            }} 
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.08)';
-              e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.5)';
-            }}
-          >
-            <BookOpen size={16} className="text-pink-500" />
-            <p className='group-hover:bg-[#ec4899] bg-gradient-to-r from-[#ec489987] to-[#ec4899] bg-clip-text text-transparent transition-colors'>How to Trade</p>
-          </button>
+          {/* How to Trade button - only show on box-hit page */}
+          {path === '/box-hit' && (
+            <button 
+              ref={howToPlayButtonRef}
+              onClick={onHowToPlayOpen}
+              className='group shrink-0 text-[14px] rounded-md px-4 py-2 transition-colors cursor-pointer border flex items-center gap-1.5' 
+              style={{ backgroundColor: 'rgba(236, 72, 153, 0.08)', borderColor: 'rgba(236, 72, 153, 0.5)' }} 
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.12)';
+                e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.7)';
+              }} 
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.5)';
+              }}
+            >
+              <BookOpen size={16} className="text-pink-500" />
+              <p className='group-hover:bg-[#ec4899] bg-gradient-to-r from-[#ec489987] to-[#ec4899] bg-clip-text text-transparent transition-colors'>How to Trade</p>
+            </button>
+          )}
 
           {/* Spacer */}
           <div className="flex-1" />
@@ -152,7 +198,16 @@ const Navbar = React.memo(function Navbar({
             <div className="relative" ref={popoverRef}>
               <button 
                 onClick={() => setIsRefPopoverOpen(!isRefPopoverOpen)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-surface-900 text-sm text-zinc-300 hover:bg-surface-850 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm text-zinc-300 transition-colors"
+                style={{ 
+                  backgroundColor: hexToRgbaLightened(signatureColor, 0.15),
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = hexToRgbaLightened(signatureColor, 0.2);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = hexToRgbaLightened(signatureColor, 0.15);
+                }}
               >
                 <span>Refer</span>
                 <UserPlus size={18} className="text-zinc-300" />

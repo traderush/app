@@ -20,7 +20,7 @@ export type NavigationItem = {
 };
 
 export const PRIMARY_NAVIGATION: NavigationItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/explorer', label: 'Explorer', icon: Compass },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy, badge: 34 },
   { href: '/refer', label: 'Refer & Earn', icon: Gift },

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { HelpCircle, Book } from 'lucide-react';
+import { useUIStore } from '@/shared/state';
 
 type PerformanceWithMemory = Performance & {
   memory?: {
@@ -35,6 +36,22 @@ const MemoryDisplay: React.FC = () => {
   }, []);
 
   return <span>{isClient ? memoryUsage : 'Loading...'}</span>;
+};
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex: string, opacity: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+// Helper function to darken a hex color
+const darkenColor = (hex: string, factor: number = 0.3) => {
+  const r = Math.max(0, Math.floor(parseInt(hex.slice(1, 3), 16) * (1 - factor)));
+  const g = Math.max(0, Math.floor(parseInt(hex.slice(3, 5), 16) * (1 - factor)));
+  const b = Math.max(0, Math.floor(parseInt(hex.slice(5, 7), 16) * (1 - factor)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
 
 interface FooterProps {
@@ -95,15 +112,19 @@ const Footer = React.memo(function Footer({
         : 'text-trading-negative';
   const fpsClass =
     fps >= 55 ? 'text-trading-positive' : fps >= 30 ? 'text-warning' : 'text-trading-negative';
+  const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+  const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
+  
   const connectionClasses = [
     'group relative flex items-center gap-1 rounded px-2 py-0.5 text-xs transition-colors',
     isWebSocketConnected
-      ? 'bg-[#04C68A]/20 text-[#04C68A]'
+      ? 'text-trading-positive'
       : 'bg-status-downBg text-trading-negative',
   ].join(' ');
+  
   const indicatorClasses = [
     'h-3 w-3 rounded-full border-2',
-    isWebSocketConnected ? 'border-live-border bg-live' : 'border-status-downBorder bg-trading-negative',
+    isWebSocketConnected ? 'border-trading-positive/30' : 'border-status-downBorder',
   ].join(' ');
   const connectionLabelClass = isWebSocketConnected ? 'text-trading-positive' : 'text-trading-negative';
   const backendStatusClasses = isBackendConnected ? 'text-trading-positive' : 'text-trading-negative';
@@ -173,8 +194,23 @@ const Footer = React.memo(function Footer({
           </a>
 
            {/* Connection Status - Dynamic styling based on connection */}
-           <div className={connectionClasses}>
-            <div className={indicatorClasses}></div>
+           <div 
+             className={connectionClasses}
+             style={isWebSocketConnected ? { 
+               backgroundColor: `${tradingPositiveColor}20`,
+               color: tradingPositiveColor 
+             } : {}}
+           >
+            <div 
+              className={indicatorClasses}
+              style={isWebSocketConnected ? { 
+                backgroundColor: tradingPositiveColor,
+                borderColor: darkenColor(tradingPositiveColor, 0.5)
+              } : { 
+                backgroundColor: tradingNegativeColor,
+                borderColor: 'var(--status-downBorder)'
+              }}
+            ></div>
             {isWebSocketConnected ? 'Connected' : 'Disconnected'}
             
             {/* Tooltip with detailed connection info and performance metrics */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useEffect } from 'react';
 import Navbar from './Navbar';
 import SidebarRail from './SidebarRail';
 import Footer from './Footer';
@@ -58,6 +58,14 @@ const useAppModalRefs = () => ({
 
 const AppShellContent = memo(function AppShellContent({ children }: { children: React.ReactNode }) {
   const signatureColor = useUIStore((state) => state.signatureColor);
+  const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+  const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
+
+  // Update CSS variables for trading colors
+  useEffect(() => {
+    document.documentElement.style.setProperty('--trading-positive', tradingPositiveColor);
+    document.documentElement.style.setProperty('--trading-negative', tradingNegativeColor);
+  }, [tradingPositiveColor, tradingNegativeColor]);
   const sidebarCollapsed = useUIStore((state) => state.layout.sidebarCollapsed);
   const watchedPlayers = usePlayerStore((state) => state.watchedPlayers);
   const selectedPlayer = usePlayerStore((state) => state.selectedPlayer);
@@ -113,7 +121,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
   const handlePlayerProfileOpen = useCallback(() => {
     openPlayerTracker({
       id: 'personal',
-      name: 'Personal Profile',
+      name: 'You',
       address: '0x1234...5678',
       avatar: 'https://i.imgflip.com/2/1vq853.jpg',
       game: 'Box Hit',

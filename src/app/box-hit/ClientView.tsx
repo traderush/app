@@ -11,7 +11,7 @@ import ErrorBoundary from '@/shared/ui/ErrorBoundary';
 import { logger } from '@/shared/utils/logger';
 import Canvas from '@/shared/ui/canvas/Canvas';
 import { Switch } from '@/shared/ui/ui/switch';
-import { Activity, ChevronDown, Clock, Maximize, Settings, TrendingDown, TrendingUp, User, Users } from 'lucide-react';
+import { Activity, ChevronDown, Clock, Maximize, Settings, TrendingDown, TrendingUp, User, Users, LayoutGrid } from 'lucide-react';
 import { ASSETS, DEFAULT_TRADE_AMOUNT, TIMEFRAME_OPTIONS } from './constants';
 import type { AssetInfo, AssetKey } from './constants';
 import { useToasts } from './hooks/useToasts';
@@ -871,7 +871,7 @@ export default function ClientView() {
                         isPositionsOverlayOpen ? 'pointer-events-none opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
                       }`}
                     >
-                      <Activity size={16} className="text-zinc-400" />
+                      <LayoutGrid size={16} className="text-zinc-400" />
                       <span className="tracking-tight">Positions</span>
                     </button>
                     {/* Latest Positions Short Summary */}

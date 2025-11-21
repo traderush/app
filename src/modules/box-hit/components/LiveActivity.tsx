@@ -3,6 +3,7 @@ import Image from 'next/image';
 import clsx from 'clsx';
 import { PROFILE_AVATAR } from '@/shared/ui/constants/navigation';
 import { usePlayerStore } from '@/shared/state/playerStore';
+import { useUIStore } from '@/shared/state';
 import type { WatchedPlayer } from '@/shared/state/playerStore';
 
 type ActivityAction = 'won' | 'lost';
@@ -30,6 +31,8 @@ function generateWalletAddress(): string {
 export default function LiveActivity() {
     const setSelectedPlayer = usePlayerStore((state) => state.setSelectedPlayer);
     const setIsPlayerTrackerOpen = usePlayerStore((state) => state.setIsPlayerTrackerOpen);
+    const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+    const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
     const [category, setCategory] = useState<'all' | 'top'>('all');
     
     const handlePlayerClick = (activity: ActivityEntry) => {
@@ -139,7 +142,11 @@ export default function LiveActivity() {
                 const isWin = activity.action === 'won';
                 return (
                     <div 
-                    style={{ backgroundColor: activity.action === 'won' ? '#101212' : '#130E11' }} 
+                    style={{ 
+                      backgroundColor: isWin 
+                        ? `${tradingPositiveColor}0D` 
+                        : `${tradingNegativeColor}0D` 
+                    }} 
                     key={activity.id}
                     className='grid grid-cols-4 gap-x-3 items-center py-2 px-2 text-xs font-regular'
                     >
@@ -162,15 +169,23 @@ export default function LiveActivity() {
                         <p className="text-zinc-300 text-center">{activity.amount}</p>
                         
                         {/* Won/loss rectangle */}
-                        <div className={clsx(
-                          "rounded px-2 py-1 text-center text-[10px] font-medium",
-                          isWin ? 'bg-[#04C68A]/20 text-[#04C68A]' : 'bg-[#DD4141]/20 text-[#DD4141]'
-                        )}>
+                        <div 
+                          className="rounded px-2 py-1 text-center text-[10px] font-medium"
+                          style={{
+                            backgroundColor: isWin ? `${tradingPositiveColor}33` : `${tradingNegativeColor}33`,
+                            color: isWin ? tradingPositiveColor : tradingNegativeColor,
+                          }}
+                        >
                           {isWin ? 'Won' : 'Loss'}
                         </div>
                         
                         {/* Won amount */}
-                        <p className={clsx("text-center font-medium", isWin ? 'text-[#04C68A]' : 'text-[#DD4141]')}>
+                        <p 
+                          className="text-center font-medium"
+                          style={{
+                            color: isWin ? tradingPositiveColor : tradingNegativeColor,
+                          }}
+                        >
                           {isWin ? '+' : '-'}{activity.payout}
                         </p>
                     </div>
