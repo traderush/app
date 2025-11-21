@@ -42,8 +42,6 @@ export type {
   BackendMultiplierMap,
 } from './types';
 
-const BOX_SCALE = 1; // Adjust < 1 to zoom out (show more boxes), > 1 to zoom in
-
 export class GridGame extends Game {
   private frameCount: number = 0;
   private camera: Camera = {
@@ -142,7 +140,7 @@ export class GridGame extends Game {
   protected boxClickabilityCache: Map<string, boolean> = new Map();
 
   protected config!: Required<GridGameConfig>;
-  private readonly boxScale: number = BOX_SCALE;
+  private zoomLevel: number = 1.0; // Zoom level: < 1.0 zooms out, > 1.0 zooms in
 
   constructor(container: HTMLElement, config?: GridGameConfig) {
     super(container, config);
@@ -190,6 +188,8 @@ export class GridGame extends Game {
       ...defaultGridGameConfig,
       ...config,
     };
+    // Initialize zoom level from config (uses default from defaultGridGameConfig if not provided)
+    this.zoomLevel = Math.max(0.25, Math.min(4.0, this.config.zoomLevel ?? 1.0));
   }
 
   /**
@@ -209,7 +209,8 @@ export class GridGame extends Game {
   private initializeWorld(): void {
     this.world = new WorldCoordinateSystem(this.camera);
     this.world.setPixelsPerPoint(this.config.pixelsPerPoint);
-    this.world.setHorizontalScale(this.boxScale);
+    this.world.setHorizontalScale(this.zoomLevel);
+    this.world.setVerticalScale(this.zoomLevel);
     this.world.updateCanvasSize(this.width, this.height);
   }
 
@@ -231,7 +232,7 @@ export class GridGame extends Game {
       gameType: this.config.gameType,
       ...defaultViewportManagerConfig,
     });
-    this.viewportManager.setVerticalScale(this.boxScale);
+    this.viewportManager.setVerticalScale(this.zoomLevel);
     
     // Initialize grid state manager
     this.gridStateManager = new GridStateManager();
@@ -751,6 +752,9 @@ export class GridGame extends Game {
     if (newConfig.pixelsPerPoint !== undefined) {
       this.world.setPixelsPerPoint(newConfig.pixelsPerPoint);
     }
+    if (newConfig.zoomLevel !== undefined) {
+      this.setZoomLevel(newConfig.zoomLevel);
+    }
     this.debug('🎯 GridGame: Updated config showOtherPlayers:', this.config.showOtherPlayers);
   }
 
@@ -814,6 +818,25 @@ export class GridGame extends Game {
   // Method to get current priceScale from WorldCoordinateSystem
   public getPriceScale(): number {
     return this.world.getPriceScale();
+  }
+
+  // Method to get current horizontal scale
+  public getHorizontalScale(): number {
+    return this.world.getHorizontalScale();
+  }
+
+  // Method to set zoom level (affects horizontalScale and verticalScale)
+  public setZoomLevel(zoomLevel: number): void {
+    // Clamp zoom level to reasonable bounds (0.25 = 4x zoom out, 4.0 = 4x zoom in)
+    this.zoomLevel = Math.max(0.25, Math.min(4.0, zoomLevel));
+    this.world.setHorizontalScale(this.zoomLevel);
+    this.world.setVerticalScale(this.zoomLevel);
+    this.viewportManager.setVerticalScale(this.zoomLevel);
+  }
+
+  // Method to get current zoom level
+  public getZoomLevel(): number {
+    return this.zoomLevel;
   }
 
 }

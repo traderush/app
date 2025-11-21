@@ -33,6 +33,7 @@ export class WorldCoordinateSystem {
   private camera: Camera
   private pixelsPerPoint: number = 5
   private horizontalScale: number = 1
+  private verticalScale: number = 1
   private canvasWidth: number = 0
   private canvasHeight: number = 0
   private viewportHeight: number = 0
@@ -52,7 +53,8 @@ export class WorldCoordinateSystem {
     this.viewportHeight = viewportHeight
     this.visiblePriceRange = visiblePriceRange
     const fixedReferenceViewportHeight = 1145; // Fixed reference height
-    this.priceScale = fixedReferenceViewportHeight / visiblePriceRange
+    // Apply verticalScale (zoom level) to priceScale, similar to horizontalScale
+    this.priceScale = (fixedReferenceViewportHeight / visiblePriceRange) * this.verticalScale
   }
   
   setPixelsPerPoint(pixelsPerPoint: number): void {
@@ -67,6 +69,21 @@ export class WorldCoordinateSystem {
 
   getHorizontalScale(): number {
     return this.horizontalScale
+  }
+
+  setVerticalScale(scale: number): void {
+    if (Number.isFinite(scale) && scale > 0) {
+      this.verticalScale = scale
+      // Recalculate priceScale with new verticalScale if viewport is already initialized
+      if (this.visiblePriceRange > 0) {
+        const fixedReferenceViewportHeight = 1145
+        this.priceScale = (fixedReferenceViewportHeight / this.visiblePriceRange) * this.verticalScale
+      }
+    }
+  }
+
+  getVerticalScale(): number {
+    return this.verticalScale
   }
 
   worldToScreen(worldX: number, worldY: number): ScreenPoint {

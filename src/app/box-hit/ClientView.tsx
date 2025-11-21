@@ -85,6 +85,7 @@ export default function ClientView() {
   const showProbabilities = useGameStore((state) => state.gameSettings.showProbabilities);
   const timeframe = useGameStore((state) => state.gameSettings.timeframe);
   const selectedAsset = useGameStore((state) => state.gameSettings.selectedAsset);
+  const zoomLevel = useGameStore((state) => state.gameSettings.zoomLevel);
   
   // UI store for dropdowns and preferences - stable subscription to prevent infinite loops
   const favoriteAssets = useUIStore((state) => state.favoriteAssets);
@@ -661,6 +662,7 @@ export default function ClientView() {
                     showProbabilities={showProbabilities}
                     showOtherPlayers={showOtherPlayers}
                     minMultiplier={minMultiplier}
+                    zoomLevel={zoomLevel}
                   />
                 </div>
               </div>

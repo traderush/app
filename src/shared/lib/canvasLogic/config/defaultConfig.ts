@@ -27,6 +27,7 @@ export const defaultGridGameConfig: Required<Omit<GridGameConfig, 'theme' | 'wid
   showProbabilities: false,
   showOtherPlayers: false,
   minMultiplier: 1.0,
+  zoomLevel: 1.2,
 };
 
 /**

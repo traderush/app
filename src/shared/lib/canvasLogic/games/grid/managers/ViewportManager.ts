@@ -70,11 +70,11 @@ export class ViewportManager extends Manager {
       maxVisibleRange: this.config.maxVisibleRange,
     });
 
-    const scale = Math.max(this.verticalScale, 0.0001);
-    const scaledRange = rawPriceRange / scale;
+    // Don't adjust visible price range based on zoom - zoom only affects rendering scale
+    // The visible range should stay constant; zoom will scale how boxes are rendered
     const minRange = this.config.minVisibleRange;
     const maxRange = this.config.maxVisibleRange;
-    this.visiblePriceRange = Math.max(minRange, Math.min(scaledRange, maxRange));
+    this.visiblePriceRange = Math.max(minRange, Math.min(rawPriceRange, maxRange));
 
     // Update world viewport with smoothed range
     world.updateViewport(viewportHeight, this.visiblePriceRange);
@@ -86,11 +86,14 @@ export class ViewportManager extends Manager {
   }
 
   /**
-   * Set vertical scale used to keep boxes square with horizontal scaling
+   * Set vertical scale (kept for API compatibility but no longer affects visible price range)
+   * Zoom now only affects rendering scale in WorldCoordinateSystem, not visible range
    */
   public setVerticalScale(scale: number): void {
     if (Number.isFinite(scale) && scale > 0) {
       this.verticalScale = scale;
+      // Note: verticalScale is stored but not used in price range calculation
+      // Zoom only affects rendering scale, not the visible price range
     }
   }
 

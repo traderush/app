@@ -40,6 +40,7 @@ export interface SquareAnimation {
  * @property showProbabilities - Whether to show probability heatmap overlay
  * @property showOtherPlayers - Whether to show other players' selections
  * @property minMultiplier - Minimum multiplier threshold to display
+ * @property zoomLevel - Zoom level for boxes (< 1.0 zooms out, > 1.0 zooms in, default: 1.0)
  */
 export interface GridGameConfig extends GameConfig {
   multipliers?: string[];
@@ -61,6 +62,7 @@ export interface GridGameConfig extends GameConfig {
   showProbabilities?: boolean;
   showOtherPlayers?: boolean;
   minMultiplier?: number;
+  zoomLevel?: number;
 }
 
 /**

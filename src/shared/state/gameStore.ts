@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector, persist } from 'zustand/middleware';
 import { createPersistentStorage } from '@/shared/utils/persistence';
+import { defaultGridGameConfig } from '@/shared/lib/canvasLogic/config/defaultConfig';
 
 export interface GameCell {
   id: string;
@@ -118,11 +119,11 @@ const initialGameSettings: GameSettings = {
   bestMultiplier: 0,
   soundEnabled: true,
   autoPlay: false,
-  minMultiplier: 1.0,
-  showOtherPlayers: false,
+  minMultiplier: defaultGridGameConfig.minMultiplier,
+  showOtherPlayers: defaultGridGameConfig.showOtherPlayers,
   isTradingMode: false,
-  zoomLevel: 1.0,
-  showProbabilities: false,
+  zoomLevel: defaultGridGameConfig.zoomLevel,
+  showProbabilities: defaultGridGameConfig.showProbabilities,
   selectedAsset: 'DEMO',
   timeframe: 2000, // Default 2s timeframe
 };

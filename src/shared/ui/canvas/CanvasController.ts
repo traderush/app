@@ -1,8 +1,10 @@
 import { GridGame } from '@/shared/lib/canvasLogic/games/grid/GridGame';
 import { defaultTheme } from '@/shared/lib/canvasLogic/config/theme';
+import { defaultGridGameConfig } from '@/shared/lib/canvasLogic/config/defaultConfig';
 import { getTimeframeConfig, getAllTimeframes, TimeFrame } from '@/shared/types/timeframe';
 import type { BoxHitContract, BoxHitPosition, BoxHitPositionMap } from '@/shared/types/boxHit';
 import type { EngineContractSnapshot, EnginePricePoint } from '@/shared/types/boxHitEngine';
+import type { GridGameConfig } from '@/shared/lib/canvasLogic/games/grid/types';
 import { getBoxHitEngineService, type BoxHitEngineService, type EngineState } from '@/shared/lib/boxHitEngine/BoxHitEngineService';
 import { useUIStore } from '@/shared/state/uiStore';
 import { useUserStore } from '@/shared/state/userStore';
@@ -88,6 +90,7 @@ export interface CanvasProps {
   showProbabilities?: boolean;
   showOtherPlayers?: boolean;
   minMultiplier?: number;
+  zoomLevel?: number;
 }
 
 function buildMultipliers(
@@ -235,12 +238,14 @@ function buildMultipliers(
     }
 
     // Adjust height to make box square on screen
-    // screenWidth = width (1:1 mapping for X axis)
-    // screenHeight = height * priceScale
-    // For square: width = height * priceScale, so: height = width / priceScale
+    // screenWidth = width * horizontalScale (from worldToScreen conversion)
+    // screenHeight = height * priceScale (from worldToScreen conversion)
+    // For square: width * horizontalScale = height * priceScale
+    // So: height = (width * horizontalScale) / priceScale
+    const horizontalScale = game?.getHorizontalScale?.() ?? 1.0;
     if (priceScale !== null && priceScale > 0) {
       // Make box height match width when rendered (square on screen)
-      height = width / priceScale;
+      height = (width * horizontalScale) / priceScale;
     }
 
     const position = positionsByContract.get(contract.contractId);
@@ -370,6 +375,7 @@ export class CanvasController {
   private initialCoverActive = true;
   private initialCoverTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
   private shouldShowInitialCover = true;
+  private zoomLevel: number = defaultGridGameConfig.zoomLevel;
 
   constructor(root: HTMLElement, options: CanvasProps = {}) {
     this.root = root;
@@ -378,6 +384,7 @@ export class CanvasController {
     this.showProbabilities = options.showProbabilities ?? false;
     this.showOtherPlayers = options.showOtherPlayers ?? false;
     this.minMultiplier = options.minMultiplier ?? 1.0;
+    this.zoomLevel = options.zoomLevel ?? defaultGridGameConfig.zoomLevel;
     this.service = getBoxHitEngineService();
 
     this.signatureColor = useUIStore.getState().signatureColor;
@@ -421,6 +428,11 @@ export class CanvasController {
     this.showProbabilities = next.showProbabilities ?? this.showProbabilities;
     this.showOtherPlayers = next.showOtherPlayers ?? this.showOtherPlayers;
     this.minMultiplier = next.minMultiplier ?? this.minMultiplier;
+    
+    if (next.zoomLevel !== undefined) {
+      this.zoomLevel = next.zoomLevel;
+    }
+    
     this.options = next;
 
     const newTimeframe = this.resolveInitialTimeframe();
@@ -439,6 +451,7 @@ export class CanvasController {
         showProbabilities: this.showProbabilities,
         showOtherPlayers: this.showOtherPlayers,
         minMultiplier: this.minMultiplier,
+        zoomLevel: this.zoomLevel,
       });
     }
   }
@@ -1061,6 +1074,7 @@ export class CanvasController {
       minMultiplier: this.minMultiplier,
       pixelsPerPoint: PIXELS_PER_POINT,
       theme,
+      zoomLevel: this.zoomLevel,
     });
 
     this.game = game;
