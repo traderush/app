@@ -20,7 +20,7 @@ import { GridStateManager } from './managers/GridStateManager';
 import { OtherPlayerManager } from './managers/OtherPlayerManager';
 import { InteractionManager } from './managers/InteractionManager';
 import { getViewportBounds as calculateViewportBounds } from '../../utils/viewportUtils';
-import { clampZoomLevel, calculateZoomFromWidth, ZOOM_REFERENCE_WIDTH } from './utils/gridGameUtils';
+import { clampZoomLevel, calculateZoomFromWidth, ZOOM_REFERENCE_WIDTH, ZOOM_MIN, ZOOM_MAX } from './utils/gridGameUtils';
 import {
   defaultGridGameConfig,
   defaultViewportManagerConfig,
@@ -534,12 +534,16 @@ export class GridGame extends Game {
         getVisiblePriceRange: () => this.viewportManager.getVisiblePriceRange(),
         getCanvasDimensions: () => ({ width: this.width, height: this.height }),
         getWorldToScreen: (worldX, worldY) => this.world.worldToScreen(worldX, worldY),
+        screenToWorld: (screenX, screenY) => this.world.screenToWorld(screenX, screenY),
         forEachSelectableBox: (cb) => this.boxController.forEachSelectableBox(cb),
         onSquareClick: (squareId, event) => this.handlePointerSquareClick(squareId, event),
         getZoomLevel: () => this.getZoomLevel(),
-        setZoomLevel: (zoomLevel) => {
-          this.setZoomLevel(zoomLevel);
+        setZoomLevel: (zoomLevel, skipClamp) => {
+          this.setZoomLevel(zoomLevel, skipClamp);
         },
+        isCameraFollowing: () => this.isCameraFollowingPrice(),
+        getHorizontalScale: () => this.world.getHorizontalScale(),
+        getPriceScale: () => this.world.getPriceScale(),
       },
     });
   }
@@ -779,8 +783,11 @@ export class GridGame extends Game {
     if (newConfig.pixelsPerPoint !== undefined) {
       this.world.setPixelsPerPoint(newConfig.pixelsPerPoint);
     }
-    if (newConfig.zoomLevel !== undefined) {
-      this.setZoomLevel(newConfig.zoomLevel);
+    // Only update zoom if it's actually different (prevents re-clamping user zoom values)
+    // If the new zoom is outside responsive range, it's user zoom - skip clamping
+    if (newConfig.zoomLevel !== undefined && Math.abs(newConfig.zoomLevel - this.zoomLevel) > 1e-6) {
+      const isUserZoom = newConfig.zoomLevel < ZOOM_MIN || newConfig.zoomLevel > ZOOM_MAX;
+      this.setZoomLevel(newConfig.zoomLevel, isUserZoom);
     }
     this.debug('🎯 GridGame: Updated config showOtherPlayers:', this.config.showOtherPlayers);
   }
@@ -853,8 +860,9 @@ export class GridGame extends Game {
   }
 
   // Method to set zoom level (affects horizontalScale and verticalScale)
-  public setZoomLevel(zoomLevel: number): void {
-    this.zoomLevel = clampZoomLevel(zoomLevel);
+  // @param skipClamp - If true, skip clamping (for user-controlled zoom that's already clamped)
+  public setZoomLevel(zoomLevel: number, skipClamp: boolean = false): void {
+    this.zoomLevel = skipClamp ? zoomLevel : clampZoomLevel(zoomLevel);
     this.world.setHorizontalScale(this.zoomLevel);
     this.world.setVerticalScale(this.zoomLevel);
     this.viewportManager.setVerticalScale(this.zoomLevel);

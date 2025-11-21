@@ -1,5 +1,5 @@
 import type { Camera } from '../../../core/WorldCoordinateSystem';
-import { clampZoomLevel } from '../utils/gridGameUtils';
+import { clampUserZoomLevel } from '../utils/gridGameUtils';
 
 interface PointerPosition {
   x: number;
@@ -17,6 +17,7 @@ interface InteractionBindings {
   getVisiblePriceRange: () => number;
   getCanvasDimensions: () => { width: number; height: number };
   getWorldToScreen: (worldX: number, worldY: number) => { x: number; y: number };
+  screenToWorld: (screenX: number, screenY: number) => { x: number; y: number };
   forEachSelectableBox: (
     cb: (
       squareId: string,
@@ -25,7 +26,10 @@ interface InteractionBindings {
   ) => void;
   onSquareClick: (squareId: string | null, event: MouseEvent) => void;
   getZoomLevel: () => number;
-  setZoomLevel: (zoomLevel: number) => void;
+  setZoomLevel: (zoomLevel: number, skipClamp?: boolean) => void;
+  isCameraFollowing: () => boolean;
+  getHorizontalScale: () => number;
+  getPriceScale: () => number;
 }
 
 interface InteractionManagerOptions {
@@ -155,10 +159,40 @@ export class InteractionManager {
 
     this.wheelFrameId = window.requestAnimationFrame(() => {
       const currentZoom = this.options.props.getZoomLevel();
-      const nextZoom = clampZoomLevel(currentZoom - this.wheelDeltaAccumulator * this.wheelSensitivity);
+      const nextZoom = clampUserZoomLevel(currentZoom - this.wheelDeltaAccumulator * this.wheelSensitivity);
 
       if (nextZoom !== currentZoom) {
-        this.options.props.setZoomLevel(nextZoom);
+        // If following price, just update zoom (existing behavior)
+        if (this.options.props.isCameraFollowing()) {
+          this.options.props.setZoomLevel(nextZoom, true); // Skip clamp, already clamped to user limits
+        } else {
+          // When not following, zoom towards viewport center
+          const { width, height } = this.options.props.getCanvasDimensions();
+          const centerScreenX = width / 2;
+          const centerScreenY = height / 2;
+
+          // Get world coordinates of viewport center before zoom
+          const centerWorld = this.options.props.screenToWorld(centerScreenX, centerScreenY);
+
+          // Apply zoom change (skip clamp, already clamped to user limits)
+          this.options.props.setZoomLevel(nextZoom, true);
+
+          // Get new scales after zoom
+          const horizontalScale = this.options.props.getHorizontalScale();
+          const priceScale = this.options.props.getPriceScale();
+
+          // Calculate new camera position to keep the same world point at screen center
+          // From screenToWorld: worldX = screenX / horizontalScale + camera.x
+          // Solving for camera.x: camera.x = worldX - screenX / horizontalScale
+          const newCameraX = Math.max(0, centerWorld.x - centerScreenX / horizontalScale);
+          // For Y: worldY = camera.y + (height/2 - screenY) / priceScale
+          // Solving: camera.y = worldY - (height/2 - screenY) / priceScale
+          const newCameraY = centerWorld.y - (height / 2 - centerScreenY) / priceScale;
+
+          // Update camera position
+          this.options.props.setCameraPosition({ x: newCameraX, y: newCameraY });
+          this.options.props.syncCameraTargets({ x: newCameraX, y: newCameraY });
+        }
       }
 
       this.wheelDeltaAccumulator = 0;
