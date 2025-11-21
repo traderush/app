@@ -20,6 +20,7 @@ import { GridStateManager } from './managers/GridStateManager';
 import { OtherPlayerManager } from './managers/OtherPlayerManager';
 import { PointerInteractionManager } from './managers/PointerInteractionManager';
 import { getViewportBounds as calculateViewportBounds } from '../../utils/viewportUtils';
+import { clampZoomLevel, calculateZoomFromWidth, ZOOM_REFERENCE_WIDTH } from './utils/gridGameUtils';
 import {
   defaultGridGameConfig,
   defaultViewportManagerConfig,
@@ -189,7 +190,8 @@ export class GridGame extends Game {
       ...config,
     };
     // Initialize zoom level from config (uses default from defaultGridGameConfig if not provided)
-    this.zoomLevel = Math.max(0.25, Math.min(4.0, this.config.zoomLevel ?? 1.0));
+    // If using default, will be recalculated from width in initializeWorld()
+    this.zoomLevel = clampZoomLevel(this.config.zoomLevel ?? 1.0);
   }
 
   /**
@@ -203,12 +205,24 @@ export class GridGame extends Game {
     }
   }
 
+
   /**
    * Initialize world coordinate system
    */
   private initializeWorld(): void {
     this.world = new WorldCoordinateSystem(this.camera);
     this.world.setPixelsPerPoint(this.config.pixelsPerPoint);
+    
+    // Calculate initial zoom from canvas width if using default config value
+    // Otherwise, use the configured zoom level
+    if (this.config.zoomLevel === defaultGridGameConfig.zoomLevel) {
+      // Auto-calculate from width if using default
+      this.zoomLevel = calculateZoomFromWidth(this.width);
+    } else {
+      // Use explicitly configured zoom level (clamped to valid range)
+      this.zoomLevel = clampZoomLevel(this.config.zoomLevel);
+    }
+    
     this.world.setHorizontalScale(this.zoomLevel);
     this.world.setVerticalScale(this.zoomLevel);
     this.world.updateCanvasSize(this.width, this.height);
@@ -474,6 +488,11 @@ export class GridGame extends Game {
       this.world.updateCanvasSize(width, height);
       // Update viewport manager with new height
       this.viewportManager.updateConfig({ height });
+      
+      // Auto-adjust zoom based on screen width
+      // Smaller screens = zoom out more, larger screens = zoom in more
+      const newZoomLevel = calculateZoomFromWidth(width);
+      this.setZoomLevel(newZoomLevel);
     });
   }
 
@@ -827,8 +846,7 @@ export class GridGame extends Game {
 
   // Method to set zoom level (affects horizontalScale and verticalScale)
   public setZoomLevel(zoomLevel: number): void {
-    // Clamp zoom level to reasonable bounds (0.25 = 4x zoom out, 4.0 = 4x zoom in)
-    this.zoomLevel = Math.max(0.25, Math.min(4.0, zoomLevel));
+    this.zoomLevel = clampZoomLevel(zoomLevel);
     this.world.setHorizontalScale(this.zoomLevel);
     this.world.setVerticalScale(this.zoomLevel);
     this.viewportManager.setVerticalScale(this.zoomLevel);

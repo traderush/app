@@ -144,3 +144,32 @@ export function calculatePriceStep(priceRange: number, isSketchOrCobra: boolean)
   return step * magnitude;
 }
 
+/**
+ * Zoom level constants and utilities
+ */
+export const ZOOM_MIN = 0.75; // Minimum zoom level (20% zoom out)
+export const ZOOM_MAX = 1.35; // Maximum zoom level (20% zoom in)
+export const ZOOM_REFERENCE_WIDTH = 1920; // Reference width where zoom = 1.0
+
+/**
+ * Clamp zoom level to valid range
+ * @param zoomLevel - Zoom level to clamp
+ * @returns Clamped zoom level between ZOOM_MIN and ZOOM_MAX
+ */
+export function clampZoomLevel(zoomLevel: number): number {
+  return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel));
+}
+
+/**
+ * Calculate zoom level based on screen/canvas width
+ * Smaller screens = lower zoom (more boxes visible)
+ * Larger screens = higher zoom (larger boxes)
+ * @param width - Canvas or screen width in pixels
+ * @param referenceWidth - Reference width where zoom = 1.0 (default: 1920)
+ * @returns Zoom level clamped between ZOOM_MIN and ZOOM_MAX
+ */
+export function calculateZoomFromWidth(width: number, referenceWidth: number = ZOOM_REFERENCE_WIDTH): number {
+  const zoomRatio = width / referenceWidth;
+  return clampZoomLevel(zoomRatio);
+}
+
