@@ -18,7 +18,7 @@ import { PriceSeriesManager } from './managers/PriceSeriesManager';
 import { ViewportManager } from './managers/ViewportManager';
 import { GridStateManager } from './managers/GridStateManager';
 import { OtherPlayerManager } from './managers/OtherPlayerManager';
-import { PointerInteractionManager } from './managers/PointerInteractionManager';
+import { InteractionManager } from './managers/InteractionManager';
 import { getViewportBounds as calculateViewportBounds } from '../../utils/viewportUtils';
 import { clampZoomLevel, calculateZoomFromWidth, ZOOM_REFERENCE_WIDTH } from './utils/gridGameUtils';
 import {
@@ -81,27 +81,30 @@ export class GridGame extends Game {
   // Grid axis renderer
   private gridAxisRenderer!: GridAxisRenderer;
   private gridFrameRenderer!: GridFrameRenderer;
-  private pointerInteractionManager!: PointerInteractionManager;
+  private interactionManager!: InteractionManager;
   private selectionManager!: SelectionManager;
   private readonly onCanvasMouseDown = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseDown(event, this.canvas);
+    this.interactionManager.handleMouseDown(event, this.canvas);
     super.handleMouseDown(event);
   };
   private readonly onCanvasMouseUp = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseUp(event, this.canvas);
+    this.interactionManager.handleMouseUp(event, this.canvas);
     super.handleMouseUp(event);
   };
   private readonly onCanvasMouseLeave = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseLeave(event, this.canvas);
+    this.interactionManager.handleMouseLeave(event, this.canvas);
     super.handleMouseLeave(event);
   };
   private readonly onCanvasMouseMove = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseMove(event, this.canvas);
+    this.interactionManager.handleMouseMove(event, this.canvas);
     super.handleMouseMove(event);
   };
   private readonly onCanvasClick = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleClick(event, this.canvas);
+    this.interactionManager.handleClick(event, this.canvas);
     super.handleClick(event);
+  };
+  private readonly onCanvasWheel = (event: WheelEvent): void => {
+    this.interactionManager.handleWheel(event);
   };
   
   // Debug logging throttle
@@ -161,11 +164,11 @@ export class GridGame extends Game {
     // Initialize renderers (must be after managers since they depend on them)
     this.initializeRenderers();
     
-    // Initialize pointer interaction manager (must be after renderers)
-    this.initializePointerInteraction();
+    // Initialize interaction manager (must be after renderers)
+    this.initializeInteraction();
 
-    // Re-setup event listeners now that pointerInteractionManager is initialized
-    // This ensures the PointerInteractionManager handlers are properly attached
+    // Re-setup event listeners now that interactionManager is initialized
+    // This ensures the InteractionManager handlers are properly attached
     this.setupEventListeners();
 
     // Setup resize handler
@@ -421,7 +424,7 @@ export class GridGame extends Game {
       }),
       getFrameCount: () => this.frameCount,
       getMousePosition: () => {
-        const { x, y } = this.pointerInteractionManager?.getMousePosition() ?? { x: -1, y: -1 };
+        const { x, y } = this.interactionManager?.getMousePosition() ?? { x: -1, y: -1 };
         return { mouseX: x, mouseY: y };
       },
       getSmoothLineEndX: () => this.smoothLineEndX,
@@ -499,8 +502,8 @@ export class GridGame extends Game {
   /**
    * Initialize pointer interaction manager
    */
-  private initializePointerInteraction(): void {
-    this.pointerInteractionManager = new PointerInteractionManager({
+  private initializeInteraction(): void {
+    this.interactionManager = new InteractionManager({
       props: {
         camera: this.camera,
         setCameraPosition: ({ x, y }) => {
@@ -533,6 +536,10 @@ export class GridGame extends Game {
         getWorldToScreen: (worldX, worldY) => this.world.worldToScreen(worldX, worldY),
         forEachSelectableBox: (cb) => this.boxController.forEachSelectableBox(cb),
         onSquareClick: (squareId, event) => this.handlePointerSquareClick(squareId, event),
+        getZoomLevel: () => this.getZoomLevel(),
+        setZoomLevel: (zoomLevel) => {
+          this.setZoomLevel(zoomLevel);
+        },
       },
     });
   }
@@ -548,7 +555,7 @@ export class GridGame extends Game {
   }
 
   /**
-   * Override Game's setupEventListeners to add PointerInteractionManager handlers
+   * Override Game's setupEventListeners to add InteractionManager handlers
    * This ensures our custom handlers are used while still calling base class setup
    */
   protected setupEventListeners(): void {
@@ -563,14 +570,15 @@ export class GridGame extends Game {
     this.canvas.removeEventListener('mousedown', this.handleMouseDown);
     this.canvas.removeEventListener('mouseup', this.handleMouseUp);
     
-    // Add our custom handlers that delegate to PointerInteractionManager
+    // Add our custom handlers that delegate to InteractionManager
     // These will fire in addition to base class handlers
-    if (this.pointerInteractionManager) {
+    if (this.interactionManager) {
       this.canvas.addEventListener('mousedown', this.onCanvasMouseDown);
       this.canvas.addEventListener('mouseup', this.onCanvasMouseUp);
       this.canvas.addEventListener('mouseleave', this.onCanvasMouseLeave);
       this.canvas.addEventListener('mousemove', this.onCanvasMouseMove);
       this.canvas.addEventListener('click', this.onCanvasClick);
+      this.canvas.addEventListener('wheel', this.onCanvasWheel, { passive: false });
     }
   }
 
@@ -850,6 +858,7 @@ export class GridGame extends Game {
     this.world.setHorizontalScale(this.zoomLevel);
     this.world.setVerticalScale(this.zoomLevel);
     this.viewportManager.setVerticalScale(this.zoomLevel);
+    this.emit('zoomLevelChanged', { zoomLevel: this.zoomLevel });
   }
 
   // Method to get current zoom level

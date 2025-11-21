@@ -663,6 +663,7 @@ export default function ClientView() {
                     showOtherPlayers={showOtherPlayers}
                     minMultiplier={minMultiplier}
                     zoomLevel={zoomLevel}
+                    onZoomLevelChange={(level) => updateGameSettings({ zoomLevel: level })}
                   />
                 </div>
               </div>

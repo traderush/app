@@ -126,7 +126,7 @@ GridGame.ts (1240 lines) - Main orchestration
 ├── BoxRenderer.ts (394 lines) - Box visuals
 ├── BoxController.ts (222 lines) - Contract & selection state
 ├── PriceLineRenderer.ts (166 lines) - Price path & ticker
-├── PointerInteractionManager.ts (216 lines) - Pointer + drag coordination
+├── InteractionManager.ts (216 lines) - Pointer + drag coordination
 ├── viewportUtils.ts (48 lines) - Shared viewport math helpers
 ├── SelectionManager.ts (97 lines) - Selection/highlight state orchestration
 ├── priceMetrics.ts (111 lines) - Price-range + ms-per-point helpers

@@ -91,6 +91,7 @@ export interface CanvasProps {
   showOtherPlayers?: boolean;
   minMultiplier?: number;
   zoomLevel?: number;
+  onZoomLevelChange?: (zoomLevel: number) => void;
 }
 
 function buildMultipliers(
@@ -1133,6 +1134,11 @@ export class CanvasController {
     game.on('cameraFollowingChanged', ({ isFollowing }: { isFollowing: boolean }) => {
       this.isCameraFollowing = isFollowing;
       this.elements.recenterButton.style.display = (!isFollowing && state.status === 'live') ? '' : 'none';
+    });
+
+    game.on('zoomLevelChanged', ({ zoomLevel }: { zoomLevel: number }) => {
+      this.zoomLevel = zoomLevel;
+      this.options.onZoomLevelChange?.(zoomLevel);
     });
 
     this.isCameraFollowing = game.isCameraFollowingPrice();

@@ -1,11 +1,12 @@
 import type { Camera } from '../../../core/WorldCoordinateSystem';
+import { clampZoomLevel } from '../utils/gridGameUtils';
 
 interface PointerPosition {
   x: number;
   y: number;
 }
 
-interface PointerInteractionType {
+interface InteractionBindings {
   camera: Camera;
   setCameraPosition: (coords: { x: number; y: number }) => void;
   syncCameraTargets: (coords: { x: number; y: number }) => void;
@@ -23,23 +24,30 @@ interface PointerInteractionType {
     ) => void
   ) => void;
   onSquareClick: (squareId: string | null, event: MouseEvent) => void;
+  getZoomLevel: () => number;
+  setZoomLevel: (zoomLevel: number) => void;
 }
 
-interface PointerInteractionManagerOptions {
-  props: PointerInteractionType;
+interface InteractionManagerOptions {
+  props: InteractionBindings;
   dragActivationThreshold?: number;
+  wheelSensitivity?: number;
 }
 
-export class PointerInteractionManager {
+export class InteractionManager {
   private isPointerDown = false;
   private isDragging = false;
   private dragStart: PointerPosition = { x: 0, y: 0 };
   private dragStartCamera: PointerPosition = { x: 0, y: 0 };
   private mousePosition: PointerPosition = { x: 0, y: 0 };
   private readonly dragActivationThreshold: number;
+  private wheelDeltaAccumulator = 0;
+  private wheelFrameId: number | null = null;
+  private readonly wheelSensitivity: number;
 
-  constructor(private readonly options: PointerInteractionManagerOptions) {
+  constructor(private readonly options: InteractionManagerOptions) {
     this.dragActivationThreshold = options.dragActivationThreshold ?? 6;
+    this.wheelSensitivity = options.wheelSensitivity ?? 0.0008;
   }
 
   public handleMouseDown(event: MouseEvent, canvas: HTMLCanvasElement): void {
@@ -137,6 +145,27 @@ export class PointerInteractionManager {
     this.options.props.onSquareClick(clickedSquareId, event);
   }
 
+  public handleWheel(event: WheelEvent): void {
+    event.preventDefault();
+    this.wheelDeltaAccumulator += this.normalizeWheelDelta(event);
+
+    if (this.wheelFrameId !== null) {
+      return;
+    }
+
+    this.wheelFrameId = window.requestAnimationFrame(() => {
+      const currentZoom = this.options.props.getZoomLevel();
+      const nextZoom = clampZoomLevel(currentZoom - this.wheelDeltaAccumulator * this.wheelSensitivity);
+
+      if (nextZoom !== currentZoom) {
+        this.options.props.setZoomLevel(nextZoom);
+      }
+
+      this.wheelDeltaAccumulator = 0;
+      this.wheelFrameId = null;
+    });
+  }
+
   public getMousePosition(): PointerPosition {
     return this.mousePosition;
   }
@@ -190,7 +219,7 @@ export class PointerInteractionManager {
     }
 
     let hovering = false;
-      this.options.props.forEachSelectableBox((squareId, box) => {
+    this.options.props.forEachSelectableBox((squareId, box) => {
       if (hovering) {
         return;
       }
@@ -209,6 +238,23 @@ export class PointerInteractionManager {
     });
 
     return hovering;
+  }
+
+  private normalizeWheelDelta(event: WheelEvent): number {
+    if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+      return event.deltaY * 16;
+    }
+    if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+      return event.deltaY * window.innerHeight;
+    }
+    return event.deltaY;
+  }
+
+  public destroy(): void {
+    if (this.wheelFrameId !== null) {
+      cancelAnimationFrame(this.wheelFrameId);
+      this.wheelFrameId = null;
+    }
   }
 }
 
