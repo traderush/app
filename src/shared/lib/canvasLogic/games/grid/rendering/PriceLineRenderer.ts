@@ -49,7 +49,7 @@ export class PriceLineRenderer extends Renderer {
     const { width, height, gameType, lineEndSmoothing, theme } = config;
 
     const points: Point[] = [];
-    let { x: smoothLineEndX, y: smoothLineEndY } = this.props.getSmoothLineEnd();
+    let { x: smoothLineEndWorldX, y: smoothLineEndWorldY } = this.props.getSmoothLineEnd();
 
     for (let i = 0; i < priceData.length; i++) {
       const worldPos = world.getLinePosition(i, dataOffset, Math.max(0, priceData[i].price));
@@ -67,32 +67,36 @@ export class PriceLineRenderer extends Renderer {
         dataOffset,
         Math.max(0, priceData[latestIndex].price)
       );
-      const latestScreenPos = world.worldToScreen(latestWorldPos.x, latestWorldPos.y);
-      const rawEndX = latestScreenPos.x;
-      const rawEndY = latestScreenPos.y;
+      const rawEndX = latestWorldPos.x;
+      const rawEndY = latestWorldPos.y;
       const smoothingFactor = Number.isFinite(lineEndSmoothing) ? lineEndSmoothing : 0.88;
 
-      if (smoothLineEndX === 0 && smoothLineEndY === 0) {
-        smoothLineEndX = rawEndX;
-        smoothLineEndY = rawEndY;
+      if (smoothLineEndWorldX === 0 && smoothLineEndWorldY === 0) {
+        smoothLineEndWorldX = rawEndX;
+        smoothLineEndWorldY = rawEndY;
       } else {
-        smoothLineEndX =
-          smoothLineEndX * smoothingFactor + rawEndX * (1 - smoothingFactor);
-        smoothLineEndY =
-          smoothLineEndY * smoothingFactor + rawEndY * (1 - smoothingFactor);
+        smoothLineEndWorldX =
+          smoothLineEndWorldX * smoothingFactor + rawEndX * (1 - smoothingFactor);
+        smoothLineEndWorldY =
+          smoothLineEndWorldY * smoothingFactor + rawEndY * (1 - smoothingFactor);
       }
     }
 
     this.props.setSmoothLineEnd({
-      x: smoothLineEndX,
-      y: smoothLineEndY,
+      x: smoothLineEndWorldX,
+      y: smoothLineEndWorldY,
     });
 
-    if (points.length > 0 && smoothLineEndX !== 0) {
+    const smoothLineEndScreen = world.worldToScreen(
+      smoothLineEndWorldX,
+      smoothLineEndWorldY
+    );
+
+    if (points.length > 0 && smoothLineEndWorldX !== 0) {
       const endY =
-        gameType === GameType.SKETCH ? height / 2 : smoothLineEndY;
+        gameType === GameType.SKETCH ? height / 2 : smoothLineEndScreen.y;
       points[points.length - 1] = {
-        x: smoothLineEndX,
+        x: smoothLineEndScreen.x,
         y: endY,
       };
       lineRenderer.render({ points, smooth: true });
@@ -104,10 +108,11 @@ export class PriceLineRenderer extends Renderer {
     let dotY: number | null = null;
 
     if (priceData.length > 0) {
-      const smoothInitialized = !(smoothLineEndX === 0 && smoothLineEndY === 0);
+      const smoothInitialized =
+        !(smoothLineEndWorldX === 0 && smoothLineEndWorldY === 0);
       if (smoothInitialized) {
-        dotX = smoothLineEndX;
-        dotY = gameType === GameType.SKETCH ? height / 2 : smoothLineEndY;
+        dotX = smoothLineEndScreen.x;
+        dotY = gameType === GameType.SKETCH ? height / 2 : smoothLineEndScreen.y;
       } else {
         const latestIndex = priceData.length - 1;
         const latestWorldPos = world.getLinePosition(

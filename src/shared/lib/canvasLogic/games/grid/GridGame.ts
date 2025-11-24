@@ -427,7 +427,12 @@ export class GridGame extends Game {
         const { x, y } = this.interactionManager?.getMousePosition() ?? { x: -1, y: -1 };
         return { mouseX: x, mouseY: y };
       },
-      getSmoothLineEndX: () => this.smoothLineEndX,
+      getSmoothLineEndX: () => {
+        if (this.smoothLineEndX === 0 && this.smoothLineEndY === 0) {
+          return 0;
+        }
+        return this.world.worldToScreen(this.smoothLineEndX, this.smoothLineEndY).x;
+      },
       getTotalDataPoints: () => this.priceSeriesManager.getTotalDataPoints(),
       getPixelsPerPoint: () => this.config.pixelsPerPoint,
       getVisiblePriceRange: () => this.viewportManager.getVisiblePriceRange(),
