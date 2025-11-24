@@ -214,7 +214,9 @@ export class BoxRenderer extends Renderer {
       const clickableThreshold = currentWorldX + bufferPixels;
       const thresholdScreenX = world.worldToScreen(clickableThreshold, 0).x;
       const hasNowLine = Number.isFinite(smoothLineEndX) && smoothLineEndX > 0;
-      const baseFadeDistance = Math.max(160, Math.abs(screenWidth) * 2.5);
+      const zoomLevel = world.getHorizontalScale();
+      const baseFadeDistance = 200 * zoomLevel;
+      const fadeStartOffset = zoomLevel * 80; // tie fade delay to current zoom
       const shouldDelayFade = isSelected || stateName === 'activated' || stateName === 'missed';
 
       let opacity = 1.0;
@@ -226,7 +228,7 @@ export class BoxRenderer extends Renderer {
         Number.isFinite(thresholdScreenX) &&
         Number.isFinite(boxRightEdgeScreenX)
       ) {
-        const distancePastThreshold = thresholdScreenX - boxRightEdgeScreenX;
+        const distancePastThreshold = thresholdScreenX - boxRightEdgeScreenX - fadeStartOffset;
         if (distancePastThreshold > 0) {
           fadeProgress = Math.min(distancePastThreshold / baseFadeDistance, 1);
         }
@@ -234,7 +236,7 @@ export class BoxRenderer extends Renderer {
 
       if (hasNowLine && Number.isFinite(boxRightEdgeScreenX)) {
         const delayPx = shouldDelayFade ? Math.max(30, Math.abs(screenWidth) * 0.2) : 0;
-        const distancePastNow = smoothLineEndX - boxRightEdgeScreenX - delayPx;
+        const distancePastNow = smoothLineEndX - boxRightEdgeScreenX - delayPx - fadeStartOffset;
         if (distancePastNow > 0 && Number.isFinite(distancePastNow)) {
           const progress = Math.min(distancePastNow / baseFadeDistance, 1);
           fadeProgress = Math.max(fadeProgress, progress);
@@ -245,7 +247,7 @@ export class BoxRenderer extends Renderer {
         Number.isFinite(thresholdScreenX) &&
         Number.isFinite(boxRightEdgeScreenX)
       ) {
-        const fallbackDistance = thresholdScreenX - boxRightEdgeScreenX;
+        const fallbackDistance = thresholdScreenX - boxRightEdgeScreenX - fadeStartOffset;
         if (fallbackDistance > 0) {
           const progress = Math.min(fallbackDistance / baseFadeDistance, 1);
           fadeProgress = Math.max(fadeProgress, progress);
@@ -256,7 +258,7 @@ export class BoxRenderer extends Renderer {
         const eased = 1 - Math.pow(1 - fadeProgress, 2);
         opacity = Math.max(0, 1 - eased);
       }
-
+      
       squareRenderer.render({
         x: topLeft.x,
         y: topLeft.y,
