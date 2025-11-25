@@ -688,6 +688,7 @@ export class GridGame extends Game {
 
   // Method to start without internal websocket
   public startWithExternalData(): void {
+    this.seedCameraWithLatestPrice();
     this.start();
   }
 
@@ -857,6 +858,25 @@ export class GridGame extends Game {
   // Method to get current priceScale from WorldCoordinateSystem
   public getPriceScale(): number {
     return this.world.getPriceScale();
+  }
+
+  private seedCameraWithLatestPrice(): void {
+    const priceData = this.priceSeriesManager.getPriceData();
+    if (!priceData.length) {
+      return;
+    }
+
+    this.cameraController.resetToFollowPrice(
+      this.width,
+      priceData,
+      this.priceSeriesManager.getTotalDataPoints(),
+      {
+        pixelsPerPoint: this.config.pixelsPerPoint,
+        cameraOffsetRatio: this.config.cameraOffsetRatio,
+        visiblePriceRange: this.viewportManager.getVisiblePriceRange(),
+        horizontalScale: this.world.getHorizontalScale(),
+      }
+    );
   }
 
   // Method to get current horizontal scale
