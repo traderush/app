@@ -232,8 +232,57 @@ export class InteractionManager {
     const worldDeltaX = -deltaX / (horizontalScale || 1);
     const worldDeltaY = deltaY / (priceScale || 1);
 
-    const newX = Math.max(0, this.dragStartCamera.x + worldDeltaX);
-    const newY = this.dragStartCamera.y + worldDeltaY;
+    let newX = this.dragStartCamera.x + worldDeltaX;
+    let newY = this.dragStartCamera.y + worldDeltaY;
+
+    // Clamp dragging relative to the block of columns:
+    // - Allow ~10% padding on the right side horizontally
+    // - Allow ~10% padding above and below vertically
+    // - Do NOT constrain the left side (newX can go as far left as needed)
+    let hasBoxes = false;
+    let minBoxX = Infinity;
+    let maxBoxX = -Infinity;
+    let minBoxY = Infinity;
+    let maxBoxY = -Infinity;
+
+    this.options.props.forEachSelectableBox((_squareId, box) => {
+      hasBoxes = true;
+      const boxLeft = box.worldX;
+      const boxRight = box.worldX + box.width;
+      const boxBottom = box.worldY;
+      const boxTop = box.worldY + box.height;
+
+      if (boxLeft < minBoxX) minBoxX = boxLeft;
+      if (boxRight > maxBoxX) maxBoxX = boxRight;
+      if (boxBottom < minBoxY) minBoxY = boxBottom;
+      if (boxTop > maxBoxY) maxBoxY = boxTop;
+    });
+
+    if (hasBoxes && Number.isFinite(minBoxX) && Number.isFinite(maxBoxX)) {
+      const { width } = this.options.props.getCanvasDimensions();
+      const viewportWorldWidth = horizontalScale > 0 ? width / horizontalScale : width;
+      const blockWidth = Math.max(0, maxBoxX - minBoxX);
+
+      // Horizontal: allow dragging so that the right edge of the viewport can go
+      // up to ~10% past the right edge of the block of columns.
+      const horizontalPadding = blockWidth * 0.1;
+      const maxCameraX = maxBoxX + horizontalPadding - viewportWorldWidth;
+
+      if (Number.isFinite(maxCameraX)) {
+        // Only clamp the right side;
+        newX = Math.min(newX, maxCameraX);
+      }
+
+      // Vertical: allow camera center to move ~5% of block height above/below (tighter than horizontal).
+      if (Number.isFinite(minBoxY) && Number.isFinite(maxBoxY) && maxBoxY > minBoxY) {
+        const minCameraY = minBoxY;
+        const maxCameraY = maxBoxY;
+
+        if (Number.isFinite(minCameraY) && Number.isFinite(maxCameraY)) {
+          newY = Math.max(minCameraY, Math.min(newY, maxCameraY));
+        }
+      }
+    }
 
     this.options.props.setCameraPosition({ x: newX, y: newY });
     this.options.props.syncCameraTargets({ x: newX, y: newY });
