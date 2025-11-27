@@ -634,6 +634,9 @@ export class GridGame extends Game {
       visiblePriceRange: visiblePriceRange,
     });
 
+    // Handle automatic recentering when price line drifts out of view
+    this.updateAutoRecentering(latestPrice, currentWorldX);
+
     // Update square animations and clean up completed ones
     this.selectionManager.updateAnimations();
 
@@ -826,22 +829,15 @@ export class GridGame extends Game {
 
   // Method to reset camera to follow price
   public resetCameraToFollowPrice(): void {
+    // Ensure camera is following price again
     this.isFollowingPrice = true;
     // Unfreeze reference point when resuming following
     this.priceSeriesManager.unfreezeReferencePoint();
 
-    this.cameraController.resetToFollowPrice(
-      this.width,
-      this.priceSeriesManager.getPriceData(),
-      this.priceSeriesManager.getTotalDataPoints(),
-      {
-        pixelsPerPoint: this.config.pixelsPerPoint,
-        cameraOffsetRatio: this.config.cameraOffsetRatio,
-        visiblePriceRange: this.viewportManager.getVisiblePriceRange(),
-        horizontalScale: this.world.getHorizontalScale(),
-      }
-    );
+    // Recenter camera around the current price line
+    this.recenterCameraAroundPrice();
 
+    // Notify listeners that camera is now following again
     this.emit('cameraFollowingChanged', { isFollowing: true });
   }
 
@@ -861,6 +857,14 @@ export class GridGame extends Game {
   }
 
   private seedCameraWithLatestPrice(): void {
+    this.recenterCameraAroundPrice();
+  }
+
+  /**
+   * Recenter the camera around the current price line
+   * Does NOT change the follow/unfollow state – purely positional.
+   */
+  public recenterCameraAroundPrice(): void {
     const priceData = this.priceSeriesManager.getPriceData();
     if (!priceData.length) {
       return;
@@ -877,6 +881,32 @@ export class GridGame extends Game {
         horizontalScale: this.world.getHorizontalScale(),
       }
     );
+  }
+
+  /**
+   * Automatically recenters the camera around the price line when the user
+   * has panned away and the price moves outside the viewport.
+   * This does NOT change the follow state; it simply snaps using the same
+   * logic as the manual recenter.
+   */
+  private updateAutoRecentering(latestPrice: number, currentWorldX: number): void {
+    // Only consider auto recentering when not following and not actively dragging
+    if (!this.isFollowingPrice && this.interactionManager && !this.interactionManager.isDraggingActive()) {
+      const { width } = this;
+
+      // Project latest price point into screen space
+      const screenPos = this.world.worldToScreen(currentWorldX, latestPrice);
+
+      const isOutside = screenPos.x > width
+
+      if (!isOutside) {
+        return;
+      }
+
+      // Snap to the same camera position used by the manual recenter button
+      // (via CameraController.resetToFollowPrice), but keep follow state unchanged.
+      this.recenterCameraAroundPrice();
+    }
   }
 
   // Method to get current horizontal scale

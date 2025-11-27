@@ -407,6 +407,16 @@ export class CanvasController {
           theme: {
             ...defaultTheme,
             colors: { ...defaultTheme.colors, primary: state.signatureColor },
+            line: {
+              ...defaultTheme.line,
+              color: state.signatureColor,
+              glow: defaultTheme.line.glow
+                ? {
+                    ...defaultTheme.line.glow,
+                    color: state.signatureColor,
+                  }
+                : undefined,
+            },
           },
         });
       }
@@ -585,7 +595,7 @@ export class CanvasController {
     const recenterButton = document.createElement('button');
     recenterButton.type = 'button';
     recenterButton.textContent = 'Recenter';
-    recenterButton.className = 'absolute right-4 top-4 z-30 rounded-md bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-md backdrop-blur transition hover:bg-black/70';
+    recenterButton.className = 'absolute right-4 top-4 z-30 rounded-md bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-md backdrop-blur transition hover:bg-black/70 border border-white/10 cursor-pointer';
     recenterButton.style.display = 'none';
     contentWrapper.appendChild(recenterButton);
 
@@ -1067,6 +1077,16 @@ export class CanvasController {
         ...defaultTheme.colors,
         primary: this.signatureColor,
       },
+      line: {
+        ...defaultTheme.line,
+        color: this.signatureColor,
+        glow: defaultTheme.line.glow
+          ? {
+              ...defaultTheme.line.glow,
+              color: this.signatureColor,
+            }
+          : undefined,
+      },
     };
 
     const game = new GridGame(this.elements.canvasContainer, {
@@ -1277,12 +1297,30 @@ export class CanvasController {
     });
   }
 
-  private resetCamera(): void {
+  /**
+   * Only recenters the camera around the current price line.
+   * Does not change whether the camera is following the price.
+   */
+  private recenterCameraAroundPriceLine(): void {
+    if (!this.game) {
+      return;
+    }
+    this.game.recenterCameraAroundPrice();
+  }
+
+  /**
+   * Enables camera follow mode and recenters around the price line.
+   */
+  private enableCameraFollowing(): void {
     if (!this.game) {
       return;
     }
     this.game.resetCameraToFollowPrice();
     this.resetCameraFollowing(true);
+  }
+
+  private resetCamera(): void {
+    this.enableCameraFollowing();
   }
 
   private resetCameraFollowing(isFollowing: boolean): void {

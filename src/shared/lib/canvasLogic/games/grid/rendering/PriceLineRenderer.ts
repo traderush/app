@@ -99,8 +99,20 @@ export class PriceLineRenderer extends Renderer {
         x: smoothLineEndScreen.x,
         y: endY,
       };
+      this.renderPriceGradientUnderLine({
+        ctx,
+        theme,
+        points,
+        canvasHeight: height,
+      });
       lineRenderer.render({ points, smooth: true });
     } else if (points.length > 0) {
+      this.renderPriceGradientUnderLine({
+        ctx,
+        theme,
+        points,
+        canvasHeight: height,
+      });
       lineRenderer.render({ points, smooth: true });
     }
 
@@ -170,5 +182,56 @@ export class PriceLineRenderer extends Renderer {
 
     return { dotX, dotY };
   }
+
+
+private renderPriceGradientUnderLine(options: {
+  ctx: CanvasRenderingContext2D;
+  theme: Theme;
+  points: Point[];
+  canvasHeight: number;
+}) {
+  const { ctx, theme, points, canvasHeight } = options;
+
+  if (!points.length) return;
+
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
+
+  // Determine the vertical start of the gradient (top of the area)
+  const minY = points.reduce((min, p) => Math.min(min, p.y), firstPoint.y);
+  const startY = Math.max(0, Math.min(canvasHeight, minY));
+
+  const startX = Math.max(0, Math.min(firstPoint.x, lastPoint.x));
+  const endX = Math.max(firstPoint.x, lastPoint.x);
+
+  const primaryColor = theme.colors?.primary || '#3b82f6';
+  const r = parseInt(primaryColor.slice(1, 3), 16);
+  const g = parseInt(primaryColor.slice(3, 5), 16);
+  const b = parseInt(primaryColor.slice(5, 7), 16);
+
+  ctx.save();
+
+  // Build a path that follows the price line and then closes down to the bottom
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.lineTo(lastPoint.x, canvasHeight);
+  ctx.lineTo(firstPoint.x, canvasHeight);
+  ctx.closePath();
+
+  // Clip to this area so the gradient top hugs the line
+  ctx.clip();
+
+  const gradient = ctx.createLinearGradient(0, startY, 0, canvasHeight);
+  gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.15)`);
+  gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(startX, startY, endX - startX, canvasHeight - startY);
+
+  ctx.restore();
+}
 }
 

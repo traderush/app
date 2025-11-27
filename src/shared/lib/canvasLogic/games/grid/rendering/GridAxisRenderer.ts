@@ -285,7 +285,6 @@ export class GridAxisRenderer extends Renderer {
   }
 
   public renderUnifiedBorderGrid(): void {
-    return;
     const world = this.world;
     if (!world) return;
     const options = this.getOptions();

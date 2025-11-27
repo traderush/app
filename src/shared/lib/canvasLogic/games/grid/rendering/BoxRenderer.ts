@@ -215,8 +215,9 @@ export class BoxRenderer extends Renderer {
       const thresholdScreenX = world.worldToScreen(clickableThreshold, 0).x;
       const hasNowLine = Number.isFinite(smoothLineEndX) && smoothLineEndX > 0;
       const zoomLevel = world.getHorizontalScale();
-      const baseFadeDistance = 200 * zoomLevel;
-      const fadeStartOffset = zoomLevel * 80; // tie fade delay to current zoom
+      // Longer fade distance and slightly earlier start for smoother transition
+      const baseFadeDistance = 280 * zoomLevel;
+      const fadeStartOffset = zoomLevel * 40;
       const shouldDelayFade = isSelected || stateName === 'activated' || stateName === 'missed';
 
       let opacity = 1.0;
@@ -255,7 +256,8 @@ export class BoxRenderer extends Renderer {
       }
 
       if (fadeProgress > 0) {
-        const eased = 1 - Math.pow(1 - fadeProgress, 2);
+        // Use a slightly softer easing so opacity falls off more gradually
+        const eased = 1 - Math.pow(1 - fadeProgress, 3);
         opacity = Math.max(0, 1 - eased);
       }
       
