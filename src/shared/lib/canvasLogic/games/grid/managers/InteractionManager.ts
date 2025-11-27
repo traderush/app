@@ -213,7 +213,7 @@ export class InteractionManager {
     const deltaX = x - this.dragStart.x;
     const deltaY = y - this.dragStart.y;
     const dragDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
+    
     if (!this.isDragging && dragDistance > this.dragActivationThreshold) {
       this.isDragging = true;
       this.options.props.setCameraFollowing(false);
@@ -224,13 +224,13 @@ export class InteractionManager {
       return;
     }
 
-    const worldDeltaX = -deltaX;
-    const { width, height } = this.options.props.getCanvasDimensions();
-    const verticalMargin = height * this.options.props.getVerticalMarginRatio();
-    const viewportHeight = Math.max(1, height - 2 * verticalMargin);
-    const effectivePriceRange = Math.max(0.0001, this.options.props.getVisiblePriceRange());
-    const priceScale = viewportHeight / effectivePriceRange;
-    const worldDeltaY = priceScale !== 0 ? deltaY / priceScale : 0;
+    // Use the same horizontalScale and priceScale as the world renderer so that
+    // dragging the camera moves the entire world layer rigidly in screen space.
+    const horizontalScale = this.options.props.getHorizontalScale();
+    const priceScale = this.options.props.getPriceScale() || 1;
+
+    const worldDeltaX = -deltaX / (horizontalScale || 1);
+    const worldDeltaY = deltaY / (priceScale || 1);
 
     const newX = Math.max(0, this.dragStartCamera.x + worldDeltaX);
     const newY = this.dragStartCamera.y + worldDeltaY;
