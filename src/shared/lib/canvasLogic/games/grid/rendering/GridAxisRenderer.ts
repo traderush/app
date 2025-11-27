@@ -243,9 +243,11 @@ export class GridAxisRenderer extends Renderer {
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
 
-    // Vertical lines follow camera.x
+    // Vertical lines follow camera.x; convert canvas width into world units using horizontal scale
+    const horizontalScale = world.getHorizontalScale();
+    const visibleWorldWidth = horizontalScale > 0 ? width / horizontalScale : width;
     const startWorldX = Math.floor((camera.x - gridSize * 2) / gridSize) * gridSize;
-    const endWorldX = camera.x + width + gridSize * 2;
+    const endWorldX = camera.x + visibleWorldWidth + gridSize * 2;
 
     for (let worldX = startWorldX; worldX <= endWorldX; worldX += gridSize) {
       const screenX = world.worldToScreen(worldX, camera.y).x;
@@ -312,10 +314,13 @@ export class GridAxisRenderer extends Renderer {
     const columnWidth = Math.max(pixelsPerPoint, gridColumnWidth);
     const rowHeight = Math.max(0.05, gridRowHeight);
 
+    const horizontalScale = world.getHorizontalScale();
+    const visibleWorldWidth = horizontalScale > 0 ? width / horizontalScale : width;
+
     const startWorldX =
       Math.floor((camera.x - columnWidth * 3 - gridColumnOrigin) / columnWidth) * columnWidth +
       gridColumnOrigin;
-    const endWorldX = camera.x + width + columnWidth * 3;
+    const endWorldX = camera.x + visibleWorldWidth + columnWidth * 3;
 
     for (let worldX = startWorldX; worldX <= endWorldX; worldX += columnWidth) {
       const screenX = world.worldToScreen(worldX, 0).x;
