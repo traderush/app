@@ -27,6 +27,7 @@ export interface ViewportUpdateResult {
 export class ViewportManager extends Manager {
   private visiblePriceRange: number = 10;
   private readonly config: Required<ViewportManagerConfig>;
+  private verticalScale: number = 1;
 
   constructor(config: ViewportManagerConfig) {
     super();
@@ -56,7 +57,7 @@ export class ViewportManager extends Manager {
     const viewportHeight = viewportBottom - viewportTop;
 
     // Calculate visible price range
-    this.visiblePriceRange = computeVisiblePriceRange({
+    const rawPriceRange = computeVisiblePriceRange({
       backendMultipliers,
       priceData,
       gameType: this.config.gameType,
@@ -69,6 +70,12 @@ export class ViewportManager extends Manager {
       maxVisibleRange: this.config.maxVisibleRange,
     });
 
+    // Don't adjust visible price range based on zoom - zoom only affects rendering scale
+    // The visible range should stay constant; zoom will scale how boxes are rendered
+    const minRange = this.config.minVisibleRange;
+    const maxRange = this.config.maxVisibleRange;
+    this.visiblePriceRange = Math.max(minRange, Math.min(rawPriceRange, maxRange));
+
     // Update world viewport with smoothed range
     world.updateViewport(viewportHeight, this.visiblePriceRange);
 
@@ -76,6 +83,18 @@ export class ViewportManager extends Manager {
       viewportHeight,
       visiblePriceRange: this.visiblePriceRange,
     };
+  }
+
+  /**
+   * Set vertical scale (kept for API compatibility but no longer affects visible price range)
+   * Zoom now only affects rendering scale in WorldCoordinateSystem, not visible range
+   */
+  public setVerticalScale(scale: number): void {
+    if (Number.isFinite(scale) && scale > 0) {
+      this.verticalScale = scale;
+      // Note: verticalScale is stored but not used in price range calculation
+      // Zoom only affects rendering scale, not the visible price range
+    }
   }
 
   /**

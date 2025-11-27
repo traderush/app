@@ -18,8 +18,9 @@ import { PriceSeriesManager } from './managers/PriceSeriesManager';
 import { ViewportManager } from './managers/ViewportManager';
 import { GridStateManager } from './managers/GridStateManager';
 import { OtherPlayerManager } from './managers/OtherPlayerManager';
-import { PointerInteractionManager } from './managers/PointerInteractionManager';
+import { InteractionManager } from './managers/InteractionManager';
 import { getViewportBounds as calculateViewportBounds } from '../../utils/viewportUtils';
+import { clampZoomLevel, calculateZoomFromWidth, ZOOM_REFERENCE_WIDTH, ZOOM_MIN, ZOOM_MAX } from './utils/gridGameUtils';
 import {
   defaultGridGameConfig,
   defaultViewportManagerConfig,
@@ -80,27 +81,30 @@ export class GridGame extends Game {
   // Grid axis renderer
   private gridAxisRenderer!: GridAxisRenderer;
   private gridFrameRenderer!: GridFrameRenderer;
-  private pointerInteractionManager!: PointerInteractionManager;
+  private interactionManager!: InteractionManager;
   private selectionManager!: SelectionManager;
   private readonly onCanvasMouseDown = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseDown(event, this.canvas);
+    this.interactionManager.handleMouseDown(event, this.canvas);
     super.handleMouseDown(event);
   };
   private readonly onCanvasMouseUp = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseUp(event, this.canvas);
+    this.interactionManager.handleMouseUp(event, this.canvas);
     super.handleMouseUp(event);
   };
   private readonly onCanvasMouseLeave = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseLeave(event, this.canvas);
+    this.interactionManager.handleMouseLeave(event, this.canvas);
     super.handleMouseLeave(event);
   };
   private readonly onCanvasMouseMove = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleMouseMove(event, this.canvas);
+    this.interactionManager.handleMouseMove(event, this.canvas);
     super.handleMouseMove(event);
   };
   private readonly onCanvasClick = (event: MouseEvent): void => {
-    this.pointerInteractionManager.handleClick(event, this.canvas);
+    this.interactionManager.handleClick(event, this.canvas);
     super.handleClick(event);
+  };
+  private readonly onCanvasWheel = (event: WheelEvent): void => {
+    this.interactionManager.handleWheel(event);
   };
   
   // Debug logging throttle
@@ -140,6 +144,7 @@ export class GridGame extends Game {
   protected boxClickabilityCache: Map<string, boolean> = new Map();
 
   protected config!: Required<GridGameConfig>;
+  private zoomLevel: number = 1.0; // Zoom level: < 1.0 zooms out, > 1.0 zooms in
 
   constructor(container: HTMLElement, config?: GridGameConfig) {
     super(container, config);
@@ -159,11 +164,11 @@ export class GridGame extends Game {
     // Initialize renderers (must be after managers since they depend on them)
     this.initializeRenderers();
     
-    // Initialize pointer interaction manager (must be after renderers)
-    this.initializePointerInteraction();
+    // Initialize interaction manager (must be after renderers)
+    this.initializeInteraction();
 
-    // Re-setup event listeners now that pointerInteractionManager is initialized
-    // This ensures the PointerInteractionManager handlers are properly attached
+    // Re-setup event listeners now that interactionManager is initialized
+    // This ensures the InteractionManager handlers are properly attached
     this.setupEventListeners();
 
     // Setup resize handler
@@ -187,6 +192,9 @@ export class GridGame extends Game {
       ...defaultGridGameConfig,
       ...config,
     };
+    // Initialize zoom level from config (uses default from defaultGridGameConfig if not provided)
+    // If using default, will be recalculated from width in initializeWorld()
+    this.zoomLevel = clampZoomLevel(this.config.zoomLevel ?? 1.0);
   }
 
   /**
@@ -200,12 +208,26 @@ export class GridGame extends Game {
     }
   }
 
+
   /**
    * Initialize world coordinate system
    */
   private initializeWorld(): void {
     this.world = new WorldCoordinateSystem(this.camera);
     this.world.setPixelsPerPoint(this.config.pixelsPerPoint);
+    
+    // Calculate initial zoom from canvas width if using default config value
+    // Otherwise, use the configured zoom level
+    if (this.config.zoomLevel === defaultGridGameConfig.zoomLevel) {
+      // Auto-calculate from width if using default
+      this.zoomLevel = calculateZoomFromWidth(this.width);
+    } else {
+      // Use explicitly configured zoom level (clamped to valid range)
+      this.zoomLevel = clampZoomLevel(this.config.zoomLevel);
+    }
+    
+    this.world.setHorizontalScale(this.zoomLevel);
+    this.world.setVerticalScale(this.zoomLevel);
     this.world.updateCanvasSize(this.width, this.height);
   }
 
@@ -227,6 +249,7 @@ export class GridGame extends Game {
       gameType: this.config.gameType,
       ...defaultViewportManagerConfig,
     });
+    this.viewportManager.setVerticalScale(this.zoomLevel);
     
     // Initialize grid state manager
     this.gridStateManager = new GridStateManager();
@@ -313,6 +336,7 @@ export class GridGame extends Game {
         cameraOffsetRatio: this.config.cameraOffsetRatio,
         width: this.width,
         visiblePriceRange: this.viewportManager.getVisiblePriceRange(),
+        horizontalScale: this.world.getHorizontalScale(),
       })
     );
   }
@@ -400,10 +424,15 @@ export class GridGame extends Game {
       }),
       getFrameCount: () => this.frameCount,
       getMousePosition: () => {
-        const { x, y } = this.pointerInteractionManager?.getMousePosition() ?? { x: -1, y: -1 };
+        const { x, y } = this.interactionManager?.getMousePosition() ?? { x: -1, y: -1 };
         return { mouseX: x, mouseY: y };
       },
-      getSmoothLineEndX: () => this.smoothLineEndX,
+      getSmoothLineEndX: () => {
+        if (this.smoothLineEndX === 0 && this.smoothLineEndY === 0) {
+          return 0;
+        }
+        return this.world.worldToScreen(this.smoothLineEndX, this.smoothLineEndY).x;
+      },
       getTotalDataPoints: () => this.priceSeriesManager.getTotalDataPoints(),
       getPixelsPerPoint: () => this.config.pixelsPerPoint,
       getVisiblePriceRange: () => this.viewportManager.getVisiblePriceRange(),
@@ -467,14 +496,19 @@ export class GridGame extends Game {
       this.world.updateCanvasSize(width, height);
       // Update viewport manager with new height
       this.viewportManager.updateConfig({ height });
+      
+      // Auto-adjust zoom based on screen width
+      // Smaller screens = zoom out more, larger screens = zoom in more
+      const newZoomLevel = calculateZoomFromWidth(width);
+      this.setZoomLevel(newZoomLevel);
     });
   }
 
   /**
    * Initialize pointer interaction manager
    */
-  private initializePointerInteraction(): void {
-    this.pointerInteractionManager = new PointerInteractionManager({
+  private initializeInteraction(): void {
+    this.interactionManager = new InteractionManager({
       props: {
         camera: this.camera,
         setCameraPosition: ({ x, y }) => {
@@ -505,8 +539,16 @@ export class GridGame extends Game {
         getVisiblePriceRange: () => this.viewportManager.getVisiblePriceRange(),
         getCanvasDimensions: () => ({ width: this.width, height: this.height }),
         getWorldToScreen: (worldX, worldY) => this.world.worldToScreen(worldX, worldY),
+        screenToWorld: (screenX, screenY) => this.world.screenToWorld(screenX, screenY),
         forEachSelectableBox: (cb) => this.boxController.forEachSelectableBox(cb),
         onSquareClick: (squareId, event) => this.handlePointerSquareClick(squareId, event),
+        getZoomLevel: () => this.getZoomLevel(),
+        setZoomLevel: (zoomLevel, skipClamp) => {
+          this.setZoomLevel(zoomLevel, skipClamp);
+        },
+        isCameraFollowing: () => this.isCameraFollowingPrice(),
+        getHorizontalScale: () => this.world.getHorizontalScale(),
+        getPriceScale: () => this.world.getPriceScale(),
       },
     });
   }
@@ -522,7 +564,7 @@ export class GridGame extends Game {
   }
 
   /**
-   * Override Game's setupEventListeners to add PointerInteractionManager handlers
+   * Override Game's setupEventListeners to add InteractionManager handlers
    * This ensures our custom handlers are used while still calling base class setup
    */
   protected setupEventListeners(): void {
@@ -537,14 +579,15 @@ export class GridGame extends Game {
     this.canvas.removeEventListener('mousedown', this.handleMouseDown);
     this.canvas.removeEventListener('mouseup', this.handleMouseUp);
     
-    // Add our custom handlers that delegate to PointerInteractionManager
+    // Add our custom handlers that delegate to InteractionManager
     // These will fire in addition to base class handlers
-    if (this.pointerInteractionManager) {
+    if (this.interactionManager) {
       this.canvas.addEventListener('mousedown', this.onCanvasMouseDown);
       this.canvas.addEventListener('mouseup', this.onCanvasMouseUp);
       this.canvas.addEventListener('mouseleave', this.onCanvasMouseLeave);
       this.canvas.addEventListener('mousemove', this.onCanvasMouseMove);
       this.canvas.addEventListener('click', this.onCanvasClick);
+      this.canvas.addEventListener('wheel', this.onCanvasWheel, { passive: false });
     }
   }
 
@@ -590,6 +633,9 @@ export class GridGame extends Game {
       latestPrice,
       visiblePriceRange: visiblePriceRange,
     });
+
+    // Handle automatic recentering when price line drifts out of view
+    this.updateAutoRecentering(latestPrice, currentWorldX);
 
     // Update square animations and clean up completed ones
     this.selectionManager.updateAnimations();
@@ -645,6 +691,7 @@ export class GridGame extends Game {
 
   // Method to start without internal websocket
   public startWithExternalData(): void {
+    this.seedCameraWithLatestPrice();
     this.start();
   }
 
@@ -745,6 +792,12 @@ export class GridGame extends Game {
     if (newConfig.pixelsPerPoint !== undefined) {
       this.world.setPixelsPerPoint(newConfig.pixelsPerPoint);
     }
+    // Only update zoom if it's actually different (prevents re-clamping user zoom values)
+    // If the new zoom is outside responsive range, it's user zoom - skip clamping
+    if (newConfig.zoomLevel !== undefined && Math.abs(newConfig.zoomLevel - this.zoomLevel) > 1e-6) {
+      const isUserZoom = newConfig.zoomLevel < ZOOM_MIN || newConfig.zoomLevel > ZOOM_MAX;
+      this.setZoomLevel(newConfig.zoomLevel, isUserZoom);
+    }
     this.debug('🎯 GridGame: Updated config showOtherPlayers:', this.config.showOtherPlayers);
   }
 
@@ -776,27 +829,104 @@ export class GridGame extends Game {
 
   // Method to reset camera to follow price
   public resetCameraToFollowPrice(): void {
+    // Ensure camera is following price again
     this.isFollowingPrice = true;
     // Unfreeze reference point when resuming following
     this.priceSeriesManager.unfreezeReferencePoint();
 
-    this.cameraController.resetToFollowPrice(
-      this.width,
-      this.priceSeriesManager.getPriceData(),
-      this.priceSeriesManager.getTotalDataPoints(),
-      {
-        pixelsPerPoint: this.config.pixelsPerPoint,
-        cameraOffsetRatio: this.config.cameraOffsetRatio,
-        visiblePriceRange: this.viewportManager.getVisiblePriceRange(),
-      }
-    );
+    // Recenter camera around the current price line
+    this.recenterCameraAroundPrice();
 
+    // Notify listeners that camera is now following again
     this.emit('cameraFollowingChanged', { isFollowing: true });
   }
 
   // Method to get current following state
   public isCameraFollowingPrice(): boolean {
     return this.isFollowingPrice;
+  }
+
+  // Method to get visible price range
+  public getVisiblePriceRange(): number {
+    return this.viewportManager.getVisiblePriceRange();
+  }
+
+  // Method to get current priceScale from WorldCoordinateSystem
+  public getPriceScale(): number {
+    return this.world.getPriceScale();
+  }
+
+  private seedCameraWithLatestPrice(): void {
+    this.recenterCameraAroundPrice();
+  }
+
+  /**
+   * Recenter the camera around the current price line
+   * Does NOT change the follow/unfollow state – purely positional.
+   */
+  public recenterCameraAroundPrice(): void {
+    const priceData = this.priceSeriesManager.getPriceData();
+    if (!priceData.length) {
+      return;
+    }
+
+    this.cameraController.resetToFollowPrice(
+      this.width,
+      priceData,
+      this.priceSeriesManager.getTotalDataPoints(),
+      {
+        pixelsPerPoint: this.config.pixelsPerPoint,
+        cameraOffsetRatio: this.config.cameraOffsetRatio,
+        visiblePriceRange: this.viewportManager.getVisiblePriceRange(),
+        horizontalScale: this.world.getHorizontalScale(),
+      }
+    );
+  }
+
+  /**
+   * Automatically recenters the camera around the price line when the user
+   * has panned away and the price moves outside the viewport.
+   * This does NOT change the follow state; it simply snaps using the same
+   * logic as the manual recenter.
+   */
+  private updateAutoRecentering(latestPrice: number, currentWorldX: number): void {
+    // Only consider auto recentering when not following and not actively dragging
+    if (!this.isFollowingPrice && this.interactionManager && !this.interactionManager.isDraggingActive()) {
+      const { width } = this;
+
+      // Project latest price point into screen space
+      const screenPos = this.world.worldToScreen(currentWorldX, latestPrice);
+
+      const isOutside = screenPos.x > width
+
+      if (!isOutside) {
+        return;
+      }
+
+      // Snap to the same camera position used by the manual recenter button
+      // (via CameraController.resetToFollowPrice), but keep follow state unchanged.
+      this.recenterCameraAroundPrice();
+    }
+  }
+
+  // Method to get current horizontal scale
+  public getHorizontalScale(): number {
+    return this.world.getHorizontalScale();
+  }
+
+  // Method to set zoom level (affects horizontalScale and verticalScale)
+  // @param skipClamp - If true, skip clamping (for user-controlled zoom that's already clamped)
+  public setZoomLevel(zoomLevel: number, skipClamp: boolean = false): void {
+    this.zoomLevel = skipClamp ? zoomLevel : clampZoomLevel(zoomLevel);
+    this.world.setHorizontalScale(this.zoomLevel);
+    this.world.setVerticalScale(this.zoomLevel);
+    this.viewportManager.setVerticalScale(this.zoomLevel);
+    this.emit('zoomLevelChanged', { zoomLevel: this.zoomLevel });
+  }
+
+  // Method to get current zoom level
+  public getZoomLevel(): number {
+    return this.zoomLevel;
   }
 
 }

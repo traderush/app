@@ -49,7 +49,7 @@ export class PriceLineRenderer extends Renderer {
     const { width, height, gameType, lineEndSmoothing, theme } = config;
 
     const points: Point[] = [];
-    let { x: smoothLineEndX, y: smoothLineEndY } = this.props.getSmoothLineEnd();
+    let { x: smoothLineEndWorldX, y: smoothLineEndWorldY } = this.props.getSmoothLineEnd();
 
     for (let i = 0; i < priceData.length; i++) {
       const worldPos = world.getLinePosition(i, dataOffset, Math.max(0, priceData[i].price));
@@ -67,36 +67,52 @@ export class PriceLineRenderer extends Renderer {
         dataOffset,
         Math.max(0, priceData[latestIndex].price)
       );
-      const latestScreenPos = world.worldToScreen(latestWorldPos.x, latestWorldPos.y);
-      const rawEndX = latestScreenPos.x;
-      const rawEndY = latestScreenPos.y;
+      const rawEndX = latestWorldPos.x;
+      const rawEndY = latestWorldPos.y;
       const smoothingFactor = Number.isFinite(lineEndSmoothing) ? lineEndSmoothing : 0.88;
 
-      if (smoothLineEndX === 0 && smoothLineEndY === 0) {
-        smoothLineEndX = rawEndX;
-        smoothLineEndY = rawEndY;
+      if (smoothLineEndWorldX === 0 && smoothLineEndWorldY === 0) {
+        smoothLineEndWorldX = rawEndX;
+        smoothLineEndWorldY = rawEndY;
       } else {
-        smoothLineEndX =
-          smoothLineEndX * smoothingFactor + rawEndX * (1 - smoothingFactor);
-        smoothLineEndY =
-          smoothLineEndY * smoothingFactor + rawEndY * (1 - smoothingFactor);
+        smoothLineEndWorldX =
+          smoothLineEndWorldX * smoothingFactor + rawEndX * (1 - smoothingFactor);
+        smoothLineEndWorldY =
+          smoothLineEndWorldY * smoothingFactor + rawEndY * (1 - smoothingFactor);
       }
     }
 
     this.props.setSmoothLineEnd({
-      x: smoothLineEndX,
-      y: smoothLineEndY,
+      x: smoothLineEndWorldX,
+      y: smoothLineEndWorldY,
     });
 
-    if (points.length > 0 && smoothLineEndX !== 0) {
+    const smoothLineEndScreen = world.worldToScreen(
+      smoothLineEndWorldX,
+      smoothLineEndWorldY
+    );
+
+    if (points.length > 0 && smoothLineEndWorldX !== 0) {
       const endY =
-        gameType === GameType.SKETCH ? height / 2 : smoothLineEndY;
+        gameType === GameType.SKETCH ? height / 2 : smoothLineEndScreen.y;
       points[points.length - 1] = {
-        x: smoothLineEndX,
+        x: smoothLineEndScreen.x,
         y: endY,
       };
+      this.renderPriceGradientUnderLine({
+        ctx,
+        theme,
+        points,
+        canvasHeight: height,
+      });
       lineRenderer.render({ points, smooth: true });
     } else if (points.length > 0) {
+      this.renderPriceGradientUnderLine({
+        ctx,
+        theme,
+        points,
+        canvasHeight: height,
+      });
       lineRenderer.render({ points, smooth: true });
     }
 
@@ -104,10 +120,11 @@ export class PriceLineRenderer extends Renderer {
     let dotY: number | null = null;
 
     if (priceData.length > 0) {
-      const smoothInitialized = !(smoothLineEndX === 0 && smoothLineEndY === 0);
+      const smoothInitialized =
+        !(smoothLineEndWorldX === 0 && smoothLineEndWorldY === 0);
       if (smoothInitialized) {
-        dotX = smoothLineEndX;
-        dotY = gameType === GameType.SKETCH ? height / 2 : smoothLineEndY;
+        dotX = smoothLineEndScreen.x;
+        dotY = gameType === GameType.SKETCH ? height / 2 : smoothLineEndScreen.y;
       } else {
         const latestIndex = priceData.length - 1;
         const latestWorldPos = world.getLinePosition(
@@ -165,5 +182,56 @@ export class PriceLineRenderer extends Renderer {
 
     return { dotX, dotY };
   }
+
+
+private renderPriceGradientUnderLine(options: {
+  ctx: CanvasRenderingContext2D;
+  theme: Theme;
+  points: Point[];
+  canvasHeight: number;
+}) {
+  const { ctx, theme, points, canvasHeight } = options;
+
+  if (!points.length) return;
+
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
+
+  // Determine the vertical start of the gradient (top of the area)
+  const minY = points.reduce((min, p) => Math.min(min, p.y), firstPoint.y);
+  const startY = Math.max(0, Math.min(canvasHeight, minY));
+
+  const startX = Math.max(0, Math.min(firstPoint.x, lastPoint.x));
+  const endX = Math.max(firstPoint.x, lastPoint.x);
+
+  const primaryColor = theme.colors?.primary || '#3b82f6';
+  const r = parseInt(primaryColor.slice(1, 3), 16);
+  const g = parseInt(primaryColor.slice(3, 5), 16);
+  const b = parseInt(primaryColor.slice(5, 7), 16);
+
+  ctx.save();
+
+  // Build a path that follows the price line and then closes down to the bottom
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.lineTo(lastPoint.x, canvasHeight);
+  ctx.lineTo(firstPoint.x, canvasHeight);
+  ctx.closePath();
+
+  // Clip to this area so the gradient top hugs the line
+  ctx.clip();
+
+  const gradient = ctx.createLinearGradient(0, startY, 0, canvasHeight);
+  gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.15)`);
+  gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(startX, startY, endX - startX, canvasHeight - startY);
+
+  ctx.restore();
+}
 }
 

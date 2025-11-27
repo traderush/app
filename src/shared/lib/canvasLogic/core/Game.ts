@@ -48,6 +48,7 @@ interface GameEvents {
   squareSelected: { squareId: string };
   cameraFollowingChanged: { isFollowing: boolean };
   selectionChanged: Record<string, never>;
+  zoomLevelChanged: { zoomLevel: number };
 }
 
 export abstract class Game extends EventEmitter<GameEvents> {

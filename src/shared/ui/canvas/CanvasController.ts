@@ -1,8 +1,10 @@
 import { GridGame } from '@/shared/lib/canvasLogic/games/grid/GridGame';
 import { defaultTheme } from '@/shared/lib/canvasLogic/config/theme';
+import { defaultGridGameConfig } from '@/shared/lib/canvasLogic/config/defaultConfig';
 import { getTimeframeConfig, getAllTimeframes, TimeFrame } from '@/shared/types/timeframe';
 import type { BoxHitContract, BoxHitPosition, BoxHitPositionMap } from '@/shared/types/boxHit';
 import type { EngineContractSnapshot, EnginePricePoint } from '@/shared/types/boxHitEngine';
+import type { GridGameConfig } from '@/shared/lib/canvasLogic/games/grid/types';
 import { getBoxHitEngineService, type BoxHitEngineService, type EngineState } from '@/shared/lib/boxHitEngine/BoxHitEngineService';
 import { useUIStore } from '@/shared/state/uiStore';
 import { useUserStore } from '@/shared/state/userStore';
@@ -88,6 +90,8 @@ export interface CanvasProps {
   showProbabilities?: boolean;
   showOtherPlayers?: boolean;
   minMultiplier?: number;
+  zoomLevel?: number;
+  onZoomLevelChange?: (zoomLevel: number) => void;
 }
 
 function buildMultipliers(
@@ -193,6 +197,8 @@ function buildMultipliers(
   game?.setGridScale?.(columnWidthPx, priceStep);
   game?.setGridOrigin?.(columnAnchorX, rowAnchorPrice);
 
+  let priceScale = game?.getPriceScale() ?? null;
+
   contracts.forEach((contract) => {
     const timeUntilStart = contract.startTime - nowTs;
     const timeSinceEnd = nowTs - contract.endTime;
@@ -220,7 +226,7 @@ function buildMultipliers(
     const alignedLower = Math.floor(contract.lowerStrike / priceStep) * priceStep;
     const priceSpan = Math.max(priceStep, contract.upperStrike - contract.lowerStrike);
     const heightSteps = Math.max(1, Math.round(priceSpan / priceStep));
-    const height = heightSteps * priceStep;
+    let height = heightSteps * priceStep;
     const durationColumns = Math.max(1, Math.round((contract.endTime - contract.startTime) / timeStep));
     const endWorldX = typeof contractEndWorldX === 'number' && Number.isFinite(contractEndWorldX)
       ? contractEndWorldX
@@ -230,6 +236,17 @@ function buildMultipliers(
       : durationColumns * columnWidthPx;
     if (!Number.isFinite(width) || width <= 0) {
       width = durationColumns * columnWidthPx;
+    }
+
+    // Adjust height to make box square on screen
+    // screenWidth = width * horizontalScale (from worldToScreen conversion)
+    // screenHeight = height * priceScale (from worldToScreen conversion)
+    // For square: width * horizontalScale = height * priceScale
+    // So: height = (width * horizontalScale) / priceScale
+    const horizontalScale = game?.getHorizontalScale?.() ?? 1.0;
+    if (priceScale !== null && priceScale > 0) {
+      // Make box height match width when rendered (square on screen)
+      height = (width * horizontalScale) / priceScale;
     }
 
     const position = positionsByContract.get(contract.contractId);
@@ -359,6 +376,7 @@ export class CanvasController {
   private initialCoverActive = true;
   private initialCoverTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
   private shouldShowInitialCover = true;
+  private zoomLevel: number = defaultGridGameConfig.zoomLevel;
 
   constructor(root: HTMLElement, options: CanvasProps = {}) {
     this.root = root;
@@ -367,6 +385,7 @@ export class CanvasController {
     this.showProbabilities = options.showProbabilities ?? false;
     this.showOtherPlayers = options.showOtherPlayers ?? false;
     this.minMultiplier = options.minMultiplier ?? 1.0;
+    this.zoomLevel = options.zoomLevel ?? defaultGridGameConfig.zoomLevel;
     this.service = getBoxHitEngineService();
 
     this.signatureColor = useUIStore.getState().signatureColor;
@@ -388,6 +407,16 @@ export class CanvasController {
           theme: {
             ...defaultTheme,
             colors: { ...defaultTheme.colors, primary: state.signatureColor },
+            line: {
+              ...defaultTheme.line,
+              color: state.signatureColor,
+              glow: defaultTheme.line.glow
+                ? {
+                    ...defaultTheme.line.glow,
+                    color: state.signatureColor,
+                  }
+                : undefined,
+            },
           },
         });
       }
@@ -410,6 +439,11 @@ export class CanvasController {
     this.showProbabilities = next.showProbabilities ?? this.showProbabilities;
     this.showOtherPlayers = next.showOtherPlayers ?? this.showOtherPlayers;
     this.minMultiplier = next.minMultiplier ?? this.minMultiplier;
+    
+    if (next.zoomLevel !== undefined) {
+      this.zoomLevel = next.zoomLevel;
+    }
+    
     this.options = next;
 
     const newTimeframe = this.resolveInitialTimeframe();
@@ -428,6 +462,7 @@ export class CanvasController {
         showProbabilities: this.showProbabilities,
         showOtherPlayers: this.showOtherPlayers,
         minMultiplier: this.minMultiplier,
+        zoomLevel: this.zoomLevel,
       });
     }
   }
@@ -560,7 +595,7 @@ export class CanvasController {
     const recenterButton = document.createElement('button');
     recenterButton.type = 'button';
     recenterButton.textContent = 'Recenter';
-    recenterButton.className = 'absolute right-4 top-4 z-30 rounded-md bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-md backdrop-blur transition hover:bg-black/70';
+    recenterButton.className = 'absolute right-4 top-4 z-30 rounded-md bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-md backdrop-blur transition hover:bg-black/70 border border-white/10 cursor-pointer';
     recenterButton.style.display = 'none';
     contentWrapper.appendChild(recenterButton);
 
@@ -1042,6 +1077,16 @@ export class CanvasController {
         ...defaultTheme.colors,
         primary: this.signatureColor,
       },
+      line: {
+        ...defaultTheme.line,
+        color: this.signatureColor,
+        glow: defaultTheme.line.glow
+          ? {
+              ...defaultTheme.line.glow,
+              color: this.signatureColor,
+            }
+          : undefined,
+      },
     };
 
     const game = new GridGame(this.elements.canvasContainer, {
@@ -1050,6 +1095,7 @@ export class CanvasController {
       minMultiplier: this.minMultiplier,
       pixelsPerPoint: PIXELS_PER_POINT,
       theme,
+      zoomLevel: this.zoomLevel,
     });
 
     this.game = game;
@@ -1108,6 +1154,11 @@ export class CanvasController {
     game.on('cameraFollowingChanged', ({ isFollowing }: { isFollowing: boolean }) => {
       this.isCameraFollowing = isFollowing;
       this.elements.recenterButton.style.display = (!isFollowing && state.status === 'live') ? '' : 'none';
+    });
+
+    game.on('zoomLevelChanged', ({ zoomLevel }: { zoomLevel: number }) => {
+      this.zoomLevel = zoomLevel;
+      this.options.onZoomLevelChange?.(zoomLevel);
     });
 
     this.isCameraFollowing = game.isCameraFollowingPrice();
@@ -1246,12 +1297,30 @@ export class CanvasController {
     });
   }
 
-  private resetCamera(): void {
+  /**
+   * Only recenters the camera around the current price line.
+   * Does not change whether the camera is following the price.
+   */
+  private recenterCameraAroundPriceLine(): void {
+    if (!this.game) {
+      return;
+    }
+    this.game.recenterCameraAroundPrice();
+  }
+
+  /**
+   * Enables camera follow mode and recenters around the price line.
+   */
+  private enableCameraFollowing(): void {
     if (!this.game) {
       return;
     }
     this.game.resetCameraToFollowPrice();
     this.resetCameraFollowing(true);
+  }
+
+  private resetCamera(): void {
+    this.enableCameraFollowing();
   }
 
   private resetCameraFollowing(isFollowing: boolean): void {

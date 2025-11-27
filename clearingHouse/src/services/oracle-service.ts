@@ -18,6 +18,9 @@ export class OracleService {
   private updateInterval?: NodeJS.Timeout;
   private isRunning: boolean = false;
   private price: number = 100;
+  // Controls how "wild" the price moves are per tick.
+  // Interpreted as a fraction of the current price (e.g. 0.01 = up to ±1%).
+  private volatility: number = 30;
 
   constructor(
     private readonly sendPriceUpdate: (symbol: Asset, price: number, time: Timestamp) => void | Promise<void>
@@ -61,7 +64,11 @@ export class OracleService {
       if (asset === Asset.USD) {
         continue;
       }
-      this.price = this.price + (Math.random() * 2 - 1) * 0.05;
+      // Random walk around the current price with configurable volatility.
+      // Max absolute step is roughly: currentPrice * volatility.
+      const maxStep = this.price * this.volatility;
+      const randomFactor = Math.random() * 2 - 1; // in range [-1, 1]
+      this.price = this.price + randomFactor * maxStep;
       await this.updatePriceAndTime(asset, this.price, new Date().getTime() as Timestamp);
     }
   }

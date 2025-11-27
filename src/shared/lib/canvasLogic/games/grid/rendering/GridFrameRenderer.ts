@@ -73,8 +73,8 @@ export class GridFrameRenderer extends Renderer {
 
     if (!this.props.hasEnoughData()) {
       // Still render Y-axis and X-axis even without price data
-      gridAxisRenderer.renderYAxis();
-      gridAxisRenderer.renderXAxis();
+      //gridAxisRenderer.renderYAxis();
+      //gridAxisRenderer.renderXAxis();
 
       // Draw a message when waiting for data
       this.saveContext();
@@ -99,10 +99,10 @@ export class GridFrameRenderer extends Renderer {
     });
 
     // Draw Y-axis last (on top as overlay)
-    gridAxisRenderer.renderYAxis();
+    //gridAxisRenderer.renderYAxis();
 
     // Draw X-axis
-    gridAxisRenderer.renderXAxis();
+    //gridAxisRenderer.renderXAxis();
   }
 }
 
