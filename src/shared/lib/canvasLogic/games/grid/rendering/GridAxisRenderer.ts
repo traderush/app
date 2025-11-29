@@ -267,8 +267,13 @@ export class GridAxisRenderer extends Renderer {
       ctx.restore();
       return;
     }
-    const minPrice = camera.y - visiblePriceRange / 2 - gridStepPrice * 2;
-    const maxPrice = camera.y + visiblePriceRange / 2 + gridStepPrice * 2;
+
+    // Use the world range corresponding to the full canvas height, then
+    // expand slightly so we always cover the extremes.
+    const topWorld = world.screenToWorld(0, 0).y;
+    const bottomWorld = world.screenToWorld(0, height).y;
+    const minPrice = Math.min(topWorld, bottomWorld) - gridStepPrice * 2;
+    const maxPrice = Math.max(topWorld, bottomWorld) + gridStepPrice * 2;
 
     for (
       let price = Math.floor(minPrice / gridStepPrice) * gridStepPrice;
@@ -337,12 +342,17 @@ export class GridAxisRenderer extends Renderer {
       ctx.restore();
       return;
     }
-    const minPrice = camera.y - options.visiblePriceRange / 2 - gridStepPrice * 2;
-    const maxPrice = camera.y + options.visiblePriceRange / 2 + gridStepPrice * 2;
+
+    // Base min/max on the full canvas height in world space, not just visiblePriceRange.
+    const topWorld = world.screenToWorld(0, 0).y;
+    const bottomWorld = world.screenToWorld(0, height).y;
+    const minPriceWorld = Math.min(topWorld, bottomWorld) - gridStepPrice * 2;
+    const maxPriceWorld = Math.max(topWorld, bottomWorld) + gridStepPrice * 2;
 
     for (
-      let price = Math.floor((minPrice - gridRowOrigin) / gridStepPrice) * gridStepPrice + gridRowOrigin;
-      price <= maxPrice;
+      let price =
+        Math.floor((minPriceWorld - gridRowOrigin) / gridStepPrice) * gridStepPrice + gridRowOrigin;
+      price <= maxPriceWorld;
       price += gridStepPrice
     ) {
       const screenY = world.worldToScreen(0, price).y;
