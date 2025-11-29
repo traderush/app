@@ -37,9 +37,43 @@ export default function ProfilePopup({ isOpen, onClose }: ProfilePopupProps) {
       ref={popupRef}
       className="fixed inset-0 z-[1001] flex items-center justify-center transition-all duration-300 ease-out"
     >
-      {/* Overlay */}
+      {/* Overlay with tech pattern */}
       <div 
-        className="absolute inset-0 bg-black/60"
+        className="absolute inset-0"
+        style={{
+          background: `
+            linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            )
+          `,
+          backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+        }}
         onClick={onClose}
       />
       

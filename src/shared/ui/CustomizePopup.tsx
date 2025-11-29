@@ -93,9 +93,43 @@ export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps)
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay with tech pattern */}
       <div 
-        className="fixed inset-0 bg-black/60 z-[1000] transition-all duration-300 ease-out opacity-60"
+        className="fixed inset-0 z-[1000] transition-all duration-300 ease-out"
+        style={{
+          background: `
+            linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            )
+          `,
+          backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+        }}
         onClick={onClose}
       />
       
@@ -193,16 +227,16 @@ export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps)
           <div className="space-y-3 pt-2 border-t border-zinc-800">
             <div className="flex items-center justify-between">
               <label className="text-zinc-300 font-medium" style={{ fontSize: '12px' }}>
-                Signature Color
-              </label>
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors"
+              Signature Color
+            </label>
+                              <button
+                  onClick={handleReset}
+                  className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors"
                 style={{ fontSize: '12px' }}
-              >
-                <RotateCcw className="w-3 h-3" />
-                Reset
-              </button>
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset
+                </button>
             </div>
             
             {/* Color Preview */}

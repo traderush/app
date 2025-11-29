@@ -3,7 +3,7 @@ import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell, Percent, BookOpen, Wallet, Send, UserPlus, Copy, ChevronDown, Gift } from 'lucide-react';
+import { Menu, Bell, Percent, BookOpen, Wallet, Send, UserPlus, Copy, ChevronDown, Gift, Pencil } from 'lucide-react';
 import clsxUtility from 'clsx';
 import { useUIStore } from '@/shared/state';
 import { useUserStore } from '@/shared/state/userStore';
@@ -49,7 +49,10 @@ const Navbar = React.memo(function Navbar({
   const [isRefPopoverOpen, setIsRefPopoverOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isDiscountButtonClicked, setIsDiscountButtonClicked] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const navItemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
 
   const hexToRgbaLightened = (hex: string, opacity: number, whiteMix: number = 0.3) => {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -82,6 +85,40 @@ const Navbar = React.memo(function Navbar({
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // Update indicator position when path changes
+  useEffect(() => {
+    const updateIndicator = () => {
+      const activeIndex = PRIMARY_NAVIGATION.findIndex((item) => 
+        item.href === '/' ? path === '/' : path.startsWith(item.href)
+      );
+
+      if (activeIndex !== -1 && navItemRefs.current[activeIndex]) {
+        const activeElement = navItemRefs.current[activeIndex];
+        const navContainer = activeElement?.parentElement;
+        
+        if (navContainer && activeElement) {
+          const containerRect = navContainer.getBoundingClientRect();
+          const elementRect = activeElement.getBoundingClientRect();
+          
+          setIndicatorStyle({
+            left: elementRect.left - containerRect.left,
+            width: elementRect.width,
+            opacity: 1,
+          });
+        }
+      } else {
+        setIndicatorStyle(prev => ({ ...prev, opacity: 0 }));
+      }
+    };
+
+    // Initial update
+    updateIndicator();
+
+    // Update on resize
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [path]);
 
   const handleCopyRefcode = () => {
     const referralText = `r/${refcode}`;
@@ -125,32 +162,50 @@ const Navbar = React.memo(function Navbar({
         <div className="flex h-14 w-full items-center gap-4 px-4 pl-0">
 
           {/* Nav menu items */}
-          <nav className="max-lg:hidden flex items-center gap-0 pl-4">
+          <nav className="max-lg:hidden flex items-center gap-0 pl-4 relative">
+            {/* Animated background indicator */}
+            <div
+              className="absolute h-8 rounded-md transition-all duration-300 ease-out pointer-events-none"
+              style={{
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
+                opacity: indicatorStyle.opacity,
+                backgroundColor: hexToRgbaLightened(signatureColor, 0.15),
+                top: '50%',
+                transform: 'translateY(-50%)',
+              }}
+            />
+            
             {PRIMARY_NAVIGATION.map((item, index) => {
-              const active = path.startsWith(item.href);
+              // For root path, only match exactly. For other paths, match if path starts with href
+              const active = item.href === '/' ? path === '/' : path.startsWith(item.href);
               return (
                 <React.Fragment key={item.href}>
                   {index > 0 && (
                     <div className="w-px h-4 bg-white/10 mx-2" />
                   )}
                   <Link
+                    ref={(el) => {
+                      navItemRefs.current[index] = el;
+                    }}
                     href={item.href}
                     className={clsxUtility(
-                      'flex items-center gap-1.5 px-2 text-[14px] font-normal transition-colors',
+                      'relative flex items-center gap-1.5 px-2 text-[14px] font-normal transition-colors duration-300',
                       active ? 'text-white' : 'text-white/40 hover:text-white/60',
                     )}
                     style={{ 
-                      ...(active ? { color: signatureColor } : {}),
-                      lineHeight: '16px'
+                      color: active ? signatureColor : undefined,
+                      lineHeight: '16px',
+                      transition: 'color 0.3s ease-out',
                     }}
                   >
                     <span style={{ lineHeight: '16px' }}>{item.label}</span>
                     {item.badge && (
                       <span
-                        className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded transition-all duration-300"
                         style={{
-                          backgroundColor: `${signatureColor}20`,
-                          color: signatureColor
+                          backgroundColor: active ? `${signatureColor}20` : 'transparent',
+                          color: active ? signatureColor : 'inherit',
                         }}
                       >
                         #{item.badge}
@@ -163,7 +218,20 @@ const Navbar = React.memo(function Navbar({
           </nav>
 
           {/* Discount button */}
-          <button className='group shrink-0 text-[14px] rounded-md px-4 py-2 transition-colors cursor-pointer border-0 flex items-center gap-1.5' style={{ backgroundColor: 'rgba(249, 115, 22, 0.08)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.12)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.08)'}>
+          <button 
+            className='group shrink-0 text-[14px] rounded-md px-4 py-2 transition-all duration-200 cursor-pointer border-0 flex items-center gap-1.5' 
+            style={{ 
+              backgroundColor: 'rgba(249, 115, 22, 0.08)',
+              transform: isDiscountButtonClicked ? 'scale(0.95)' : 'scale(1)',
+            }} 
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.12)'} 
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.08)';
+              setIsDiscountButtonClicked(false);
+            }}
+            onMouseDown={() => setIsDiscountButtonClicked(true)}
+            onMouseUp={() => setIsDiscountButtonClicked(false)}
+          >
             <Percent size={16} className="text-orange-500" />
             <p className='group-hover:bg-[#f97316] bg-gradient-to-r from-[#f9731687] to-[#f97316] bg-clip-text text-transparent transition-colors'>Enjoy 0% fees on Trading</p>
           </button>
@@ -198,23 +266,65 @@ const Navbar = React.memo(function Navbar({
             <div className="relative" ref={popoverRef}>
               <button 
                 onClick={() => setIsRefPopoverOpen(!isRefPopoverOpen)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm text-zinc-300 transition-colors"
+                className="flex items-center justify-center rounded-md px-3 text-zinc-300 transition-colors"
                 style={{ 
-                  backgroundColor: hexToRgbaLightened(signatureColor, 0.15),
+                  backgroundColor: '#171717',
+                  height: '36px',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = hexToRgbaLightened(signatureColor, 0.2);
+                  e.currentTarget.style.backgroundColor = '#1f1f1f';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = hexToRgbaLightened(signatureColor, 0.15);
+                  e.currentTarget.style.backgroundColor = '#171717';
                 }}
+                title="Refer"
               >
-                <span>Refer</span>
                 <UserPlus size={18} className="text-zinc-300" />
               </button>
               {isRefPopoverOpen && (
-                <div className="absolute top-full left-0 mt-2 w-64 p-3 rounded-md border border-zinc-800 bg-surface-850 shadow-xl z-50">
-                  <div className="text-xs text-zinc-400 mb-2">Your referral code</div>
+                <>
+                  {/* Dimming overlay with tech pattern */}
+                  <div 
+                    className="fixed inset-0 z-[1000] transition-opacity duration-300 ease-out"
+                    style={{
+                      background: `
+                        linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+                        repeating-linear-gradient(
+                          0deg,
+                          transparent,
+                          transparent 1px,
+                          rgba(255, 255, 255, 0.03) 1px,
+                          rgba(255, 255, 255, 0.03) 2px
+                        ),
+                        repeating-linear-gradient(
+                          90deg,
+                          transparent,
+                          transparent 1px,
+                          rgba(255, 255, 255, 0.03) 1px,
+                          rgba(255, 255, 255, 0.03) 2px
+                        ),
+                        repeating-linear-gradient(
+                          45deg,
+                          transparent,
+                          transparent 8px,
+                          rgba(255, 255, 255, 0.02) 8px,
+                          rgba(255, 255, 255, 0.02) 9px
+                        ),
+                        repeating-linear-gradient(
+                          -45deg,
+                          transparent,
+                          transparent 8px,
+                          rgba(255, 255, 255, 0.02) 8px,
+                          rgba(255, 255, 255, 0.02) 9px
+                        )
+                      `,
+                      backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+                    }}
+                    onClick={() => setIsRefPopoverOpen(false)}
+                  />
+                  {/* Popup content */}
+                  <div className="absolute top-full left-0 mt-2 w-64 p-3 rounded-md border border-zinc-800 bg-surface-850 shadow-xl z-[1002]">
+                    <div className="text-xs text-zinc-400 mb-3">Your referral code</div>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex items-center gap-2 px-2 py-1 rounded-md border border-zinc-800 bg-surface-900">
                         <span className="text-xs text-zinc-400">r/</span>
@@ -232,23 +342,23 @@ const Navbar = React.memo(function Navbar({
                           </span>
                         )}
                       </button>
-                      <div className="text-xs font-medium px-2 py-1 rounded" style={{ background: `linear-gradient(to right, ${signatureColor}25, ${signatureColor}10)` }}>
-                        <span className="text-xs font-medium" style={{ background: `linear-gradient(to right, ${signatureColor}, ${signatureColor}cc)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                          Earn rewards
-                        </span>
-                      </div>
+                      <button className="text-xs font-medium flex items-center gap-1 hover:opacity-80 transition-opacity" style={{ color: signatureColor }}>
+                        <Pencil size={12} style={{ color: signatureColor }} />
+                        <span className="underline">Edit</span>
+                      </button>
                     </div>
-                    <div className="text-xs text-zinc-500">Share this code with friends</div>
+                    <div className="text-xs text-zinc-500">Share with friends & earn rewards</div>
                   </div>
-                )}
+                </>
+              )}
             </div>
 
             {/* Deposit button */}
             <button 
               ref={depositButtonRef}
               onClick={onDepositOpen}
-              className="rounded-md px-4 py-2 text-sm font-medium text-brand-foreground transition-colors"
-              style={{ backgroundColor: signatureColor }}
+              className="rounded-md px-4 py-2 text-sm font-medium text-brand-foreground transition-colors flex items-center"
+              style={{ backgroundColor: signatureColor, height: '36px' }}
             >
               Deposit
             </button>

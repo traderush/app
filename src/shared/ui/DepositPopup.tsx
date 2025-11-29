@@ -83,11 +83,45 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
 
   return (
     <>
-      {/* Overlay */}
+            {/* Overlay with tech pattern */}
       <div 
-        className={`fixed inset-0 bg-black/60 z-[1000] transition-all duration-300 ease-out ${
-          isOpen ? 'opacity-60' : 'opacity-0'
+        className={`fixed inset-0 z-[1000] transition-all duration-300 ease-out ${
+          isOpen ? 'opacity-100' : 'opacity-0'
         }`}
+        style={{
+          background: `
+            linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            )
+          `,
+          backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+        }}
         onClick={onClose}
       />
       
@@ -118,24 +152,24 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
           {/* Content */}
           <div className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
             {/* Network & Balance */}
-            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
               <span className="text-xs text-zinc-400">Network</span>
               <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-zinc-800 bg-surface-900">
-                <span className="relative w-4 h-4">
-                  <Image
-                    src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png"
-                    alt="SOL"
-                    fill
-                    className="object-contain"
-                    sizes="16px"
-                  />
-                </span>
+                  <span className="relative w-4 h-4">
+                    <Image
+                      src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/solana-sol-icon.png"
+                      alt="SOL"
+                      fill
+                      className="object-contain"
+                      sizes="16px"
+                    />
+                  </span>
                 <span className="text-xs text-white">Solana</span>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
+              </div>
+              <div className="flex items-center justify-between">
               <span className="text-xs text-zinc-400">Balance</span>
-              <span className="text-xs text-white">0.0000 SOL</span>
+                <span className="text-xs text-white">0.0000 SOL</span>
             </div>
 
             {/* QR Code */}
@@ -145,23 +179,23 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
                 <div className="w-32 h-32 bg-white rounded flex items-center justify-center border border-zinc-800">
                   <div className="text-black text-xs">QR Code</div>
                 </div>
+                </div>
               </div>
-            </div>
-
+              
             {/* Address */}
             <div className="space-y-2">
               <div className="bg-surface-900 border border-zinc-800 rounded p-3">
                 <div className="text-xs text-white font-mono break-all leading-relaxed mb-2">
                   {depositAddress}
                 </div>
-                <button
-                  onClick={handleCopyAddress}
+                  <button
+                    onClick={handleCopyAddress}
                   className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border text-xs transition-colors ${
-                    isCopied 
+                      isCopied 
                       ? 'text-zinc-300 border-zinc-700 bg-zinc-900/50' 
                       : 'text-zinc-400 border-zinc-800 bg-surface-850 hover:bg-surface-800 hover:text-white'
-                  }`}
-                >
+                    }`}
+                  >
                   {isCopied ? (
                     <>
                       <Check size={12} />
@@ -173,7 +207,7 @@ export default function DepositPopup({ isOpen, onClose }: DepositPopupProps) {
                       <span>Copy Address</span>
                     </>
                   )}
-                </button>
+                  </button>
               </div>
             </div>
 

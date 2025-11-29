@@ -205,9 +205,43 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay with tech pattern */}
       <div 
-        className="fixed inset-0 bg-black/60 z-[1000] transition-all duration-300 ease-out opacity-60"
+        className="fixed inset-0 z-[1000] transition-all duration-300 ease-out"
+        style={{
+          background: `
+            linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            )
+          `,
+          backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+        }}
         onClick={onClose}
       />
       
@@ -220,30 +254,30 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/70">
-            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
               <span className="text-zinc-300 text-xs font-mono">{formatAddress(player.address)}</span>
-              <button
-                onClick={handleCopyAddress}
+                <button
+                  onClick={handleCopyAddress}
                 className="relative text-zinc-400 hover:text-white transition-colors"
                 title="Copy address"
-              >
-                <Copy size={12} />
+                >
+                <Copy size={13} />
                 {copySuccess && (
                   <span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-zinc-300 bg-zinc-900 px-2 py-1 rounded border border-zinc-700">
                     Copied!
                   </span>
                 )}
-              </button>
+                </button>
             </div>
             
             <div className="flex items-center gap-2">
-              <button className="text-zinc-400 hover:text-white transition-colors">
+              <button className="text-zinc-400 hover:text-white transition-colors" style={{ fontWeight: 500 }}>
                 <Share size={14} />
               </button>
-              <button className="text-zinc-400 hover:text-white transition-colors">
+              <button className="text-zinc-400 hover:text-white transition-colors" style={{ fontWeight: 500 }}>
                 <Search size={14} />
               </button>
-              <button className="text-zinc-400 hover:text-white transition-colors">
+              <button className="text-zinc-400 hover:text-white transition-colors" style={{ fontWeight: 500 }}>
                 <Calendar size={14} />
               </button>
               
@@ -253,13 +287,14 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                   <button
                     key={timeframe}
                     onClick={() => setSelectedTimeframe(timeframe)}
-                    className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                    className={`px-2 py-1 text-xs rounded transition-colors font-medium ${
                       selectedTimeframe === timeframe
                         ? 'text-white'
                         : 'text-zinc-400 hover:text-white'
                     }`}
                     style={{
-                      backgroundColor: selectedTimeframe === timeframe ? signatureColor : 'transparent'
+                      backgroundColor: selectedTimeframe === timeframe ? signatureColor : 'transparent',
+                      fontWeight: 500
                     }}
                   >
                     {timeframe}
@@ -271,7 +306,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                 onClick={onClose}
                 className="grid place-items-center w-5 h-5 rounded hover:bg-white/5 transition-colors"
               >
-                <X size={12} className="text-white" />
+                <X size={13} className="text-white" />
               </button>
             </div>
           </div>
@@ -279,23 +314,23 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
           {/* Main Content */}
           <div>
             <div className="p-4 pb-0">
-              <div className="grid grid-cols-12 gap-6">
-                {/* Performance Section */}
+            <div className="grid grid-cols-12 gap-6">
+              {/* Performance Section */}
                 <div className="col-span-3 border-r border-zinc-800/50 pr-6">
-                <h3 className="text-white text-sm font-medium mb-4">User Info</h3>
-                <div className="flex items-start gap-4 mb-6">
+                <h3 className="text-white font-medium mb-4" style={{ fontSize: '14px' }}>User Info</h3>
+                <div className="flex items-start gap-5 mb-6">
                   <Image
                     src={PROFILE_AVATAR}
                     alt="Profile"
-                    width={64}
-                    height={64}
-                    className="w-16 h-16 rounded-md object-cover flex-shrink-0 mt-0.5"
+                    width={72}
+                    height={72}
+                    className="w-[72px] h-[72px] rounded-md object-cover flex-shrink-0 mt-0.5"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <div className="text-white text-sm font-medium">{player?.name || 'User'}</div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="text-white text-base font-medium">{player?.name || 'User'}</div>
                       <span
-                        className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                        className="text-xs font-medium px-2 py-1 rounded"
                         style={{
                           backgroundColor: `${signatureColor}20`,
                           color: signatureColor
@@ -305,34 +340,34 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                       </span>
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-xs text-zinc-400">PNL:</span>
-                      <div className="font-medium" style={{ color: tradingPositiveColor, fontSize: '14px', fontWeight: 500 }}>
+                      <span className="text-sm text-zinc-400">PNL:</span>
+                      <div className="font-medium" style={{ color: tradingPositiveColor, fontSize: '16px', fontWeight: 500 }}>
                         {mockData.pnl}
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {/* First Row */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="border-r border-zinc-800/50 pr-4">
-                      <div className="text-zinc-400 text-xs mb-0.5">Balance</div>
-                      <div className="text-white text-sm font-medium">{mockData.availableBalance}</div>
+                  <div className="grid grid-cols-2 gap-5">
+                    <div className="border-r border-zinc-800/50 pr-5">
+                      <div className="text-zinc-400 mb-0.5" style={{ fontSize: '12px' }}>Balance</div>
+                      <div className="text-white text-base font-medium">{mockData.availableBalance}</div>
                     </div>
-                    <div>
-                      <div className="text-zinc-400 text-xs mb-0.5">Volume</div>
-                      <div className="text-white text-sm font-medium">{mockData.volume}</div>
+                  <div>
+                      <div className="text-zinc-400 mb-0.5" style={{ fontSize: '12px' }}>Volume</div>
+                      <div className="text-white text-base font-medium">{mockData.volume}</div>
                     </div>
                   </div>
                   
                   {/* Second Row */}
                   <div className="mt-4">
-                    <div className="text-zinc-400 text-xs mb-0.5">Winrate</div>
+                     <div className="text-zinc-400 mb-0.5" style={{ fontSize: '12px' }}>Winrate</div>
                     <div className="flex items-baseline gap-2">
-                      <div className="text-white text-sm font-medium">{mockData.winrate}</div>
-                      <div className="text-xs">
+                    <div className="text-white text-base font-medium">{mockData.winrate}</div>
+                    <div className="text-sm">
                         <span style={{ color: tradingPositiveColor }}>{mockData.wins}W</span>
-                        <span className="text-zinc-500"> / </span>
+                      <span className="text-zinc-500"> / </span>
                         <span style={{ color: tradingNegativeColor }}>{mockData.losses}L</span>
                       </div>
                     </div>
@@ -342,25 +377,25 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
 
               {/* PNL Chart Section */}
               <div className="col-span-6 border-r border-zinc-800/50 pr-6">
-                <h3 className="text-white text-sm font-medium mb-4">PNL</h3>
-                <div className="h-48 relative">
+                 <h3 className="text-white font-medium mb-4" style={{ fontSize: '14px' }}>PNL</h3>
+                <div className="h-56 relative">
                   <RealizedPnlChart />
                 </div>
               </div>
 
               {/* History Section */}
               <div className="col-span-3">
-                <h3 className="text-white text-sm font-medium mb-4">History</h3>
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-zinc-400 text-xs mb-1">Profile Creation Date</div>
-                    <div className="text-white text-sm font-medium">{mockData.profileCreationDate}</div>
-                  </div>
-                  <div>
-                    <div className="text-zinc-400 text-xs mb-1">Total Trades</div>
-                    <div className="text-white text-sm font-medium">{mockData.totalTransactions}</div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-zinc-800/50 flex flex-wrap gap-2">
+                 <h3 className="text-white font-medium mb-4" style={{ fontSize: '14px' }}>History</h3>
+                 <div className="space-y-3">
+                   <div>
+                     <div className="text-zinc-400 mb-0.5" style={{ fontSize: '12px' }}>Profile Creation Date</div>
+                     <div className="text-white text-base font-medium">{mockData.profileCreationDate}</div>
+                   </div>
+                   <div>
+                     <div className="text-zinc-400 mb-0.5" style={{ fontSize: '12px' }}>Total Trades</div>
+                     <div className="text-white text-base font-medium">{mockData.totalTransactions}</div>
+                   </div>
+                   <div className="mt-4 pt-3 border-t border-zinc-800/50 flex flex-wrap gap-2">
                     <span
                       className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white"
                       style={{
@@ -380,7 +415,7 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                       Verified
                     </span>
                   </div>
-                </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -413,20 +448,20 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                     >
                       Box Hit
                     </button>
-                    <button
+                  <button
                       onClick={() => setSelectedGame('Sketch')}
                       className={`text-sm font-medium transition-colors ${
                         selectedGame === 'Sketch'
                           ? 'text-zinc-100'
                           : 'text-zinc-400 hover:text-zinc-300'
-                      }`}
-                    >
+                    }`}
+                  >
                       Sketch
-                    </button>
-                  </div>
+                  </button>
+              </div>
                 </div>
                 <div 
-                  className="max-h-96 overflow-y-auto [&::-webkit-scrollbar-thumb]:bg-zinc-800/50 [&::-webkit-scrollbar-thumb]:hover:bg-zinc-800/50 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent"
+                  className="max-h-64 overflow-y-auto [&::-webkit-scrollbar-thumb]:bg-zinc-800/50 [&::-webkit-scrollbar-thumb]:hover:bg-zinc-800/50 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent"
                   style={{
                     scrollbarWidth: 'thin',
                     scrollbarColor: 'rgba(39, 39, 42, 0.5) transparent'
@@ -518,26 +553,26 @@ const PlayerTrackerPopup: React.FC<PlayerTrackerPopupProps> = ({
                             key={index}
                             className={`border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors ${
                               index % 2 === 0 && 'bg-zinc-950/30'
-                            }`}
+                        }`}
                           >
                             <td className="px-4 py-3">
                               <span 
                                 className="text-xs font-medium"
-                                style={{
+                        style={{
                                   color: activity.result === 'Win' ? tradingPositiveColor : tradingNegativeColor
                                 }}
                               >
-                                {activity.result}
-                              </span>
+                          {activity.result}
+                        </span>
                             </td>
                             <td className="px-4 py-3 text-zinc-100">{activity.gameName}</td>
                             <td className="px-4 py-3">{activity.tradeAmount}</td>
                             <td className="px-4 py-3 text-zinc-300">{activity.targetPrice}</td>
                             <td className="px-4 py-3 text-zinc-400">{activity.age}</td>
                             <td className="px-4 py-3">
-                              <button className="text-zinc-400 hover:text-white transition-colors">
-                                <ExternalLink size={12} />
-                              </button>
+                        <button className="text-zinc-400 hover:text-white transition-colors">
+                          <ExternalLink size={12} />
+                        </button>
                             </td>
                           </tr>
                         ))
