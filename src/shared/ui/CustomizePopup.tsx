@@ -11,7 +11,14 @@ interface CustomizePopupProps {
 export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps) {
   const signatureColor = useUIStore((state) => state.signatureColor);
   const setSignatureColor = useUIStore((state) => state.setSignatureColor);
+  const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+  const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
+  const setTradingPositiveColor = useUIStore((state) => state.setTradingPositiveColor);
+  const setTradingNegativeColor = useUIStore((state) => state.setTradingNegativeColor);
+  const resetTradingColors = useUIStore((state) => state.resetTradingColors);
   const [localSignatureColor, setLocalSignatureColor] = useState(signatureColor);
+  const [localTradingPositiveColor, setLocalTradingPositiveColor] = useState(tradingPositiveColor);
+  const [localTradingNegativeColor, setLocalTradingNegativeColor] = useState(tradingNegativeColor);
   const popupRef = useRef<HTMLDivElement>(null);
 
   // Handle click outside to close
@@ -55,24 +62,74 @@ export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps)
     setLocalSignatureColor('#FA5616');
   };
 
-  // Apply the signature color changes
+  // Reset trading colors
+  const handleResetTradingColors = () => {
+    setLocalTradingPositiveColor('#2ecc71');
+    setLocalTradingNegativeColor('#ff5a5f');
+  };
+
+  // Apply all color changes
   const handleApply = () => {
     setSignatureColor(localSignatureColor);
+    setTradingPositiveColor(localTradingPositiveColor);
+    setTradingNegativeColor(localTradingNegativeColor);
     onClose();
   };
 
-  // Update local color when signature color changes
+  // Update local colors when store colors change
   useEffect(() => {
     setLocalSignatureColor(signatureColor);
   }, [signatureColor]);
+
+  useEffect(() => {
+    setLocalTradingPositiveColor(tradingPositiveColor);
+  }, [tradingPositiveColor]);
+
+  useEffect(() => {
+    setLocalTradingNegativeColor(tradingNegativeColor);
+  }, [tradingNegativeColor]);
 
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay with tech pattern */}
       <div 
-        className="fixed inset-0 bg-black/60 z-[1000] transition-all duration-300 ease-out opacity-60"
+        className="fixed inset-0 z-[1000] transition-all duration-300 ease-out"
+        style={{
+          background: `
+            linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            )
+          `,
+          backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+        }}
         onClick={onClose}
       />
       
@@ -80,7 +137,7 @@ export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps)
       <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
         <div
           ref={popupRef}
-          className="w-72 border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
+          className="w-96 border border-zinc-800 rounded shadow-2xl pointer-events-auto transition-all duration-300 ease-out opacity-100 scale-100"
           style={{ backgroundColor: '#0E0E0E' }}
         >
         {/* Header */}
@@ -96,16 +153,86 @@ export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps)
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Signature Color Section */}
+          {/* Trading Colors Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-                          <label className="text-zinc-300 font-medium" style={{ fontSize: '11px' }}>
+              <label className="text-zinc-300 font-medium" style={{ fontSize: '12px' }}>
+                Trading Colors
+              </label>
+              <button
+                onClick={handleResetTradingColors}
+                className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors"
+                style={{ fontSize: '12px' }}
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset
+              </button>
+            </div>
+            
+            {/* Trading Colors - Side by Side */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Positive Color (Green/Win) */}
+              <div className="space-y-2">
+                <label className="text-zinc-400" style={{ fontSize: '12px' }}>
+                  Positive (Win/Green)
+                </label>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-6 h-6 rounded border border-zinc-600"
+                    style={{ backgroundColor: localTradingPositiveColor }}
+                  />
+                  <input
+                    type="color"
+                    value={localTradingPositiveColor}
+                    onChange={(e) => setLocalTradingPositiveColor(e.target.value)}
+                    className="w-6 h-6 rounded border border-zinc-600 cursor-pointer"
+                  />
+                  <span 
+                    className="text-zinc-300 font-mono"
+                    style={{ fontSize: '12px' }}
+                  >
+                    {localTradingPositiveColor}
+                  </span>
+                </div>
+              </div>
+
+              {/* Negative Color (Red/Loss) */}
+              <div className="space-y-2">
+                <label className="text-zinc-400" style={{ fontSize: '12px' }}>
+                  Negative (Loss/Red)
+                </label>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-6 h-6 rounded border border-zinc-600"
+                    style={{ backgroundColor: localTradingNegativeColor }}
+                  />
+                  <input
+                    type="color"
+                    value={localTradingNegativeColor}
+                    onChange={(e) => setLocalTradingNegativeColor(e.target.value)}
+                    className="w-6 h-6 rounded border border-zinc-600 cursor-pointer"
+                  />
+                  <span 
+                    className="text-zinc-300 font-mono"
+                    style={{ fontSize: '12px' }}
+                  >
+                    {localTradingNegativeColor}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Signature Color Section */}
+          <div className="space-y-3 pt-2 border-t border-zinc-800">
+            <div className="flex items-center justify-between">
+              <label className="text-zinc-300 font-medium" style={{ fontSize: '12px' }}>
               Signature Color
             </label>
                               <button
                   onClick={handleReset}
                   className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors"
-                  style={{ fontSize: '11px' }}
+                style={{ fontSize: '12px' }}
                 >
                   <RotateCcw className="w-3 h-3" />
                   Reset
@@ -126,20 +253,20 @@ export default function CustomizePopup({ isOpen, onClose }: CustomizePopupProps)
               />
               <span 
                 className="text-zinc-300 font-mono"
-                style={{ fontSize: '11px' }}
+                style={{ fontSize: '12px' }}
               >
                 {localSignatureColor}
               </span>
             </div>
             
-            <p className="text-zinc-400" style={{ fontSize: '11px' }}>
+            <p className="text-zinc-400" style={{ fontSize: '12px' }}>
               This color will be used throughout the app for buttons, highlights, and accents.
             </p>
           </div>
 
           {/* Preset Colors */}
           <div className="space-y-3">
-            <label className="text-zinc-300 font-medium" style={{ fontSize: '11px' }}>
+            <label className="text-zinc-300 font-medium" style={{ fontSize: '12px' }}>
               Quick Colors
             </label>
             <div className="grid grid-cols-6 gap-2">

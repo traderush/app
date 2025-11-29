@@ -1,11 +1,12 @@
 'use client';
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useEffect } from 'react';
 import Navbar from './Navbar';
 import SidebarRail from './SidebarRail';
 import Footer from './Footer';
 import AppShellModals from './AppShellModals';
 import { useUIStore, usePlayerStore, useModal, type WatchedPlayer } from '@/shared/state';
+import { useGameStore } from '@/shared/state/gameStore';
 
 type ModalController = ReturnType<typeof useModal>;
 
@@ -13,9 +14,11 @@ type AppModals = {
   deposit: ModalController;
   notifications: ModalController;
   settings: ModalController;
+  help: ModalController;
   howToPlay: ModalController;
   newsUpdates: ModalController;
   rewards: ModalController;
+  referral: ModalController;
   pnLTracker: ModalController;
   customize: ModalController;
   watchlist: ModalController;
@@ -27,9 +30,11 @@ const useAppModals = (): AppModals => ({
   deposit: useModal('deposit'),
   notifications: useModal('notifications'),
   settings: useModal('settings'),
+  help: useModal('help'),
   howToPlay: useModal('howToPlay'),
   newsUpdates: useModal('newsUpdates'),
   rewards: useModal('rewards'),
+  referral: useModal('rewards'),
   pnLTracker: useModal('pnLTracker'),
   customize: useModal('customize'),
   watchlist: useModal('watchlist'),
@@ -41,9 +46,11 @@ const useAppModalRefs = () => ({
   depositButtonRef: React.useRef<HTMLButtonElement | null>(null),
   notificationsButtonRef: React.useRef<HTMLButtonElement | null>(null),
   settingsButtonRef: React.useRef<HTMLButtonElement | null>(null),
+  helpButtonRef: React.useRef<HTMLButtonElement | null>(null),
   howToPlayButtonRef: React.useRef<HTMLButtonElement | null>(null),
   newsUpdatesButtonRef: React.useRef<HTMLButtonElement | null>(null),
   rewardsButtonRef: React.useRef<HTMLButtonElement | null>(null),
+  referralButtonRef: React.useRef<HTMLButtonElement | null>(null),
   pnLTrackerButtonRef: React.useRef<HTMLButtonElement | null>(null),
   customizeButtonRef: React.useRef<HTMLButtonElement | null>(null),
   mobileMenuButtonRef: React.useRef<HTMLButtonElement | null>(null),
@@ -51,6 +58,14 @@ const useAppModalRefs = () => ({
 
 const AppShellContent = memo(function AppShellContent({ children }: { children: React.ReactNode }) {
   const signatureColor = useUIStore((state) => state.signatureColor);
+  const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+  const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
+
+  // Update CSS variables for trading colors
+  useEffect(() => {
+    document.documentElement.style.setProperty('--trading-positive', tradingPositiveColor);
+    document.documentElement.style.setProperty('--trading-negative', tradingNegativeColor);
+  }, [tradingPositiveColor, tradingNegativeColor]);
   const sidebarCollapsed = useUIStore((state) => state.layout.sidebarCollapsed);
   const watchedPlayers = usePlayerStore((state) => state.watchedPlayers);
   const selectedPlayer = usePlayerStore((state) => state.selectedPlayer);
@@ -66,9 +81,11 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     deposit,
     notifications,
     settings,
+    help,
     howToPlay,
     newsUpdates,
     rewards,
+    referral,
     pnLTracker,
     customize,
     watchlist,
@@ -80,9 +97,11 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
     depositButtonRef,
     notificationsButtonRef,
     settingsButtonRef,
+    helpButtonRef,
     howToPlayButtonRef,
     newsUpdatesButtonRef,
     rewardsButtonRef,
+    referralButtonRef,
     pnLTrackerButtonRef,
     customizeButtonRef,
     mobileMenuButtonRef,
@@ -102,7 +121,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
   const handlePlayerProfileOpen = useCallback(() => {
     openPlayerTracker({
       id: 'personal',
-      name: 'Personal Profile',
+      name: 'You',
       address: '0x1234...5678',
       avatar: 'https://i.imgflip.com/2/1vq853.jpg',
       game: 'Box Hit',
@@ -125,9 +144,13 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
   );
 
   const handleSoundToggle = useCallback(() => {
+    // Toggle in UI store (for SoundManager)
     if (typeof window !== 'undefined') {
       (window as typeof window & { toggleSound?: () => void }).toggleSound?.();
     }
+    // Also toggle in game store (for sidebar display)
+    const currentSoundEnabled = useGameStore.getState().gameSettings.soundEnabled;
+    useGameStore.getState().updateGameSettings({ soundEnabled: !currentSoundEnabled });
   }, []);
 
   const handlePnLTrackerToggle = useCallback(() => {
@@ -155,6 +178,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           newsUpdatesButtonRef={newsUpdatesButtonRef}
           mobileMenuButtonRef={mobileMenuButtonRef}
           onMobileMenuOpen={mobileMenu.open}
+          onHowToPlayOpen={howToPlay.open}
+          howToPlayButtonRef={howToPlayButtonRef}
         />
       </div>
 
@@ -166,6 +191,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         howToPlayButtonRef={howToPlayButtonRef}
         onRewardsOpen={rewards.open}
         rewardsButtonRef={rewardsButtonRef}
+        onReferralOpen={referral.open}
+        referralButtonRef={referralButtonRef}
         onWatchlistOpen={watchlist.open}
         onPlayerClick={openPlayerTracker}
         watchedPlayers={watchedPlayers}
@@ -189,8 +216,8 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         customizeButtonRef={customizeButtonRef}
         isWebSocketConnected={isWebSocketConnected}
         isBackendConnected={isBackendConnected}
-        onSettingsOpen={settings.open}
-        settingsButtonRef={settingsButtonRef}
+        onSettingsOpen={help.open}
+        settingsButtonRef={helpButtonRef}
       />
 
       <AppShellModals
@@ -198,6 +225,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
         modalRefs={{
           notificationsButtonRef,
           settingsButtonRef,
+          helpButtonRef,
           howToPlayButtonRef,
           newsUpdatesButtonRef,
           rewardsButtonRef,
@@ -208,6 +236,7 @@ const AppShellContent = memo(function AppShellContent({ children }: { children: 
           deposit,
           notifications,
           settings,
+          help,
           howToPlay,
           newsUpdates,
           rewards,

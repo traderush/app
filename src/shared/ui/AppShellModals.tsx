@@ -8,6 +8,7 @@ import type { PnLCustomization } from '@/shared/state/uiStore';
 const LazyDepositPopup = React.lazy(() => import('./DepositPopup'));
 const LazyNotificationsModal = React.lazy(() => import('./NotificationsModal'));
 const LazySettingsPopup = React.lazy(() => import('./SettingsPopup'));
+const LazyHelpPopup = React.lazy(() => import('./HelpPopup'));
 const LazyHowToPlayPopup = React.lazy(() => import('./HowToPlayPopup'));
 const LazyNewsUpdatesPopup = React.lazy(() => import('./NewsUpdatesPopup'));
 const LazyRewardsPopup = React.lazy(() => import('./RewardsPopup'));
@@ -16,7 +17,43 @@ const LazyCustomizePopup = React.lazy(() => import('./CustomizePopup'));
 const LazyWatchlistPopup = React.lazy(() => import('./WatchlistPopup'));
 const LazyPlayerTrackerPopup = React.lazy(() => import('./PlayerTrackerPopup'));
 const LazyMobileMenuPopup = React.lazy(() => import('./MobileMenuPopup'));
-const MODAL_FALLBACK = <div className="fixed inset-0 bg-black/60 z-[1000]" />;
+const MODAL_FALLBACK = <div 
+  className="fixed inset-0 z-[1000]" 
+  style={{
+    background: `
+      linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 255, 255, 0.03) 1px,
+        rgba(255, 255, 255, 0.03) 2px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 255, 255, 0.03) 1px,
+        rgba(255, 255, 255, 0.03) 2px
+      ),
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 8px,
+        rgba(255, 255, 255, 0.02) 8px,
+        rgba(255, 255, 255, 0.02) 9px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 8px,
+        rgba(255, 255, 255, 0.02) 8px,
+        rgba(255, 255, 255, 0.02) 9px
+      )
+    `,
+    backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+  }}
+/>;
 
 type ModalController = {
   isOpen: boolean;
@@ -29,6 +66,7 @@ type ModalKey =
   | 'deposit'
   | 'notifications'
   | 'settings'
+  | 'help'
   | 'howToPlay'
   | 'newsUpdates'
   | 'rewards'
@@ -43,6 +81,7 @@ interface AppShellModalsProps {
   modalRefs: {
     notificationsButtonRef: React.RefObject<HTMLButtonElement | null>;
     settingsButtonRef: React.RefObject<HTMLButtonElement | null>;
+    helpButtonRef: React.RefObject<HTMLButtonElement | null>;
     howToPlayButtonRef: React.RefObject<HTMLButtonElement | null>;
     newsUpdatesButtonRef: React.RefObject<HTMLButtonElement | null>;
     rewardsButtonRef: React.RefObject<HTMLButtonElement | null>;
@@ -78,7 +117,44 @@ const PnLCustomizationOverlay: React.FC<PnLCustomizationOverlayProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 opacity-60 transition-all duration-300 ease-out z-[1000]" onClick={onClose} />
+      <div 
+        className="fixed inset-0 transition-all duration-300 ease-out z-[1000]" 
+        style={{
+          background: `
+            linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 1px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(255, 255, 255, 0.03) 2px
+            ),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 8px,
+              rgba(255, 255, 255, 0.02) 8px,
+              rgba(255, 255, 255, 0.02) 9px
+            )
+          `,
+          backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+        }}
+        onClick={onClose} 
+      />
 
       <div className="fixed inset-0 z-[1001] flex items-center justify-center pointer-events-none">
         <div
@@ -227,6 +303,11 @@ const MODAL_DEFINITIONS: ModalDefinition[] = [
     key: 'settings',
     Component: LazySettingsPopup,
     getProps: (ctx) => ({ triggerRef: ctx.modalRefs.settingsButtonRef }),
+  },
+  {
+    key: 'help',
+    Component: LazyHelpPopup,
+    getProps: (ctx) => ({ triggerRef: ctx.modalRefs.helpButtonRef }),
   },
   {
     key: 'howToPlay',

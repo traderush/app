@@ -11,9 +11,11 @@ interface ModalProps {
   triggerRef: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
   className?: string;
+  badge?: string | number;
+  signatureColor?: string;
 }
 
-export default function Modal({ title, isOpen, onClose, triggerRef, children, className }: ModalProps) {
+export default function Modal({ title, isOpen, onClose, triggerRef, children, className, badge, signatureColor }: ModalProps) {
   const [position, setPosition] = useState({ top: 0, right: 0 });
 
   // Update position when isOpen changes or window resizes
@@ -40,15 +42,50 @@ export default function Modal({ title, isOpen, onClose, triggerRef, children, cl
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()} modal>
       <DialogPrimitive.Portal>
-        {/* Overlay */}
+        {/* Overlay with tech pattern */}
         <DialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 bg-black/60 z-[1000]',
+            'fixed inset-0 z-[1000]',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=open]:opacity-100 data-[state=closed]:opacity-0',
             'transition-opacity duration-300 ease-out',
             className
           )}
+          style={{
+            background: `
+              linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+              repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 1px,
+                rgba(255, 255, 255, 0.03) 1px,
+                rgba(255, 255, 255, 0.03) 2px
+              ),
+              repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 1px,
+                rgba(255, 255, 255, 0.03) 1px,
+                rgba(255, 255, 255, 0.03) 2px
+              ),
+              repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 8px,
+                rgba(255, 255, 255, 0.02) 8px,
+                rgba(255, 255, 255, 0.02) 9px
+              ),
+              repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 8px,
+                rgba(255, 255, 255, 0.02) 8px,
+                rgba(255, 255, 255, 0.02) 9px
+              )
+            `,
+            backgroundSize: '100% 100%, 24px 24px, 24px 24px, 16px 16px, 16px 16px',
+          }}
         />
 
         {/* Content positioned relative to trigger */}
@@ -69,9 +106,22 @@ export default function Modal({ title, isOpen, onClose, triggerRef, children, cl
         >
           {/* Header */}
           <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
-            <DialogPrimitive.Title className="text-zinc-100" style={{ fontSize: '14px', fontWeight: 500 }}>
-              {title}
-            </DialogPrimitive.Title>
+            <div className="flex items-center gap-2">
+              <DialogPrimitive.Title className="text-zinc-100" style={{ fontSize: '14px', fontWeight: 500 }}>
+                {title}
+              </DialogPrimitive.Title>
+              {badge !== undefined && (
+                <span
+                  className="text-[10px] font-medium px-1.5 py-0.5 rounded transition-all duration-300"
+                  style={{
+                    backgroundColor: signatureColor ? `${signatureColor}20` : 'transparent',
+                    color: signatureColor || 'inherit',
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <DialogPrimitive.Close
                 className="grid place-items-center w-4 h-4 rounded hover:bg-white/5 transition-colors"

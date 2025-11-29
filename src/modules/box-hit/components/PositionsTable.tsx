@@ -162,7 +162,7 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice, clo
       <td className="font-medium" style={{ color: signatureColor }}>
         {position.multiplier.toFixed(1)}x
       </td>
-      <td className="text-trading-positive">{position.equity}</td>
+      <td className={getEquityClass(position.equity)}>{position.equity}</td>
       <td className={getProbabilityClass(position.hit)}>{position.hit}</td>
       <td>
         <ProgressBar progress={position.prog} />
@@ -191,7 +191,7 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice, clo
       <td>{position.entry}</td>
       <td>
         <span
-          className={`rounded px-2 py-1 text-xs font-normal ${
+          className={`rounded-md px-2 py-1 text-xs font-normal ${
             position.result === 'Won'
               ? 'bg-trading-positive/20 text-trading-positive'
               : 'bg-trading-negative/20 text-trading-negative'
@@ -207,7 +207,7 @@ const PositionsTable = React.memo(function PositionsTable({ currentBTCPrice, clo
     <div className="border-t border-zinc-800/80">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <button onClick={close} className="px-2 py-2 rounded-sm">
+          <button onClick={close} className="px-2 py-2 rounded-md">
             <ChevronDownIcon
               size={16}
               className="text-zinc-400 hover:text-zinc-300"

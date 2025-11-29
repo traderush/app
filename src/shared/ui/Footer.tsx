@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { HelpCircle, Book } from 'lucide-react';
+import { useUIStore } from '@/shared/state';
 
 type PerformanceWithMemory = Performance & {
   memory?: {
@@ -35,6 +36,22 @@ const MemoryDisplay: React.FC = () => {
   }, []);
 
   return <span>{isClient ? memoryUsage : 'Loading...'}</span>;
+};
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex: string, opacity: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+// Helper function to darken a hex color
+const darkenColor = (hex: string, factor: number = 0.3) => {
+  const r = Math.max(0, Math.floor(parseInt(hex.slice(1, 3), 16) * (1 - factor)));
+  const g = Math.max(0, Math.floor(parseInt(hex.slice(3, 5), 16) * (1 - factor)));
+  const b = Math.max(0, Math.floor(parseInt(hex.slice(5, 7), 16) * (1 - factor)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
 
 interface FooterProps {
@@ -95,15 +112,19 @@ const Footer = React.memo(function Footer({
         : 'text-trading-negative';
   const fpsClass =
     fps >= 55 ? 'text-trading-positive' : fps >= 30 ? 'text-warning' : 'text-trading-negative';
+  const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+  const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
+  
   const connectionClasses = [
-    'group relative flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition-colors border',
+    'group relative flex items-center gap-1 rounded px-2 py-0.5 text-xs transition-colors',
     isWebSocketConnected
-      ? 'border-live-border bg-status-liveBg text-live'
-      : 'border-status-downBorder bg-status-downBg text-trading-negative',
+      ? 'text-trading-positive'
+      : 'bg-status-downBg text-trading-negative',
   ].join(' ');
+  
   const indicatorClasses = [
     'h-3 w-3 rounded-full border-2',
-    isWebSocketConnected ? 'border-live-border bg-live' : 'border-status-downBorder bg-trading-negative',
+    isWebSocketConnected ? 'border-trading-positive/30' : 'border-status-downBorder',
   ].join(' ');
   const connectionLabelClass = isWebSocketConnected ? 'text-trading-positive' : 'text-trading-negative';
   const backendStatusClasses = isBackendConnected ? 'text-trading-positive' : 'text-trading-negative';
@@ -113,7 +134,7 @@ const Footer = React.memo(function Footer({
   ].join(' ');
   return (
     <footer className="fixed bottom-3 right-3 z-30">
-      <div className="h-8 flex items-center justify-between p-2 gap-4 text-xs text-zinc-400 w-[400px] bg-black border border-zinc-800 rounded-sm">
+      <div className="h-8 flex items-center justify-between p-2 gap-4 text-xs text-zinc-400 w-[400px] border border-zinc-800 rounded-md" style={{ backgroundColor: '#0D0D0D' }}>
           {/* Customize Button */}
           <button 
             ref={customizeButtonRef}
@@ -129,14 +150,14 @@ const Footer = React.memo(function Footer({
           {/* Separator */}
           <div className="w-px h-4 bg-white/20"></div>
         
-          {/* Settings Button */}
+          {/* Help Button */}
           <button 
             ref={settingsButtonRef}
             onClick={onSettingsOpen}
             className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
           >
-            <Settings size={14} strokeWidth={1.4} />
-            <span>Settings</span>
+            <HelpCircle size={14} strokeWidth={1.4} />
+            <span>Help</span>
           </button>
 
           {/* Separator */}
@@ -163,26 +184,38 @@ const Footer = React.memo(function Footer({
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
             </svg>
           </a>
-          {/* <a 
+          <a 
             href="https://docs.traderush.com" 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
-            </svg>
-            <span>Docs</span>
-          </a> */}
+            <Book size={14} strokeWidth={1.4} />
+          </a>
 
            {/* Connection Status - Dynamic styling based on connection */}
-           <div className={connectionClasses}>
-            <div className={indicatorClasses}></div>
+           <div 
+             className={connectionClasses}
+             style={isWebSocketConnected ? { 
+               backgroundColor: `${tradingPositiveColor}20`,
+               color: tradingPositiveColor 
+             } : {}}
+           >
+            <div 
+              className={indicatorClasses}
+              style={isWebSocketConnected ? { 
+                backgroundColor: tradingPositiveColor,
+                borderColor: darkenColor(tradingPositiveColor, 0.5)
+              } : { 
+                backgroundColor: tradingNegativeColor,
+                borderColor: 'var(--status-downBorder)'
+              }}
+            ></div>
             {isWebSocketConnected ? 'Connected' : 'Disconnected'}
             
             {/* Tooltip with detailed connection info and performance metrics */}
             <div 
-              className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 min-w-[260px] whitespace-nowrap rounded-lg border border-zinc-700/50 bg-status-glass px-3 py-2.5 opacity-0 shadow-2xl backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
+              className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 min-w-[260px] whitespace-nowrap rounded-md border border-zinc-700/50 bg-status-glass px-3 py-2.5 opacity-0 shadow-2xl backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
             >
               <div className="text-xs text-zinc-300 space-y-2">
                 {/* Status Header with inline status */}

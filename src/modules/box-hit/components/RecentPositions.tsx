@@ -1,4 +1,4 @@
-import { useUserStore } from '@/shared/state';
+import { useUserStore, useUIStore } from '@/shared/state';
 import clsx from 'clsx';
 import React, { useMemo, useState } from 'react'
 
@@ -27,9 +27,22 @@ export default function RecentPositions() {
 
 const RecentPosition = ({ position }: { position: any }) => {
     const [isHovering, setIsHovering] = useState(false);
+    const tradingPositiveColor = useUIStore((state) => state.tradingPositiveColor);
+    const tradingNegativeColor = useUIStore((state) => state.tradingNegativeColor);
+    
     return (
-        <div onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} key={position.id} style={{backgroundColor: position.hit === 'Win' ? '#101212' : '#130E11'}} className='relative flex-1 text-center p-2 z-30'>
-            <p style={{color: position.hit === 'Win' ? '#04C68AB2' : '#DD4141B2'}} className='text-xs'>${position.size.toFixed(2)}</p>
+        <div 
+            onMouseEnter={() => setIsHovering(true)} 
+            onMouseLeave={() => setIsHovering(false)} 
+            key={position.id} 
+            style={{
+                backgroundColor: position.hit === 'Win' 
+                    ? `${tradingPositiveColor}0D` 
+                    : `${tradingNegativeColor}0D`
+            }} 
+            className='relative flex-1 text-center p-2 z-30'
+        >
+            <p className={position.hit === 'Win' ? 'text-xs text-trading-positive' : 'text-xs text-trading-negative'}>${position.size.toFixed(2)}</p>
             {isHovering && <RecentPositionHover position={position} />}
         </div>
     )
@@ -38,7 +51,7 @@ const RecentPosition = ({ position }: { position: any }) => {
 const RecentPositionHover = ({ position }: { position: any }) => {
     return (
         <div className='flex flex-col absolute bottom-0 -translate-y-[50%] left-1/2 -translate-x-1/2 bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/80 p-2 w-full gap-1'>
-            <p className={clsx("text-xs", position.hit === 'Win' ? 'text-[#04C68AB2]' : 'text-[#DD4141B2]')}>{position.hit}</p>
+            <p className={clsx("text-xs", position.hit === 'Win' ? 'text-trading-positive' : 'text-trading-negative')}>{position.hit}</p>
             <p className='text-xs'>{position.multiplier.toFixed(1)}x</p>
             <RelativeTime time={position.time} />
         </div>

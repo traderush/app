@@ -158,12 +158,12 @@ export function ExplorerClient() {
     <div className="space-y-4 text-zinc-100">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Orderbook Explorer</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-lg font-semibold text-zinc-100">Orderbook Explorer</h1>
+          <p className="text-sm text-zinc-500">
             Live snapshots pulled directly from the clearing house runtime.
           </p>
         </div>
-        <div className="text-right text-xs text-neutral-400">
+        <div className="text-right text-xs text-zinc-400">
           {lastUpdated
             ? `Updated ${new Date(lastUpdated).toLocaleTimeString()}`
             : backendBaseUrl
@@ -186,7 +186,7 @@ export function ExplorerClient() {
             className={`rounded-md px-3 py-1 text-sm transition ${
               selectedTf === timeframe
                 ? 'bg-zinc-800 text-zinc-100'
-                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800/60'
+                : 'bg-zinc-900/50 text-zinc-400 hover:bg-zinc-800/60'
             }`}
           >
             {timeframeLabels.get(timeframe) ?? `${timeframe}ms`}
@@ -194,29 +194,29 @@ export function ExplorerClient() {
         ))}
       </div>
 
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/90 p-4 shadow">
+      <div className="rounded-lg border border-zinc-800/50 bg-zinc-900/30 p-4">
         <div className="mb-4 flex items-baseline justify-between">
           <div>
-            <h2 className="text-base font-medium">
+            <h2 className="text-sm font-medium text-zinc-100">
               {selectedTf
                 ? `Timeframe ${timeframeLabels.get(selectedTf) ?? `${selectedTf}ms`}`
                 : 'Select timeframe'}
             </h2>
             {selectedSnapshot && selectedHorizonColumns !== null && (
-              <div className="text-xs text-neutral-500">
+              <div className="text-xs text-zinc-500">
                 Horizon: {selectedHorizonColumns} columns · Buckets {selectedSnapshot.contracts.length}
               </div>
             )}
           </div>
           {selectedSnapshot && (
-            <span className="text-sm text-neutral-400">
+            <span className="text-sm text-zinc-400">
               Price {selectedSnapshot.price.toFixed(2)}
             </span>
           )}
         </div>
 
         {!selectedSnapshot ? (
-          <p className="text-sm text-neutral-500">No data available.</p>
+          <p className="text-sm text-zinc-500">No data available.</p>
         ) : (
           <OrderbookGrid snapshot={selectedSnapshot} />
         )}
@@ -251,14 +251,14 @@ function OrderbookGrid({ snapshot }: { snapshot: ExplorerSnapshot }) {
   );
 
   const columnHeaders = Array.from({ length: columnCount }, (_, idx) => (
-    <div key={idx} className="w-8 text-center text-[10px] text-neutral-500">
+    <div key={idx} className="w-8 text-center text-[10px] text-zinc-500">
       {idx === 0 ? 'now' : `+${idx}`}
     </div>
   ));
 
   const rowElements = gridRows.map((row) => (
     <div key={row.bucketIndex} className="flex items-center gap-1">
-      <div className="w-16 pr-1 text-right text-[10px] text-neutral-500 font-mono">
+      <div className="w-16 pr-1 text-right text-[10px] text-zinc-500 font-mono">
         {(anchorPrice + row.bucketIndex * priceStep).toFixed(2)}
       </div>
       <div className="flex gap-1">
@@ -303,7 +303,7 @@ function OrderbookGrid({ snapshot }: { snapshot: ExplorerSnapshot }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-between text-xs text-neutral-500">
+      <div className="flex justify-between text-xs text-zinc-500">
         <span>Rows (price ± window)</span>
         <span>Columns (time horizon)</span>
       </div>

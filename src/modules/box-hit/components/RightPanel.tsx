@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo, useEffect, useState } from 'react';
-import { Edit3 } from 'lucide-react';
+import clsx from 'clsx';
 
 import { DEFAULT_TRADE_AMOUNT, QUICK_TRADE_AMOUNTS } from '@/modules/box-hit/constants';
 import { useUIStore } from '@/shared/state';
@@ -37,10 +37,6 @@ function RightPanel({
 
   const [activeCell, setActiveCell] = useState<number | null>(null);
   const [showWarning, setShowWarning] = useState(false);
-  const [showLiquidityToggle, setShowLiquidityToggle] = useState(false);
-  const [showFeeToggle, setShowFeeToggle] = useState(false);
-  const [feeAmount, setFeeAmount] = useState(0.01);
-  const [liquidityAmount, setLiquidityAmount] = useState(0);
 
   const handleTradeAmountClick = (amount: number) => {
     onTradeAmountChange(amount);
@@ -65,11 +61,43 @@ function RightPanel({
     }
   };
 
+  // Convert hex to rgba with lightening (matching sidebar style)
+  const hexToRgbaLightened = (hex: string, opacity: number, whiteMix: number = 0.3) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    // Mix with white (255, 255, 255)
+    const lightenedR = Math.round(r + (255 - r) * whiteMix);
+    const lightenedG = Math.round(g + (255 - g) * whiteMix);
+    const lightenedB = Math.round(b + (255 - b) * whiteMix);
+    return `rgba(${lightenedR}, ${lightenedG}, ${lightenedB}, ${opacity})`;
+  };
+
 
   return (
-    <aside className="bg-zinc-950/60 border border-zinc-800/80 p-2 rounded-sm">
+    <aside className="border border-zinc-800 p-2 pt-3 rounded-md" style={{ backgroundColor: '#0D0D0D' }}>
       <div className='flex flex-col gap-3'>
-        <div className="flex items-center justify-center gap-2 bg-trading-negative/10 px-3 py-2">
+        {/* Mode selector */}
+        <div className="relative border-b border-zinc-800 -mx-2 px-4">
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              className="relative pb-2 text-sm font-medium text-white transition-colors hover:text-zinc-200"
+            >
+              Test Mode
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
+            </button>
+            <button
+              type="button"
+              disabled
+              className="pb-2 text-sm font-medium text-zinc-500 cursor-not-allowed"
+            >
+              Live Mode
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 bg-trading-negative/10 px-3 py-2 -mx-2">
           <div className="flex h-4 w-4 items-center justify-center rounded-full bg-trading-negative/20">
             <span className="text-xs font-bold text-trading-negative">i</span>
           </div>
@@ -79,66 +107,100 @@ function RightPanel({
         </div>
 
         <div>
-          <div className="mb-4">
-            <div className="rounded-t-lg border border-zinc-800 bg-surface-900 px-3 py-1">
-              <div className="text-xs text-zinc-400">Trade amount</div>
-              <div className="flex items-center justify-between">
-                <input
-                  type="number"
-                  value={tradeAmount}
-                  onChange={handleCustomTradeAmount}
-                  className="w-20 border-none bg-transparent text-lg font-medium text-zinc-100 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder="0"
-                  min="0"
-                  step="0.01"
-                />
-                <div className="text-xs text-zinc-400">USDC</div>
-              </div>
-            </div>
-
-            <div className="grid h-6 grid-cols-5 overflow-hidden rounded-b-lg border border-t-0 border-zinc-800 bg-zinc-900/60">
-              {QUICK_TRADE_AMOUNTS.map((amount, index) => (
-                <button
-                  key={amount}
-                  onClick={() => handleTradeAmountClick(amount)}
-                  onKeyDown={(event) => handleQuickAmountKeyDown(event, index)}
-                  onFocus={() => setActiveCell(index)}
-                  onBlur={() => setActiveCell(null)}
-                  className={[
-                    'flex items-center justify-center text-xs font-medium transition-colors',
-                    index === 0 ? 'rounded-bl-lg' : '',
-                    index === QUICK_TRADE_AMOUNTS.length - 1 ? 'rounded-br-none' : '',
-                    index < QUICK_TRADE_AMOUNTS.length - 1 ? 'border-r border-zinc-700' : '',
-                    tradeAmount === amount
-                      ? 'bg-zinc-700 text-white'
-                      : 'bg-transparent text-zinc-200 hover:bg-zinc-700 hover:text-white',
-                    activeCell === index ? 'ring-1 ring-zinc-500' : '',
-                  ].join(' ')}
-                  tabIndex={0}
-                >
-                  {amount}
-                </button>
-              ))}
+          <div className="mb-4 flex flex-col gap-2">
+            {/* Top bar with minus, value, and plus - in its own bubble */}
+            <div className="flex items-center justify-between rounded-md bg-surface-900 px-3 py-3">
               <button
-                onKeyDown={(event) => handleQuickAmountKeyDown(event, QUICK_TRADE_AMOUNTS.length)}
-                onFocus={() => setActiveCell(QUICK_TRADE_AMOUNTS.length)}
-                onBlur={() => setActiveCell(null)}
-                className={[
-                  'flex items-center justify-center text-xs font-medium transition-colors',
-                  'rounded-br-lg',
-                  activeCell === QUICK_TRADE_AMOUNTS.length
-                    ? 'bg-zinc-700 text-white'
-                    : 'bg-transparent text-zinc-200 hover:bg-zinc-700 hover:text-white',
-                  activeCell === QUICK_TRADE_AMOUNTS.length ? 'ring-1 ring-zinc-500' : '',
-                ].join(' ')}
-                tabIndex={0}
+                type="button"
+                onClick={() => {
+                  let currentIndex = QUICK_TRADE_AMOUNTS.indexOf(tradeAmount as typeof QUICK_TRADE_AMOUNTS[number]);
+                  // If not found, find the closest value
+                  if (currentIndex === -1) {
+                    currentIndex = QUICK_TRADE_AMOUNTS.findIndex((amount) => amount > tradeAmount) - 1;
+                    if (currentIndex < 0) {
+                      currentIndex = QUICK_TRADE_AMOUNTS.length - 1;
+                    }
+                  }
+                  // Go to previous value, but don't go below minimum
+                  if (currentIndex > 0) {
+                    onTradeAmountChange(QUICK_TRADE_AMOUNTS[currentIndex - 1]);
+                  }
+                }}
+                disabled={tradeAmount === QUICK_TRADE_AMOUNTS[0]}
+                className={clsx(
+                  "flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-white transition-colors",
+                  tradeAmount === QUICK_TRADE_AMOUNTS[0]
+                    ? "cursor-not-allowed opacity-50"
+                    : "hover:bg-zinc-800"
+                )}
               >
-                <Edit3 size={12} />
+                <span className="text-lg font-medium">−</span>
               </button>
+              <div className="flex items-center gap-1">
+                <span className="text-2xl font-bold text-white">{tradeAmount}</span>
+                <span className="text-sm text-zinc-400">$</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  let currentIndex = QUICK_TRADE_AMOUNTS.indexOf(tradeAmount as typeof QUICK_TRADE_AMOUNTS[number]);
+                  // If not found, find the closest value
+                  if (currentIndex === -1) {
+                    currentIndex = QUICK_TRADE_AMOUNTS.findIndex((amount) => amount > tradeAmount);
+                    if (currentIndex < 0) {
+                      currentIndex = 0;
+                    }
+                  }
+                  // Go to next value, but don't go above maximum
+                  if (currentIndex < QUICK_TRADE_AMOUNTS.length - 1) {
+                    onTradeAmountChange(QUICK_TRADE_AMOUNTS[currentIndex + 1]);
+                  }
+                }}
+                disabled={tradeAmount === QUICK_TRADE_AMOUNTS[QUICK_TRADE_AMOUNTS.length - 1]}
+                className={clsx(
+                  "flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-white transition-colors",
+                  tradeAmount === QUICK_TRADE_AMOUNTS[QUICK_TRADE_AMOUNTS.length - 1]
+                    ? "cursor-not-allowed opacity-50"
+                    : "hover:bg-zinc-800"
+                )}
+              >
+                <span className="text-lg font-medium">+</span>
+              </button>
+            </div>
+            
+            {/* Bottom row with quick amount buttons - each in its own bubble */}
+            <div className="flex items-center gap-2">
+              {QUICK_TRADE_AMOUNTS.map((amount, index) => {
+                const isSelected = tradeAmount === amount;
+                const backgroundColor = isSelected
+                  ? hexToRgbaLightened(signatureColor, 0.15)
+                  : '#171717';
+                
+                return (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => handleTradeAmountClick(amount)}
+                    onKeyDown={(event) => handleQuickAmountKeyDown(event, index)}
+                    onFocus={() => setActiveCell(index)}
+                    onBlur={() => setActiveCell(null)}
+                    className={clsx(
+                      'flex flex-1 h-7 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors focus:outline-none focus:ring-0',
+                      isSelected
+                        ? 'text-zinc-300'
+                        : 'text-zinc-500 hover:text-zinc-300',
+                    )}
+                    style={{ backgroundColor }}
+                    tabIndex={0}
+                  >
+                    ${amount}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="mb-4 flex">
+          <div className="mb-4 flex px-2">
             <div className="flex-1">
               <div className="text-xs text-white">Boxes Selected</div>
               <div className="font-medium">
@@ -159,7 +221,7 @@ function RightPanel({
                     ? Math.round(
                         tradeAmount *
                           selectedMultipliers.reduce((sum, multiplier) => sum + multiplier, 0),
-                      )
+                      ).toLocaleString('en-US')
                     : '0'}
                 </span>
                 <span className="ml-1 text-xs text-zinc-400" style={{ fontWeight: 400 }}>
@@ -183,7 +245,7 @@ function RightPanel({
               onTradingModeChange(false);
             }}
             className={[
-              'h-10 w-full rounded-lg font-medium text-brand-foreground transition-colors hover:opacity-90',
+              'h-10 w-full rounded-md font-medium text-brand-foreground transition-colors hover:opacity-90 mb-2',
               tradeAmount === 0 && !isTradingMode ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
               isTradingMode ? 'bg-danger' : '',
             ].join(' ')}
@@ -199,57 +261,10 @@ function RightPanel({
             {isTradingMode ? 'Exit Trading' : 'Start Trading'}
           </button>
 
-          <div className="mt-2 flex items-center justify-between">
-            <button
-              onClick={() => setShowLiquidityToggle((value) => !value)}
-              className="flex items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-zinc-300"
-            >
-              <span>⊹</span>
-              <span>General liquidity available</span>
-            </button>
-            <button
-              onClick={() => setShowFeeToggle((value) => !value)}
-              className="flex items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-zinc-300"
-            >
-              <span>⛐</span>
-              <span>{feeAmount.toFixed(2)} Fee applies</span>
-            </button>
-          </div>
-
-          {(showLiquidityToggle || showFeeToggle) && (
-            <div className="mt-2 flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">⊹</span>
-                <input
-                  type="number"
-                  value={liquidityAmount}
-                  onChange={(event) =>
-                    setLiquidityAmount(Number.parseFloat(event.target.value) || 0)
-                  }
-                  className="w-20 border-b border-zinc-700 bg-transparent px-2 py-1 text-xs text-white outline-none focus:border-zinc-500"
-                  placeholder="0.00"
-                  step="0.01"
-                />
-                <span className="text-xs text-zinc-400">USDC</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">⛐</span>
-                <input
-                  type="number"
-                  value={feeAmount}
-                  onChange={(event) => setFeeAmount(Number.parseFloat(event.target.value) || 0)}
-                  className="w-20 border-b border-zinc-700 bg-transparent px-2 py-1 text-xs text-white outline-none focus:border-zinc-500"
-                  placeholder="0.00"
-                  step="0.01"
-                />
-                <span className="text-xs text-zinc-400">USDC</span>
-              </div>
-            </div>
-          )}
 
           {showWarning && (
             <div
-              className="mt-2 rounded border border-trading-negative/20 bg-trading-negative/10 px-3 py-2 text-center text-xs text-trading-negative"
+              className="mt-2 rounded-md border border-trading-negative/20 bg-trading-negative/10 px-3 py-2 text-center text-xs text-trading-negative"
             >
               Please enter a trade amount to start trading
             </div>

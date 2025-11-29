@@ -39,6 +39,9 @@ export interface GameSettings {
   isTradingMode: boolean;
   zoomLevel: number;
   showProbabilities: boolean;
+  customAnimations: boolean;
+  showMultipliers: boolean;
+  showFlowingPrice: boolean;
   selectedAsset: 'BTC' | 'ETH' | 'SOL' | 'DEMO';
   timeframe: number; // Timeframe in milliseconds (500, 1000, 2000, 4000, 10000)
 }
@@ -124,6 +127,9 @@ const initialGameSettings: GameSettings = {
   isTradingMode: false,
   zoomLevel: defaultGridGameConfig.zoomLevel,
   showProbabilities: defaultGridGameConfig.showProbabilities,
+  customAnimations: true,
+  showMultipliers: true,
+  showFlowingPrice: true,
   selectedAsset: 'DEMO',
   timeframe: 2000, // Default 2s timeframe
 };
